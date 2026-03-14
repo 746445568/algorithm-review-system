@@ -13,7 +13,7 @@ using System.Reflection;
 [assembly: System.Reflection.AssemblyCompanyAttribute("OJReviewDesktop")]
 [assembly: System.Reflection.AssemblyConfigurationAttribute("Debug")]
 [assembly: System.Reflection.AssemblyFileVersionAttribute("1.0.0.0")]
-[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0")]
+[assembly: System.Reflection.AssemblyInformationalVersionAttribute("1.0.0+9ff3ffac58a415227fd5e30cd585d4f200760568")]
 [assembly: System.Reflection.AssemblyProductAttribute("OJReviewDesktop")]
 [assembly: System.Reflection.AssemblyTitleAttribute("OJReviewDesktop")]
 [assembly: System.Reflection.AssemblyVersionAttribute("1.0.0.0")]

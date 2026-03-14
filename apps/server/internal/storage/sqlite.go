@@ -172,6 +172,14 @@ CREATE TABLE IF NOT EXISTS review_snapshots (
   generated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   summary_json TEXT NOT NULL
 );
+CREATE TABLE IF NOT EXISTS problem_review_states (
+  problem_id INTEGER PRIMARY KEY,
+  status TEXT NOT NULL DEFAULT 'TODO',
+  notes TEXT NOT NULL DEFAULT '',
+  next_review_at TEXT,
+  last_updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY(problem_id) REFERENCES problems(id) ON DELETE CASCADE
+);
 CREATE TABLE IF NOT EXISTS analysis_tasks (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   status TEXT NOT NULL,
@@ -734,6 +742,60 @@ func (db *DB) GetReviewSnapshot(id int64) (models.ReviewSnapshot, error) {
 	return scanReviewSnapshot(row)
 }
 
+func (db *DB) GetProblemReviewState(problemID int64) (models.ProblemReviewState, error) {
+	row := db.conn.QueryRow(`
+SELECT problem_id, status, notes, next_review_at, last_updated_at
+FROM problem_review_states
+WHERE problem_id = ?`, problemID)
+
+	state, err := scanProblemReviewState(row)
+	if err == nil {
+		return state, nil
+	}
+	if !errors.Is(err, sql.ErrNoRows) {
+		return models.ProblemReviewState{}, err
+	}
+
+	return models.ProblemReviewState{
+		ProblemID:     problemID,
+		Status:        models.ReviewStatusTodo,
+		Notes:         "",
+		LastUpdatedAt: time.Now().UTC(),
+	}, nil
+}
+
+func (db *DB) SaveProblemReviewState(state models.ProblemReviewState) (models.ProblemReviewState, error) {
+	if state.ProblemID == 0 {
+		return models.ProblemReviewState{}, errors.New("problem id is required")
+	}
+
+	status := normalizeReviewStatus(state.Status)
+	notes := strings.TrimSpace(state.Notes)
+	var nextReviewAt any
+	if state.NextReviewAt != nil && !state.NextReviewAt.IsZero() {
+		nextReviewAt = state.NextReviewAt.UTC().Format(time.RFC3339)
+	}
+
+	_, err := db.conn.Exec(`
+INSERT INTO problem_review_states(problem_id, status, notes, next_review_at, last_updated_at)
+VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
+ON CONFLICT(problem_id) DO UPDATE SET
+	status = excluded.status,
+	notes = excluded.notes,
+	next_review_at = excluded.next_review_at,
+	last_updated_at = CURRENT_TIMESTAMP`,
+		state.ProblemID,
+		status,
+		notes,
+		nextReviewAt,
+	)
+	if err != nil {
+		return models.ProblemReviewState{}, err
+	}
+
+	return db.GetProblemReviewState(state.ProblemID)
+}
+
 func (db *DB) CreateAnalysisTask(provider, model string, snapshotID int64) (models.AnalysisTask, bool, error) {
 	existing, err := db.findReusableAnalysisTask(snapshotID, provider, model)
 	if err == nil {
@@ -1050,6 +1112,31 @@ func scanReviewSnapshot(scanner interface{ Scan(dest ...any) error }) (models.Re
 	return snapshot, nil
 }
 
+func scanProblemReviewState(scanner interface{ Scan(dest ...any) error }) (models.ProblemReviewState, error) {
+	var state models.ProblemReviewState
+	var nextReviewAtRaw sql.NullString
+	var lastUpdatedAtRaw string
+	if err := scanner.Scan(&state.ProblemID, &state.Status, &state.Notes, &nextReviewAtRaw, &lastUpdatedAtRaw); err != nil {
+		return state, err
+	}
+
+	lastUpdatedAt, err := parseSQLiteTimestamp(lastUpdatedAtRaw)
+	if err != nil {
+		return state, fmt.Errorf("parse review state last_updated_at: %w", err)
+	}
+	state.LastUpdatedAt = lastUpdatedAt
+
+	if nextReviewAtRaw.Valid && strings.TrimSpace(nextReviewAtRaw.String) != "" {
+		parsed, err := parseSQLiteTimestamp(nextReviewAtRaw.String)
+		if err != nil {
+			return state, fmt.Errorf("parse review state next_review_at: %w", err)
+		}
+		state.NextReviewAt = &parsed
+	}
+
+	return state, nil
+}
+
 func scanContestRecord(scanner interface{ Scan(dest ...any) error }) (models.Contest, error) {
 	var item models.Contest
 	var startTimeRaw string
@@ -1280,13 +1367,16 @@ func copyFile(src, dst string) error {
 // GetReviewSummary aggregates review statistics
 func (db *DB) GetReviewSummary() (map[string]any, error) {
 	summary := map[string]any{
-		"totalSubmissions": 0,
-		"acRate":           0.0,
-		"weakTags":         []map[string]any{},
-		"repeatedFailures": []map[string]any{},
-		"recentUnsolved":   []map[string]any{},
-		"problemSummaries": []map[string]any{},
-		"contestGroups":    []map[string]any{},
+		"totalSubmissions":    0,
+		"acRate":              0.0,
+		"weakTags":            []map[string]any{},
+		"repeatedFailures":    []map[string]any{},
+		"recentUnsolved":      []map[string]any{},
+		"problemSummaries":    []map[string]any{},
+		"contestGroups":       []map[string]any{},
+		"reviewStatusCounts":  map[string]int{},
+		"dueReviewCount":      0,
+		"scheduledReviewCount": 0,
 	}
 
 	// 1. totalSubmissions + acRate
@@ -1438,19 +1528,32 @@ func (db *DB) GetReviewSummary() (map[string]any, error) {
 				ORDER BY s2.submitted_at DESC, s2.id DESC
 				LIMIT 1
 			), ?) AS latest_verdict,
-			COALESCE(GROUP_CONCAT(DISTINCT pt.tag_name), '') AS tags_csv
+			COALESCE(GROUP_CONCAT(DISTINCT pt.tag_name), '') AS tags_csv,
+			COALESCE(prs.status, ?) AS review_status,
+			prs.next_review_at,
+			prs.last_updated_at
 		FROM submissions s
 		JOIN problems p ON p.id = s.problem_id
 		LEFT JOIN problem_tags pt ON pt.problem_id = p.id
+		LEFT JOIN problem_review_states prs ON prs.problem_id = p.id
 		GROUP BY p.id, p.external_problem_id, p.title, p.platform, p.external_contest_id
 		ORDER BY last_submitted_at DESC, p.id DESC
-		LIMIT 100`, models.VerdictAC, models.VerdictAC, models.VerdictUnknown)
+		LIMIT 100`, models.VerdictAC, models.VerdictAC, models.VerdictUnknown, models.ReviewStatusTodo)
 	if err != nil {
 		return nil, fmt.Errorf("get review summary: query problem summaries: %w", err)
 	}
 	defer problemRows.Close()
 
 	problemSummaries := make([]map[string]any, 0, 100)
+	reviewStatusCounts := map[string]int{
+		string(models.ReviewStatusTodo):      0,
+		string(models.ReviewStatusReviewing): 0,
+		string(models.ReviewStatusScheduled): 0,
+		string(models.ReviewStatusDone):      0,
+	}
+	dueReviewCount := 0
+	scheduledReviewCount := 0
+	now := time.Now().UTC()
 	for problemRows.Next() {
 		var problemID int64
 		var externalProblemID string
@@ -1463,25 +1566,78 @@ func (db *DB) GetReviewSummary() (map[string]any, error) {
 		var lastSubmittedAt string
 		var latestVerdict models.Verdict
 		var tagsCSV string
-		if err := problemRows.Scan(&problemID, &externalProblemID, &title, &platform, &contestID, &attemptCount, &acCount, &lastFailedAt, &lastSubmittedAt, &latestVerdict, &tagsCSV); err != nil {
+		var reviewStatusRaw string
+		var nextReviewAtRaw sql.NullString
+		var lastReviewUpdatedAtRaw sql.NullString
+		if err := problemRows.Scan(
+			&problemID,
+			&externalProblemID,
+			&title,
+			&platform,
+			&contestID,
+			&attemptCount,
+			&acCount,
+			&lastFailedAt,
+			&lastSubmittedAt,
+			&latestVerdict,
+			&tagsCSV,
+			&reviewStatusRaw,
+			&nextReviewAtRaw,
+			&lastReviewUpdatedAtRaw,
+		); err != nil {
 			return nil, fmt.Errorf("get review summary: scan problem summary row: %w", err)
 		}
+
+		reviewStatus := normalizeReviewStatus(models.ReviewStatus(reviewStatusRaw))
+		reviewStatusCounts[string(reviewStatus)]++
+
+		var nextReviewAt any
+		reviewDue := false
+		if nextReviewAtRaw.Valid && strings.TrimSpace(nextReviewAtRaw.String) != "" {
+			parsed, err := parseSQLiteTimestamp(nextReviewAtRaw.String)
+			if err != nil {
+				return nil, fmt.Errorf("get review summary: parse problem summary next review: %w", err)
+			}
+			nextReviewAt = parsed
+			if !parsed.After(now) {
+				reviewDue = true
+				dueReviewCount++
+			}
+			scheduledReviewCount++
+		}
+
+		var lastReviewUpdatedAt any
+		if lastReviewUpdatedAtRaw.Valid && strings.TrimSpace(lastReviewUpdatedAtRaw.String) != "" {
+			parsed, err := parseSQLiteTimestamp(lastReviewUpdatedAtRaw.String)
+			if err != nil {
+				return nil, fmt.Errorf("get review summary: parse problem summary review update: %w", err)
+			}
+			lastReviewUpdatedAt = parsed
+		}
+
 		problemSummaries = append(problemSummaries, map[string]any{
-			"problemId":         problemID,
-			"externalProblemId": externalProblemID,
-			"title":             title,
-			"platform":          platform,
-			"contestId":         contestID,
-			"attemptCount":      attemptCount,
-			"acCount":           acCount,
-			"solvedLater":       acCount > 0,
-			"lastFailedAt":      nullableNullString(lastFailedAt),
-			"lastSubmittedAt":   lastSubmittedAt,
-			"latestVerdict":     latestVerdict,
-			"tags":              splitTagsCSV(tagsCSV),
+			"problemId":           problemID,
+			"externalProblemId":   externalProblemID,
+			"title":               title,
+			"platform":            platform,
+			"contestId":           contestID,
+			"attemptCount":        attemptCount,
+			"acCount":             acCount,
+			"solvedLater":         acCount > 0,
+			"lastFailedAt":        nullableNullString(lastFailedAt),
+			"lastSubmittedAt":     lastSubmittedAt,
+			"latestVerdict":       latestVerdict,
+			"tags":                splitTagsCSV(tagsCSV),
+			"reviewStatus":        reviewStatus,
+			"nextReviewAt":        nextReviewAt,
+			"lastReviewUpdatedAt": lastReviewUpdatedAt,
+			"reviewDue":           reviewDue,
 		})
 	}
 	summary["problemSummaries"] = problemSummaries
+	summary["reviewStatusCounts"] = reviewStatusCounts
+	summary["dueReviewCount"] = dueReviewCount
+	summary["scheduledReviewCount"] = scheduledReviewCount
 
 	contestRows, err := db.conn.Query(`
 		SELECT
@@ -1542,4 +1698,17 @@ func solveRate(problemCount int, acCount int) float64 {
 	}
 	rate := (float64(acCount) * 100.0) / float64(problemCount)
 	return math.Round(rate*10) / 10
+}
+
+func normalizeReviewStatus(status models.ReviewStatus) models.ReviewStatus {
+	switch strings.ToUpper(strings.TrimSpace(string(status))) {
+	case string(models.ReviewStatusReviewing):
+		return models.ReviewStatusReviewing
+	case string(models.ReviewStatusScheduled):
+		return models.ReviewStatusScheduled
+	case string(models.ReviewStatusDone):
+		return models.ReviewStatusDone
+	default:
+		return models.ReviewStatusTodo
+	}
 }

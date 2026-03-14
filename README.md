@@ -4,13 +4,14 @@ This repository is being rewritten from an online prototype into a **Windows des
 
 ## Current tracks
 
-- `frontend/` + `backend/`: legacy web prototype
-- `apps/desktop/OJReviewDesktop`: WinUI 3 desktop shell
-- `apps/server`: Go local service scaffold
+- `apps/desktop-electron/`: **Electron desktop shell**
+- `apps/server`: Go local service
+- `frontend/` + `backend/`: legacy web prototype (保留参考)
 
 ## Desktop direction
 
-- Windows-first native app
+- Windows-first desktop app
+- Electron shell with React renderer
 - embedded Go local service on `127.0.0.1`
 - SQLite local persistence
 - in-process persistent task queue
@@ -22,14 +23,24 @@ This repository is being rewritten from an online prototype into a **Windows des
 ## Repository guide
 
 - desktop architecture: `docs/desktop-architecture.md`
-- Windows packaging notes: `packaging/windows/README.md`
+- Electron development: `apps/desktop-electron/README.md`
 - local service notes: `apps/server/README.md`
+
+## Quick start
+
+```bash
+cd apps/desktop-electron
+npm install
+npm run dev
+```
+
+See `QUICKSTART.md` for detailed instructions.
 
 ## Current implementation status
 
-- WinUI shell builds and launches as an unpackaged desktop app.
-- The shell checks `http://127.0.0.1:38473/health` and attempts to auto-start `ojreviewd.exe` if packaged beside the app.
-- The Go local service scaffold now owns schema bootstrap, task persistence, AI settings storage, and diagnostics export.
+- Electron shell builds and launches with React renderer.
+- The shell manages `ojreviewd` Go service lifecycle.
+- The Go local service owns schema bootstrap, task persistence, AI settings storage, and diagnostics export.
 
 ## Legacy prototype
 

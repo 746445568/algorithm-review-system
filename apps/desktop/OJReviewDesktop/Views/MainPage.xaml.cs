@@ -82,8 +82,9 @@ namespace OJReviewDesktop.Views
                 if (healthy)
                 {
                     var owner = await App.ApiClient.GetOwnerAsync();
-                    WorkspaceNameText.Text = owner is null ? "本地单用户工作区" : owner.Owner.Name;
-                    ServiceStatusText.Text = owner is null ? "本地服务可用，数据目录已初始化。" : $"数据目录：{owner.App.DataDir}";
+                    ServiceStatusText.Text = owner is null
+                        ? "本地服务可用，数据目录已初始化。"
+                        : $"数据目录：{owner.App.DataDir}";
                     ServiceStatusTone.Text = "HEALTHY";
                     return;
                 }
@@ -92,7 +93,7 @@ namespace OJReviewDesktop.Views
             {
             }
 
-            ServiceStatusText.Text = "本地服务未就绪，当前只能查看界面壳层。";
+            ServiceStatusText.Text = "本地服务未就绪，当前只能查看桌面壳层。";
             ServiceStatusTone.Text = "FAILED";
         }
 

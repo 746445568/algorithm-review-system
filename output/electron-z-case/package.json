@@ -1,0 +1,6 @@
+{
+  "name": "z-case",
+  "private": true,
+  "type": "module",
+  "main": "main/index.mjs"
+}

@@ -1,0 +1,24 @@
+{
+  "name": "ojreview-desktop-electron",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Electron desktop shell for OJ Review",
+  "main": "main/index.mjs",
+  "scripts": {
+    "dev": "node ./scripts/dev.mjs",
+    "dev:renderer": "vite --config ./renderer/vite.config.mjs",
+    "build": "node ./scripts/build.mjs",
+    "start": "node ./scripts/start-static.mjs",
+    "start:static": "node ./scripts/start-static.mjs"
+  },
+  "dependencies": {
+    "react": "^19.1.1",
+    "react-dom": "^19.1.1"
+  },
+  "devDependencies": {
+    "@vitejs/plugin-react": "^5.0.2",
+    "electron": "^37.2.6",
+    "vite": "^7.1.3"
+  }
+}

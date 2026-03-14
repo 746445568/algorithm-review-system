@@ -9,95 +9,142 @@
     <Grid Background="{StaticResource AppBackgroundBrush}">
         <NavigationView
             x:Name="RootNav"
+            AlwaysShowHeader="False"
+            CompactPaneLength="48"
             IsBackButtonVisible="Collapsed"
-            IsPaneToggleButtonVisible="True"
+            IsPaneOpen="False"
             IsSettingsVisible="False"
-            OpenPaneLength="228"
-            PaneDisplayMode="LeftCompact"
+            OpenPaneLength="220"
+            PaneDisplayMode="Left"
             SelectionChanged="OnSelectionChanged">
             <NavigationView.PaneHeader>
-                <StackPanel Margin="16,16,16,8" Spacing="16">
-                    <StackPanel Orientation="Horizontal" Spacing="12">
-                        <Border Width="40" Height="40" CornerRadius="14" Background="{StaticResource AccentBrush}">
-                            <FontIcon Glyph="&#xE7C3;" Foreground="White" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                <Grid Height="56" Padding="12,8">
+                    <StackPanel Orientation="Horizontal" Spacing="12" VerticalAlignment="Center">
+                        <Border
+                            Width="36"
+                            Height="36"
+                            Background="{StaticResource AccentBrush}"
+                            CornerRadius="10"
+                            ToolTipService.ToolTip="算法复盘">
+                            <FontIcon
+                                FontFamily="Segoe Fluent Icons"
+                                FontSize="16"
+                                Foreground="White"
+                                Glyph="&#xE7C3;"
+                                HorizontalAlignment="Center"
+                                VerticalAlignment="Center" />
                         </Border>
-                        <StackPanel Spacing="2">
-                            <TextBlock Text="算法复盘平台" FontSize="18" FontWeight="SemiBold" />
-                            <TextBlock Text="Competitive Programming Review" Style="{StaticResource MutedCaption}" />
+                        <StackPanel VerticalAlignment="Center">
+                            <TextBlock FontSize="16" FontWeight="SemiBold" Text="算法复盘" />
+                            <TextBlock FontSize="11" Foreground="{StaticResource MutedForegroundBrush}" Text="OJ Review" />
                         </StackPanel>
                     </StackPanel>
-
-                    <Border Style="{StaticResource SoftPanel}" Padding="14">
-                        <StackPanel Spacing="4">
-                            <TextBlock Text="当前工作区" Style="{StaticResource MutedCaption}" />
-                            <TextBlock x:Name="WorkspaceNameText" Text="本地单用户工作区" FontWeight="SemiBold" />
-                        </StackPanel>
-                    </Border>
-                </StackPanel>
+                </Grid>
             </NavigationView.PaneHeader>
 
             <NavigationView.MenuItems>
-                <NavigationViewItem Content="总览" Icon="Home" Tag="dashboard" />
-                <NavigationViewItem Content="账号绑定" Icon="Contact" Tag="accounts" />
-                <NavigationViewItem Content="提交记录" Icon="Library" Tag="submissions" />
-                <NavigationViewItem Content="题库" Icon="Document" Tag="problems" />
-                <NavigationViewItem Content="错题复盘" Icon="Favorite" Tag="review" />
-                <NavigationViewItem Content="AI 分析" Icon="Preview" Tag="analysis" />
+                <NavigationViewItem Content="总览" Tag="dashboard" ToolTipService.ToolTip="总览">
+                    <NavigationViewItem.Icon>
+                        <SymbolIcon Symbol="Home" />
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
+                <NavigationViewItem Content="账号绑定" Tag="accounts" ToolTipService.ToolTip="账号绑定">
+                    <NavigationViewItem.Icon>
+                        <SymbolIcon Symbol="People" />
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
+                <NavigationViewItem Content="提交记录" Tag="submissions" ToolTipService.ToolTip="提交记录">
+                    <NavigationViewItem.Icon>
+                        <SymbolIcon Symbol="Document" />
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
+                <NavigationViewItem Content="题库" Tag="problems" ToolTipService.ToolTip="题库">
+                    <NavigationViewItem.Icon>
+                        <SymbolIcon Symbol="ShowResults" />
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
+                <NavigationViewItem Content="错题复盘" Tag="review" ToolTipService.ToolTip="错题复盘">
+                    <NavigationViewItem.Icon>
+                        <SymbolIcon Symbol="Repair" />
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
+                <NavigationViewItem Content="AI 分析" Tag="analysis" ToolTipService.ToolTip="AI 分析">
+                    <NavigationViewItem.Icon>
+                        <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xE9D2;" />
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
             </NavigationView.MenuItems>
 
             <NavigationView.FooterMenuItems>
-                <NavigationViewItem Content="设置" Icon="Setting" Tag="settings" />
+                <NavigationViewItem Content="设置" Tag="settings" ToolTipService.ToolTip="设置">
+                    <NavigationViewItem.Icon>
+                        <SymbolIcon Symbol="Setting" />
+                    </NavigationViewItem.Icon>
+                </NavigationViewItem>
             </NavigationView.FooterMenuItems>
 
-            <Grid Padding="28,20,28,28" RowSpacing="24">
+            <Grid Padding="24,20,24,24" RowSpacing="0">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto" />
                     <RowDefinition Height="*" />
                 </Grid.RowDefinitions>
 
-                <Border Grid.Row="0" Style="{StaticResource AppCard}">
-                    <Grid ColumnSpacing="20">
+                <!-- 顶部栏：标题 + 服务状态 + 主题 -->
+                <Border
+                    Grid.Row="0"
+                    Margin="0,0,0,16"
+                    Padding="20,14"
+                    Background="{StaticResource CardBackgroundBrush}"
+                    BorderBrush="{StaticResource AppBorderBrush}"
+                    BorderThickness="0,0,0,1"
+                    CornerRadius="0">
+                    <Grid ColumnSpacing="16">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*" />
                             <ColumnDefinition Width="Auto" />
                         </Grid.ColumnDefinitions>
-
-                        <StackPanel Spacing="6">
-                            <TextBlock Text="把多平台 OJ 提交沉淀成真正可复用的复盘资产" Style="{StaticResource PageTitle}" />
+                        <StackPanel VerticalAlignment="Center">
                             <TextBlock
-                                Text="统一同步 Codeforces、AtCoder 与手动录题数据，在一个本地工作台里完成筛选、复盘、分析与追踪。"
-                                Style="{StaticResource PageDescription}" />
+                                x:Name="ServiceStatusText"
+                                Style="{StaticResource MutedCaption}"
+                                Text="正在检查服务…" />
+                            <StackPanel Orientation="Horizontal" Spacing="8" Margin="0,4,0,0">
+                                <Border
+                                    Background="{Binding Text, ElementName=ServiceStatusTone, Converter={StaticResource SyncStatusBrushConverter}, ConverterParameter=background}"
+                                    CornerRadius="6"
+                                    Padding="8,4">
+                                    <TextBlock
+                                        x:Name="ServiceStatusTone"
+                                        FontFamily="{StaticResource AppMonoFontFamily}"
+                                        FontSize="11"
+                                        FontWeight="SemiBold"
+                                        Foreground="{Binding Text, ElementName=ServiceStatusTone, Converter={StaticResource SyncStatusBrushConverter}, ConverterParameter=foreground}"
+                                        Text="—" />
+                                </Border>
+                            </StackPanel>
                         </StackPanel>
-
-                        <StackPanel Grid.Column="1" HorizontalAlignment="Right" Spacing="10">
-                            <TextBlock x:Name="ServiceStatusText" HorizontalAlignment="Right" Style="{StaticResource MutedCaption}" />
-                            <Border
-                                Background="{Binding Text, ElementName=ServiceStatusTone, Converter={StaticResource SyncStatusBrushConverter}, ConverterParameter=background}"
-                                CornerRadius="999"
-                                Padding="10,4">
-                                <TextBlock
-                                    x:Name="ServiceStatusTone"
-                                    FontFamily="{StaticResource AppMonoFontFamily}"
-                                    FontSize="12"
-                                    FontWeight="SemiBold"
-                                    Foreground="{Binding Text, ElementName=ServiceStatusTone, Converter={StaticResource SyncStatusBrushConverter}, ConverterParameter=foreground}"
-                                    Text="RUNNING" />
-                            </Border>
-                            <ComboBox
-                                x:Name="ThemeModeBox"
-                                MinWidth="156"
-                                SelectedIndex="0"
-                                SelectionChanged="ThemeModeBox_SelectionChanged"
-                                Style="{StaticResource InputComboBoxStyle}">
-                                <ComboBoxItem Content="跟随系统" Tag="follow-system" />
-                                <ComboBoxItem Content="浅色模式" Tag="light" />
-                                <ComboBoxItem Content="深色模式" Tag="dark" />
-                            </ComboBox>
-                        </StackPanel>
+                        <ComboBox
+                            x:Name="ThemeModeBox"
+                            Grid.Column="1"
+                            MinWidth="140"
+                            VerticalAlignment="Center"
+                            SelectedIndex="0"
+                            SelectionChanged="ThemeModeBox_SelectionChanged"
+                            Style="{StaticResource InputComboBoxStyle}">
+                            <ComboBoxItem Content="跟随系统" Tag="follow-system" />
+                            <ComboBoxItem Content="浅色" Tag="light" />
+                            <ComboBoxItem Content="深色" Tag="dark" />
+                        </ComboBox>
                     </Grid>
                 </Border>
 
-                <Border Grid.Row="1" Background="{StaticResource SurfaceBackgroundBrush}" BorderBrush="{StaticResource AppBorderBrush}" BorderThickness="1" CornerRadius="24" Padding="8">
+                <Border
+                    Grid.Row="1"
+                    Background="{StaticResource SurfaceBackgroundBrush}"
+                    BorderBrush="{StaticResource AppBorderBrush}"
+                    BorderThickness="1"
+                    CornerRadius="16"
+                    Padding="0">
                     <Frame x:Name="ContentFrame" />
                 </Border>
             </Grid>

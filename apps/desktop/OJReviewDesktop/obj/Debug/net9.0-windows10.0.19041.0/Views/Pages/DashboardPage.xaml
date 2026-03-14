@@ -5,19 +5,19 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:models="using:OJReviewDesktop.Models">
     <ScrollViewer VerticalScrollBarVisibility="Auto">
-        <StackPanel Spacing="24" Padding="12">
-            <Grid>
+        <StackPanel Padding="12" Spacing="24">
+            <Grid ColumnSpacing="16">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
-                <StackPanel Spacing="6">
-                    <TextBlock Text="总览" Style="{StaticResource PageTitle}" />
+                <StackPanel Spacing="8">
+                    <TextBlock Style="{StaticResource PageTitle}" Text="总览" />
                     <TextBlock x:ConnectionId='20' x:Name="OwnerText" Style="{StaticResource PageDescription}" />
                 </StackPanel>
                 <CommandBar Grid.Column="1" DefaultLabelPosition="Right">
-                    <AppBarButton x:ConnectionId='18' Label="刷新" Icon="Refresh"                             />
-                    <AppBarButton x:ConnectionId='19' Label="同步比赛" Icon="Calendar"                                  />
+                    <AppBarButton x:ConnectionId='18'                             Icon="Refresh" Label="刷新" />
+                    <AppBarButton x:ConnectionId='19'                                  Icon="Calendar" Label="同步比赛" />
                 </CommandBar>
             </Grid>
 
@@ -29,15 +29,15 @@
                 </Grid.ColumnDefinitions>
 
                 <StackPanel Grid.Column="0" Spacing="6">
-                    <TextBlock Text="总提交数" Style="{StaticResource MetricLabel}" />
+                    <TextBlock Style="{StaticResource MetricLabel}" Text="总提交数" />
                     <TextBlock x:ConnectionId='17' x:Name="TotalSubmissionsText" Style="{StaticResource MetricValue}" Text="0" />
                 </StackPanel>
                 <StackPanel Grid.Column="1" Spacing="6">
-                    <TextBlock Text="通过率" Style="{StaticResource MetricLabel}" />
+                    <TextBlock Style="{StaticResource MetricLabel}" Text="通过率" />
                     <TextBlock x:ConnectionId='16' x:Name="AcRateText" Style="{StaticResource MetricValue}" Text="0%" />
                 </StackPanel>
                 <StackPanel Grid.Column="2" Spacing="6">
-                    <TextBlock Text="重复出错题" Style="{StaticResource MetricLabel}" />
+                    <TextBlock Style="{StaticResource MetricLabel}" Text="重复出错题" />
                     <TextBlock x:ConnectionId='15' x:Name="RepeatedFailuresText" Style="{StaticResource MetricValue}" Text="0" />
                 </StackPanel>
             </Grid>
@@ -45,8 +45,8 @@
             <StackPanel x:ConnectionId='2' x:Name="LoadingStatePanel" Spacing="24">
                 <Border Style="{StaticResource AppCard}">
                     <StackPanel Spacing="16">
-                        <Rectangle Style="{StaticResource SkeletonBlock}" Width="220" Height="22" />
-                        <Rectangle Style="{StaticResource SkeletonBlock}" Height="160" />
+                        <Rectangle Width="220" Height="20" Style="{StaticResource SkeletonBlock}" />
+                        <Rectangle Height="180" Style="{StaticResource SkeletonBlock}" />
                     </StackPanel>
                 </Border>
                 <Grid ColumnSpacing="24">
@@ -56,14 +56,14 @@
                     </Grid.ColumnDefinitions>
                     <Border Grid.Column="0" Style="{StaticResource AppCard}">
                         <StackPanel Spacing="12">
-                            <Rectangle Style="{StaticResource SkeletonBlock}" Width="160" Height="18" />
-                            <Rectangle Style="{StaticResource SkeletonBlock}" Height="180" />
+                            <Rectangle Width="180" Height="18" Style="{StaticResource SkeletonBlock}" />
+                            <Rectangle Height="220" Style="{StaticResource SkeletonBlock}" />
                         </StackPanel>
                     </Border>
                     <Border Grid.Column="1" Style="{StaticResource AppCard}">
                         <StackPanel Spacing="12">
-                            <Rectangle Style="{StaticResource SkeletonBlock}" Width="160" Height="18" />
-                            <Rectangle Style="{StaticResource SkeletonBlock}" Height="180" />
+                            <Rectangle Width="180" Height="18" Style="{StaticResource SkeletonBlock}" />
+                            <Rectangle Height="220" Style="{StaticResource SkeletonBlock}" />
                         </StackPanel>
                     </Border>
                 </Grid>
@@ -71,10 +71,10 @@
 
             <StackPanel x:ConnectionId='3' x:Name="ContentPanel" Spacing="24" Visibility="Collapsed">
                 <Border Style="{StaticResource AppCard}">
-                    <StackPanel Spacing="16">
+                    <StackPanel Spacing="18">
                         <StackPanel Spacing="4">
-                            <TextBlock Text="近 14 天提交趋势" Style="{StaticResource SectionTitle}" />
-                            <TextBlock Text="用提交节奏判断训练稳定性，观察最近是否断档。" Style="{StaticResource PageDescription}" />
+                            <TextBlock Style="{StaticResource SectionTitle}" Text="近 14 天提交趋势" />
+                            <TextBlock Style="{StaticResource PageDescription}" Text="用提交节奏判断训练稳定性，观察最近是否断档。" />
                         </StackPanel>
                         <ItemsControl x:ConnectionId='12' x:Name="SubmissionTrendItems">
                             <ItemsControl.ItemsPanel>
@@ -84,14 +84,17 @@
                             </ItemsControl.ItemsPanel>
                             <ItemsControl.ItemTemplate>
                                 <DataTemplate                               >
-                                    <StackPanel Width="42" Margin="0,0,10,0" VerticalAlignment="Bottom" Spacing="8">
+                                    <StackPanel Width="44" Margin="0,0,10,0" Spacing="8" VerticalAlignment="Bottom">
                                         <Border
                                             Height="{Binding Height}"
-                                            MinHeight="8"
-                                            VerticalAlignment="Bottom"
+                                            MinHeight="10"
                                             Background="{StaticResource AccentBrush}"
-                                            CornerRadius="8" />
-                                        <TextBlock Text="{Binding Label}" FontFamily="{StaticResource AppMonoFontFamily}" HorizontalAlignment="Center" Style="{StaticResource MutedCaption}" />
+                                            CornerRadius="8"
+                                            VerticalAlignment="Bottom" />
+                                        <TextBlock
+                                            HorizontalAlignment="Center"
+                                            Style="{StaticResource MutedCaption}"
+                                            Text="{Binding Label}" />
                                     </StackPanel>
                                 </DataTemplate>
                             </ItemsControl.ItemTemplate>
@@ -101,35 +104,45 @@
 
                 <Grid ColumnSpacing="24">
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="1.2*" />
-                        <ColumnDefinition Width="0.8*" />
+                        <ColumnDefinition Width="1.15*" />
+                        <ColumnDefinition Width="0.85*" />
                     </Grid.ColumnDefinitions>
 
                     <Border Grid.Column="0" Style="{StaticResource AppCard}">
                         <StackPanel Spacing="16">
                             <StackPanel Spacing="4">
-                                <TextBlock Text="薄弱标签" Style="{StaticResource SectionTitle}" />
-                                <TextBlock Text="优先观察失败频率高、通过率低的方向。" Style="{StaticResource PageDescription}" />
+                                <TextBlock Style="{StaticResource SectionTitle}" Text="薄弱标签" />
+                                <TextBlock Style="{StaticResource PageDescription}" Text="优先观察失败频率高、通过率低的方向。" />
                             </StackPanel>
+
                             <ItemsControl x:ConnectionId='7' x:Name="WeakTagChartItems">
                                 <ItemsControl.ItemTemplate>
                                     <DataTemplate                                      >
-                                        <Grid Margin="0,0,0,10" ColumnSpacing="12">
+                                        <Grid Margin="0,0,0,12" ColumnSpacing="12">
                                             <Grid.ColumnDefinitions>
-                                                <ColumnDefinition Width="120" />
+                                                <ColumnDefinition Width="130" />
                                                 <ColumnDefinition Width="*" />
                                                 <ColumnDefinition Width="64" />
                                             </Grid.ColumnDefinitions>
-                                            <TextBlock Text="{Binding Label}" VerticalAlignment="Center" Style="{StaticResource MutedCaption}" />
-                                            <Border Grid.Column="1" Height="10" Background="{StaticResource SurfaceBackgroundBrush}" CornerRadius="999" VerticalAlignment="Center">
-                                                <Border Width="{Binding Width}" HorizontalAlignment="Left" Background="{StaticResource AccentBrush}" CornerRadius="999" />
+                                            <TextBlock Style="{StaticResource MutedCaption}" Text="{Binding Label}" VerticalAlignment="Center" />
+                                            <Border Grid.Column="1" Background="{StaticResource SurfaceBackgroundBrush}" CornerRadius="999" Height="10" VerticalAlignment="Center">
+                                                <Border
+                                                    Width="{Binding Width}"
+                                                    HorizontalAlignment="Left"
+                                                    Background="{StaticResource AccentBrush}"
+                                                    CornerRadius="999" />
                                             </Border>
-                                            <TextBlock Grid.Column="2" Text="{Binding ValueText}" FontFamily="{StaticResource AppMonoFontFamily}" HorizontalAlignment="Right" />
+                                            <TextBlock
+                                                Grid.Column="2"
+                                                FontFamily="{StaticResource AppMonoFontFamily}"
+                                                HorizontalAlignment="Right"
+                                                Text="{Binding ValueText}" />
                                         </Grid>
                                     </DataTemplate>
                                 </ItemsControl.ItemTemplate>
                             </ItemsControl>
-                            <ListView x:ConnectionId='8' x:Name="WeakTagsList" MaxHeight="220">
+
+                            <ListView x:ConnectionId='8' x:Name="WeakTagsList" MaxHeight="240">
                                 <ListView.ItemTemplate>
                                     <DataTemplate>
                                         <Grid Margin="0,0,0,12" ColumnSpacing="12">
@@ -138,10 +151,14 @@
                                                 <ColumnDefinition Width="Auto" />
                                             </Grid.ColumnDefinitions>
                                             <StackPanel Spacing="4">
-                                                <TextBlock Text="{Binding Tag}" FontWeight="SemiBold" />
-                                                <TextBlock Text="{Binding AttemptsText}" Style="{StaticResource MutedCaption}" />
+                                                <TextBlock FontWeight="SemiBold" Text="{Binding Tag}" />
+                                                <TextBlock Style="{StaticResource MutedCaption}" Text="{Binding AttemptsText}" />
                                             </StackPanel>
-                                            <TextBlock Grid.Column="1" Text="{Binding AcRateText}" FontFamily="{StaticResource AppMonoFontFamily}" VerticalAlignment="Center" />
+                                            <TextBlock
+                                                Grid.Column="1"
+                                                FontFamily="{StaticResource AppMonoFontFamily}"
+                                                Text="{Binding AcRateText}"
+                                                VerticalAlignment="Center" />
                                         </Grid>
                                     </DataTemplate>
                                 </ListView.ItemTemplate>
@@ -152,21 +169,21 @@
                     <Border Grid.Column="1" Style="{StaticResource AppCard}">
                         <StackPanel Spacing="16">
                             <StackPanel Spacing="4">
-                                <TextBlock Text="近期比赛" Style="{StaticResource SectionTitle}" />
-                                <TextBlock Text="只展示应用内比赛日历，不做系统提醒。" Style="{StaticResource PageDescription}" />
+                                <TextBlock Style="{StaticResource SectionTitle}" Text="近期比赛" />
+                                <TextBlock Style="{StaticResource PageDescription}" Text="只展示应用内比赛日历，不做系统提醒。" />
                             </StackPanel>
-                            <ListView x:ConnectionId='5' x:Name="UpcomingContestsList" MaxHeight="520">
+                            <ListView x:ConnectionId='5' x:Name="UpcomingContestsList" MaxHeight="540">
                                 <ListView.ItemTemplate>
                                     <DataTemplate>
-                                        <Border Margin="0,0,0,12" Style="{StaticResource SoftPanel}" Padding="16">
-                                            <StackPanel Spacing="6">
+                                        <Border Margin="0,0,0,12" Style="{StaticResource SoftPanel}">
+                                            <StackPanel Spacing="8">
                                                 <StackPanel Orientation="Horizontal" Spacing="8">
-                                                    <FontIcon Glyph="&#xECA7;" Foreground="{StaticResource AccentBrush}" />
-                                                    <TextBlock Text="{Binding PlatformText}" Style="{StaticResource MutedCaption}" />
+                                                    <FontIcon Foreground="{StaticResource AccentBrush}" Glyph="&#xE787;" />
+                                                    <TextBlock Style="{StaticResource MutedCaption}" Text="{Binding PlatformText}" />
                                                 </StackPanel>
-                                                <TextBlock Text="{Binding Name}" FontWeight="SemiBold" TextWrapping="WrapWholeWords" />
-                                                <TextBlock Text="{Binding StartText}" FontFamily="{StaticResource AppMonoFontFamily}" />
-                                                <TextBlock Text="{Binding DurationText}" Style="{StaticResource MutedCaption}" />
+                                                <TextBlock FontWeight="SemiBold" Text="{Binding Name}" TextWrapping="WrapWholeWords" />
+                                                <TextBlock FontFamily="{StaticResource AppMonoFontFamily}" Text="{Binding StartText}" />
+                                                <TextBlock Style="{StaticResource MutedCaption}" Text="{Binding DurationText}" />
                                             </StackPanel>
                                         </Border>
                                     </DataTemplate>

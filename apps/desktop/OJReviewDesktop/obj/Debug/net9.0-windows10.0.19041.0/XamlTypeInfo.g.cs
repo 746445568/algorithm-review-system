@@ -226,7 +226,7 @@ namespace OJReviewDesktop.OJReviewDesktop_XamlTypeInfo
         
         private void InitTypeTables()
         {
-            _typeNameTable = new string[54];
+            _typeNameTable = new string[56];
             _typeNameTable[0] = "Microsoft.UI.Xaml.Controls.XamlControlsResources";
             _typeNameTable[1] = "Microsoft.UI.Xaml.ResourceDictionary";
             _typeNameTable[2] = "Object";
@@ -239,9 +239,9 @@ namespace OJReviewDesktop.OJReviewDesktop_XamlTypeInfo
             _typeNameTable[9] = "OJReviewDesktop.Converters.StringVisibilityConverter";
             _typeNameTable[10] = "Microsoft.UI.Xaml.Controls.NavigationView";
             _typeNameTable[11] = "Microsoft.UI.Xaml.Controls.ContentControl";
-            _typeNameTable[12] = "Microsoft.UI.Xaml.Controls.NavigationViewBackButtonVisible";
-            _typeNameTable[13] = "System.Enum";
-            _typeNameTable[14] = "Double";
+            _typeNameTable[12] = "Double";
+            _typeNameTable[13] = "Microsoft.UI.Xaml.Controls.NavigationViewBackButtonVisible";
+            _typeNameTable[14] = "System.Enum";
             _typeNameTable[15] = "Microsoft.UI.Xaml.Controls.NavigationViewPaneDisplayMode";
             _typeNameTable[16] = "Microsoft.UI.Xaml.UIElement";
             _typeNameTable[17] = "System.Collections.Generic.IList`1<Object>";
@@ -271,18 +271,20 @@ namespace OJReviewDesktop.OJReviewDesktop_XamlTypeInfo
             _typeNameTable[41] = "System.Windows.Input.ICommand";
             _typeNameTable[42] = "Microsoft.UI.Xaml.Controls.IconSource";
             _typeNameTable[43] = "Microsoft.UI.Xaml.Controls.InfoBarTemplateSettings";
-            _typeNameTable[44] = "OJReviewDesktop.Views.Pages.AccountsPage";
-            _typeNameTable[45] = "OJReviewDesktop.Views.Pages.AnalysisPage";
-            _typeNameTable[46] = "OJReviewDesktop.Views.Pages.DashboardPage";
-            _typeNameTable[47] = "OJReviewDesktop.Views.Pages.ProblemsPage";
-            _typeNameTable[48] = "OJReviewDesktop.Views.Pages.ReviewPage";
-            _typeNameTable[49] = "OJReviewDesktop.Views.Pages.SettingsPage";
-            _typeNameTable[50] = "OJReviewDesktop.Views.Pages.SubmissionsPage";
-            _typeNameTable[51] = "Microsoft.UI.Xaml.Controls.TreeViewNode";
-            _typeNameTable[52] = "System.Collections.Generic.IList`1<Microsoft.UI.Xaml.Controls.TreeViewNode>";
-            _typeNameTable[53] = "Int32";
+            _typeNameTable[44] = "Microsoft.UI.Xaml.Controls.ProgressRing";
+            _typeNameTable[45] = "Microsoft.UI.Xaml.Controls.ProgressRingTemplateSettings";
+            _typeNameTable[46] = "OJReviewDesktop.Views.Pages.AccountsPage";
+            _typeNameTable[47] = "OJReviewDesktop.Views.Pages.AnalysisPage";
+            _typeNameTable[48] = "OJReviewDesktop.Views.Pages.DashboardPage";
+            _typeNameTable[49] = "OJReviewDesktop.Views.Pages.ProblemsPage";
+            _typeNameTable[50] = "OJReviewDesktop.Views.Pages.ReviewPage";
+            _typeNameTable[51] = "OJReviewDesktop.Views.Pages.SettingsPage";
+            _typeNameTable[52] = "OJReviewDesktop.Views.Pages.SubmissionsPage";
+            _typeNameTable[53] = "Microsoft.UI.Xaml.Controls.TreeViewNode";
+            _typeNameTable[54] = "System.Collections.Generic.IList`1<Microsoft.UI.Xaml.Controls.TreeViewNode>";
+            _typeNameTable[55] = "Int32";
 
-            _typeTable = new global::System.Type[54];
+            _typeTable = new global::System.Type[56];
             _typeTable[0] = typeof(global::Microsoft.UI.Xaml.Controls.XamlControlsResources);
             _typeTable[1] = typeof(global::Microsoft.UI.Xaml.ResourceDictionary);
             _typeTable[2] = typeof(global::System.Object);
@@ -295,9 +297,9 @@ namespace OJReviewDesktop.OJReviewDesktop_XamlTypeInfo
             _typeTable[9] = typeof(global::OJReviewDesktop.Converters.StringVisibilityConverter);
             _typeTable[10] = typeof(global::Microsoft.UI.Xaml.Controls.NavigationView);
             _typeTable[11] = typeof(global::Microsoft.UI.Xaml.Controls.ContentControl);
-            _typeTable[12] = typeof(global::Microsoft.UI.Xaml.Controls.NavigationViewBackButtonVisible);
-            _typeTable[13] = typeof(global::System.Enum);
-            _typeTable[14] = typeof(global::System.Double);
+            _typeTable[12] = typeof(global::System.Double);
+            _typeTable[13] = typeof(global::Microsoft.UI.Xaml.Controls.NavigationViewBackButtonVisible);
+            _typeTable[14] = typeof(global::System.Enum);
             _typeTable[15] = typeof(global::Microsoft.UI.Xaml.Controls.NavigationViewPaneDisplayMode);
             _typeTable[16] = typeof(global::Microsoft.UI.Xaml.UIElement);
             _typeTable[17] = typeof(global::System.Collections.Generic.IList<global::System.Object>);
@@ -327,16 +329,18 @@ namespace OJReviewDesktop.OJReviewDesktop_XamlTypeInfo
             _typeTable[41] = typeof(global::System.Windows.Input.ICommand);
             _typeTable[42] = typeof(global::Microsoft.UI.Xaml.Controls.IconSource);
             _typeTable[43] = typeof(global::Microsoft.UI.Xaml.Controls.InfoBarTemplateSettings);
-            _typeTable[44] = typeof(global::OJReviewDesktop.Views.Pages.AccountsPage);
-            _typeTable[45] = typeof(global::OJReviewDesktop.Views.Pages.AnalysisPage);
-            _typeTable[46] = typeof(global::OJReviewDesktop.Views.Pages.DashboardPage);
-            _typeTable[47] = typeof(global::OJReviewDesktop.Views.Pages.ProblemsPage);
-            _typeTable[48] = typeof(global::OJReviewDesktop.Views.Pages.ReviewPage);
-            _typeTable[49] = typeof(global::OJReviewDesktop.Views.Pages.SettingsPage);
-            _typeTable[50] = typeof(global::OJReviewDesktop.Views.Pages.SubmissionsPage);
-            _typeTable[51] = typeof(global::Microsoft.UI.Xaml.Controls.TreeViewNode);
-            _typeTable[52] = typeof(global::System.Collections.Generic.IList<global::Microsoft.UI.Xaml.Controls.TreeViewNode>);
-            _typeTable[53] = typeof(global::System.Int32);
+            _typeTable[44] = typeof(global::Microsoft.UI.Xaml.Controls.ProgressRing);
+            _typeTable[45] = typeof(global::Microsoft.UI.Xaml.Controls.ProgressRingTemplateSettings);
+            _typeTable[46] = typeof(global::OJReviewDesktop.Views.Pages.AccountsPage);
+            _typeTable[47] = typeof(global::OJReviewDesktop.Views.Pages.AnalysisPage);
+            _typeTable[48] = typeof(global::OJReviewDesktop.Views.Pages.DashboardPage);
+            _typeTable[49] = typeof(global::OJReviewDesktop.Views.Pages.ProblemsPage);
+            _typeTable[50] = typeof(global::OJReviewDesktop.Views.Pages.ReviewPage);
+            _typeTable[51] = typeof(global::OJReviewDesktop.Views.Pages.SettingsPage);
+            _typeTable[52] = typeof(global::OJReviewDesktop.Views.Pages.SubmissionsPage);
+            _typeTable[53] = typeof(global::Microsoft.UI.Xaml.Controls.TreeViewNode);
+            _typeTable[54] = typeof(global::System.Collections.Generic.IList<global::Microsoft.UI.Xaml.Controls.TreeViewNode>);
+            _typeTable[55] = typeof(global::System.Int32);
         }
 
         private int LookupTypeIndexByName(string typeName)
@@ -382,14 +386,15 @@ namespace OJReviewDesktop.OJReviewDesktop_XamlTypeInfo
         private object Activate_35_MainPage() { return new global::OJReviewDesktop.Views.MainPage(); }
         private object Activate_38_InfoBar() { return new global::Microsoft.UI.Xaml.Controls.InfoBar(); }
         private object Activate_43_InfoBarTemplateSettings() { return new global::Microsoft.UI.Xaml.Controls.InfoBarTemplateSettings(); }
-        private object Activate_44_AccountsPage() { return new global::OJReviewDesktop.Views.Pages.AccountsPage(); }
-        private object Activate_45_AnalysisPage() { return new global::OJReviewDesktop.Views.Pages.AnalysisPage(); }
-        private object Activate_46_DashboardPage() { return new global::OJReviewDesktop.Views.Pages.DashboardPage(); }
-        private object Activate_47_ProblemsPage() { return new global::OJReviewDesktop.Views.Pages.ProblemsPage(); }
-        private object Activate_48_ReviewPage() { return new global::OJReviewDesktop.Views.Pages.ReviewPage(); }
-        private object Activate_49_SettingsPage() { return new global::OJReviewDesktop.Views.Pages.SettingsPage(); }
-        private object Activate_50_SubmissionsPage() { return new global::OJReviewDesktop.Views.Pages.SubmissionsPage(); }
-        private object Activate_51_TreeViewNode() { return new global::Microsoft.UI.Xaml.Controls.TreeViewNode(); }
+        private object Activate_44_ProgressRing() { return new global::Microsoft.UI.Xaml.Controls.ProgressRing(); }
+        private object Activate_46_AccountsPage() { return new global::OJReviewDesktop.Views.Pages.AccountsPage(); }
+        private object Activate_47_AnalysisPage() { return new global::OJReviewDesktop.Views.Pages.AnalysisPage(); }
+        private object Activate_48_DashboardPage() { return new global::OJReviewDesktop.Views.Pages.DashboardPage(); }
+        private object Activate_49_ProblemsPage() { return new global::OJReviewDesktop.Views.Pages.ProblemsPage(); }
+        private object Activate_50_ReviewPage() { return new global::OJReviewDesktop.Views.Pages.ReviewPage(); }
+        private object Activate_51_SettingsPage() { return new global::OJReviewDesktop.Views.Pages.SettingsPage(); }
+        private object Activate_52_SubmissionsPage() { return new global::OJReviewDesktop.Views.Pages.SubmissionsPage(); }
+        private object Activate_53_TreeViewNode() { return new global::Microsoft.UI.Xaml.Controls.TreeViewNode(); }
         private void StaticInitializer_0_XamlControlsResources() => global::System.Runtime.CompilerServices.RuntimeHelpers.RunClassConstructor(typeof(global::Microsoft.UI.Xaml.Controls.XamlControlsResources).TypeHandle);
         private void StaticInitializer_4_Color() => global::System.Runtime.CompilerServices.RuntimeHelpers.RunClassConstructor(typeof(global::Windows.UI.Color).TypeHandle);
         private void StaticInitializer_5_ValueType() => global::System.Runtime.CompilerServices.RuntimeHelpers.RunClassConstructor(typeof(global::System.ValueType).TypeHandle);
@@ -398,8 +403,8 @@ namespace OJReviewDesktop.OJReviewDesktop_XamlTypeInfo
         private void StaticInitializer_8_SyncStatusBrushConverter() => global::System.Runtime.CompilerServices.RuntimeHelpers.RunClassConstructor(typeof(global::OJReviewDesktop.Converters.SyncStatusBrushConverter).TypeHandle);
         private void StaticInitializer_9_StringVisibilityConverter() => global::System.Runtime.CompilerServices.RuntimeHelpers.RunClassConstructor(typeof(global::OJReviewDesktop.Converters.StringVisibilityConverter).TypeHandle);
         private void StaticInitializer_10_NavigationView() => global::System.Runtime.CompilerServices.RuntimeHelpers.RunClassConstructor(typeof(global::Microsoft.UI.Xaml.Controls.NavigationView).TypeHandle);
-        private void StaticInitializer_12_NavigationViewBackButtonVisible() => global::System.Runtime.CompilerServices.RuntimeHelpers.RunClassConstructor(typeof(global::Microsoft.UI.Xaml.Controls.NavigationViewBackButtonVisible).TypeHandle);
-        private void StaticInitializer_13_Enum() => global::System.Runtime.CompilerServices.RuntimeHelpers.RunClassConstructor(typeof(global::System.Enum).TypeHandle);
+        private void StaticInitializer_13_NavigationViewBackButtonVisible() => global::System.Runtime.CompilerServices.RuntimeHelpers.RunClassConstructor(typeof(global::Microsoft.UI.Xaml.Controls.NavigationViewBackButtonVisible).TypeHandle);
+        private void StaticInitializer_14_Enum() => global::System.Runtime.CompilerServices.RuntimeHelpers.RunClassConstructor(typeof(global::System.Enum).TypeHandle);
         private void StaticInitializer_15_NavigationViewPaneDisplayMode() => global::System.Runtime.CompilerServices.RuntimeHelpers.RunClassConstructor(typeof(global::Microsoft.UI.Xaml.Controls.NavigationViewPaneDisplayMode).TypeHandle);
         private void StaticInitializer_17_IList() => global::System.Runtime.CompilerServices.RuntimeHelpers.RunClassConstructor(typeof(global::System.Collections.Generic.IList<global::System.Object>).TypeHandle);
         private void StaticInitializer_19_NavigationViewDisplayMode() => global::System.Runtime.CompilerServices.RuntimeHelpers.RunClassConstructor(typeof(global::Microsoft.UI.Xaml.Controls.NavigationViewDisplayMode).TypeHandle);
@@ -415,15 +420,17 @@ namespace OJReviewDesktop.OJReviewDesktop_XamlTypeInfo
         private void StaticInitializer_39_InfoBarSeverity() => global::System.Runtime.CompilerServices.RuntimeHelpers.RunClassConstructor(typeof(global::Microsoft.UI.Xaml.Controls.InfoBarSeverity).TypeHandle);
         private void StaticInitializer_41_ICommand() => global::System.Runtime.CompilerServices.RuntimeHelpers.RunClassConstructor(typeof(global::System.Windows.Input.ICommand).TypeHandle);
         private void StaticInitializer_43_InfoBarTemplateSettings() => global::System.Runtime.CompilerServices.RuntimeHelpers.RunClassConstructor(typeof(global::Microsoft.UI.Xaml.Controls.InfoBarTemplateSettings).TypeHandle);
-        private void StaticInitializer_44_AccountsPage() => global::System.Runtime.CompilerServices.RuntimeHelpers.RunClassConstructor(typeof(global::OJReviewDesktop.Views.Pages.AccountsPage).TypeHandle);
-        private void StaticInitializer_45_AnalysisPage() => global::System.Runtime.CompilerServices.RuntimeHelpers.RunClassConstructor(typeof(global::OJReviewDesktop.Views.Pages.AnalysisPage).TypeHandle);
-        private void StaticInitializer_46_DashboardPage() => global::System.Runtime.CompilerServices.RuntimeHelpers.RunClassConstructor(typeof(global::OJReviewDesktop.Views.Pages.DashboardPage).TypeHandle);
-        private void StaticInitializer_47_ProblemsPage() => global::System.Runtime.CompilerServices.RuntimeHelpers.RunClassConstructor(typeof(global::OJReviewDesktop.Views.Pages.ProblemsPage).TypeHandle);
-        private void StaticInitializer_48_ReviewPage() => global::System.Runtime.CompilerServices.RuntimeHelpers.RunClassConstructor(typeof(global::OJReviewDesktop.Views.Pages.ReviewPage).TypeHandle);
-        private void StaticInitializer_49_SettingsPage() => global::System.Runtime.CompilerServices.RuntimeHelpers.RunClassConstructor(typeof(global::OJReviewDesktop.Views.Pages.SettingsPage).TypeHandle);
-        private void StaticInitializer_50_SubmissionsPage() => global::System.Runtime.CompilerServices.RuntimeHelpers.RunClassConstructor(typeof(global::OJReviewDesktop.Views.Pages.SubmissionsPage).TypeHandle);
-        private void StaticInitializer_51_TreeViewNode() => global::System.Runtime.CompilerServices.RuntimeHelpers.RunClassConstructor(typeof(global::Microsoft.UI.Xaml.Controls.TreeViewNode).TypeHandle);
-        private void StaticInitializer_52_IList() => global::System.Runtime.CompilerServices.RuntimeHelpers.RunClassConstructor(typeof(global::System.Collections.Generic.IList<global::Microsoft.UI.Xaml.Controls.TreeViewNode>).TypeHandle);
+        private void StaticInitializer_44_ProgressRing() => global::System.Runtime.CompilerServices.RuntimeHelpers.RunClassConstructor(typeof(global::Microsoft.UI.Xaml.Controls.ProgressRing).TypeHandle);
+        private void StaticInitializer_45_ProgressRingTemplateSettings() => global::System.Runtime.CompilerServices.RuntimeHelpers.RunClassConstructor(typeof(global::Microsoft.UI.Xaml.Controls.ProgressRingTemplateSettings).TypeHandle);
+        private void StaticInitializer_46_AccountsPage() => global::System.Runtime.CompilerServices.RuntimeHelpers.RunClassConstructor(typeof(global::OJReviewDesktop.Views.Pages.AccountsPage).TypeHandle);
+        private void StaticInitializer_47_AnalysisPage() => global::System.Runtime.CompilerServices.RuntimeHelpers.RunClassConstructor(typeof(global::OJReviewDesktop.Views.Pages.AnalysisPage).TypeHandle);
+        private void StaticInitializer_48_DashboardPage() => global::System.Runtime.CompilerServices.RuntimeHelpers.RunClassConstructor(typeof(global::OJReviewDesktop.Views.Pages.DashboardPage).TypeHandle);
+        private void StaticInitializer_49_ProblemsPage() => global::System.Runtime.CompilerServices.RuntimeHelpers.RunClassConstructor(typeof(global::OJReviewDesktop.Views.Pages.ProblemsPage).TypeHandle);
+        private void StaticInitializer_50_ReviewPage() => global::System.Runtime.CompilerServices.RuntimeHelpers.RunClassConstructor(typeof(global::OJReviewDesktop.Views.Pages.ReviewPage).TypeHandle);
+        private void StaticInitializer_51_SettingsPage() => global::System.Runtime.CompilerServices.RuntimeHelpers.RunClassConstructor(typeof(global::OJReviewDesktop.Views.Pages.SettingsPage).TypeHandle);
+        private void StaticInitializer_52_SubmissionsPage() => global::System.Runtime.CompilerServices.RuntimeHelpers.RunClassConstructor(typeof(global::OJReviewDesktop.Views.Pages.SubmissionsPage).TypeHandle);
+        private void StaticInitializer_53_TreeViewNode() => global::System.Runtime.CompilerServices.RuntimeHelpers.RunClassConstructor(typeof(global::Microsoft.UI.Xaml.Controls.TreeViewNode).TypeHandle);
+        private void StaticInitializer_54_IList() => global::System.Runtime.CompilerServices.RuntimeHelpers.RunClassConstructor(typeof(global::System.Collections.Generic.IList<global::Microsoft.UI.Xaml.Controls.TreeViewNode>).TypeHandle);
         private void MapAdd_0_XamlControlsResources(object instance, object key, object item)
         {
             var collection = (global::System.Collections.Generic.IDictionary<global::System.Object, global::System.Object>)instance;
@@ -437,7 +444,7 @@ namespace OJReviewDesktop.OJReviewDesktop_XamlTypeInfo
             var newItem = (global::System.Object)item;
             collection.Add(newItem);
         }
-        private void VectorAdd_52_IList(object instance, object item)
+        private void VectorAdd_54_IList(object instance, object item)
         {
             var collection = (global::System.Collections.Generic.ICollection<global::Microsoft.UI.Xaml.Controls.TreeViewNode>)instance;
             var newItem = (global::Microsoft.UI.Xaml.Controls.TreeViewNode)item;
@@ -526,7 +533,10 @@ namespace OJReviewDesktop.OJReviewDesktop_XamlTypeInfo
                 userType = new global::OJReviewDesktop.OJReviewDesktop_XamlTypeInfo.XamlUserType(this, typeName, type, GetXamlTypeByName("Microsoft.UI.Xaml.Controls.ContentControl"));
                 userType.Activator = Activate_10_NavigationView;
                 userType.StaticInitializer = StaticInitializer_10_NavigationView;
+                userType.AddMemberName("AlwaysShowHeader");
+                userType.AddMemberName("CompactPaneLength");
                 userType.AddMemberName("IsBackButtonVisible");
+                userType.AddMemberName("IsPaneOpen");
                 userType.AddMemberName("IsPaneToggleButtonVisible");
                 userType.AddMemberName("IsSettingsVisible");
                 userType.AddMemberName("OpenPaneLength");
@@ -534,10 +544,8 @@ namespace OJReviewDesktop.OJReviewDesktop_XamlTypeInfo
                 userType.AddMemberName("PaneHeader");
                 userType.AddMemberName("MenuItems");
                 userType.AddMemberName("FooterMenuItems");
-                userType.AddMemberName("AlwaysShowHeader");
                 userType.AddMemberName("AutoSuggestBox");
                 userType.AddMemberName("CompactModeThresholdWidth");
-                userType.AddMemberName("CompactPaneLength");
                 userType.AddMemberName("ContentOverlay");
                 userType.AddMemberName("DisplayMode");
                 userType.AddMemberName("ExpandedModeThresholdWidth");
@@ -545,7 +553,6 @@ namespace OJReviewDesktop.OJReviewDesktop_XamlTypeInfo
                 userType.AddMemberName("Header");
                 userType.AddMemberName("HeaderTemplate");
                 userType.AddMemberName("IsBackEnabled");
-                userType.AddMemberName("IsPaneOpen");
                 userType.AddMemberName("IsPaneVisible");
                 userType.AddMemberName("IsTitleBarAutoPaddingEnabled");
                 userType.AddMemberName("MenuItemContainerStyle");
@@ -570,23 +577,23 @@ namespace OJReviewDesktop.OJReviewDesktop_XamlTypeInfo
                 xamlType = new global::OJReviewDesktop.OJReviewDesktop_XamlTypeInfo.XamlSystemBaseType(typeName, type);
                 break;
 
-            case 12:   //  Microsoft.UI.Xaml.Controls.NavigationViewBackButtonVisible
+            case 12:   //  Double
+                xamlType = new global::OJReviewDesktop.OJReviewDesktop_XamlTypeInfo.XamlSystemBaseType(typeName, type);
+                break;
+
+            case 13:   //  Microsoft.UI.Xaml.Controls.NavigationViewBackButtonVisible
                 userType = new global::OJReviewDesktop.OJReviewDesktop_XamlTypeInfo.XamlUserType(this, typeName, type, GetXamlTypeByName("System.Enum"));
-                userType.StaticInitializer = StaticInitializer_12_NavigationViewBackButtonVisible;
+                userType.StaticInitializer = StaticInitializer_13_NavigationViewBackButtonVisible;
                 userType.AddEnumValue("Collapsed", global::Microsoft.UI.Xaml.Controls.NavigationViewBackButtonVisible.Collapsed);
                 userType.AddEnumValue("Visible", global::Microsoft.UI.Xaml.Controls.NavigationViewBackButtonVisible.Visible);
                 userType.AddEnumValue("Auto", global::Microsoft.UI.Xaml.Controls.NavigationViewBackButtonVisible.Auto);
                 xamlType = userType;
                 break;
 
-            case 13:   //  System.Enum
+            case 14:   //  System.Enum
                 userType = new global::OJReviewDesktop.OJReviewDesktop_XamlTypeInfo.XamlUserType(this, typeName, type, GetXamlTypeByName("System.ValueType"));
-                userType.StaticInitializer = StaticInitializer_13_Enum;
+                userType.StaticInitializer = StaticInitializer_14_Enum;
                 xamlType = userType;
-                break;
-
-            case 14:   //  Double
-                xamlType = new global::OJReviewDesktop.OJReviewDesktop_XamlTypeInfo.XamlSystemBaseType(typeName, type);
                 break;
 
             case 15:   //  Microsoft.UI.Xaml.Controls.NavigationViewPaneDisplayMode
@@ -789,66 +796,86 @@ namespace OJReviewDesktop.OJReviewDesktop_XamlTypeInfo
                 xamlType = userType;
                 break;
 
-            case 44:   //  OJReviewDesktop.Views.Pages.AccountsPage
-                userType = new global::OJReviewDesktop.OJReviewDesktop_XamlTypeInfo.XamlUserType(this, typeName, type, GetXamlTypeByName("Microsoft.UI.Xaml.Controls.Page"));
-                userType.Activator = Activate_44_AccountsPage;
-                userType.StaticInitializer = StaticInitializer_44_AccountsPage;
-                userType.SetIsLocalType();
+            case 44:   //  Microsoft.UI.Xaml.Controls.ProgressRing
+                userType = new global::OJReviewDesktop.OJReviewDesktop_XamlTypeInfo.XamlUserType(this, typeName, type, GetXamlTypeByName("Microsoft.UI.Xaml.Controls.Control"));
+                userType.Activator = Activate_44_ProgressRing;
+                userType.StaticInitializer = StaticInitializer_44_ProgressRing;
+                userType.AddMemberName("IsActive");
+                userType.AddMemberName("IsIndeterminate");
+                userType.AddMemberName("Maximum");
+                userType.AddMemberName("Minimum");
+                userType.AddMemberName("TemplateSettings");
+                userType.AddMemberName("Value");
                 xamlType = userType;
                 break;
 
-            case 45:   //  OJReviewDesktop.Views.Pages.AnalysisPage
-                userType = new global::OJReviewDesktop.OJReviewDesktop_XamlTypeInfo.XamlUserType(this, typeName, type, GetXamlTypeByName("Microsoft.UI.Xaml.Controls.Page"));
-                userType.Activator = Activate_45_AnalysisPage;
-                userType.StaticInitializer = StaticInitializer_45_AnalysisPage;
-                userType.SetIsLocalType();
-                xamlType = userType;
-                break;
-
-            case 46:   //  OJReviewDesktop.Views.Pages.DashboardPage
-                userType = new global::OJReviewDesktop.OJReviewDesktop_XamlTypeInfo.XamlUserType(this, typeName, type, GetXamlTypeByName("Microsoft.UI.Xaml.Controls.Page"));
-                userType.Activator = Activate_46_DashboardPage;
-                userType.StaticInitializer = StaticInitializer_46_DashboardPage;
-                userType.SetIsLocalType();
-                xamlType = userType;
-                break;
-
-            case 47:   //  OJReviewDesktop.Views.Pages.ProblemsPage
-                userType = new global::OJReviewDesktop.OJReviewDesktop_XamlTypeInfo.XamlUserType(this, typeName, type, GetXamlTypeByName("Microsoft.UI.Xaml.Controls.Page"));
-                userType.Activator = Activate_47_ProblemsPage;
-                userType.StaticInitializer = StaticInitializer_47_ProblemsPage;
-                userType.SetIsLocalType();
-                xamlType = userType;
-                break;
-
-            case 48:   //  OJReviewDesktop.Views.Pages.ReviewPage
-                userType = new global::OJReviewDesktop.OJReviewDesktop_XamlTypeInfo.XamlUserType(this, typeName, type, GetXamlTypeByName("Microsoft.UI.Xaml.Controls.Page"));
-                userType.Activator = Activate_48_ReviewPage;
-                userType.StaticInitializer = StaticInitializer_48_ReviewPage;
-                userType.SetIsLocalType();
-                xamlType = userType;
-                break;
-
-            case 49:   //  OJReviewDesktop.Views.Pages.SettingsPage
-                userType = new global::OJReviewDesktop.OJReviewDesktop_XamlTypeInfo.XamlUserType(this, typeName, type, GetXamlTypeByName("Microsoft.UI.Xaml.Controls.Page"));
-                userType.Activator = Activate_49_SettingsPage;
-                userType.StaticInitializer = StaticInitializer_49_SettingsPage;
-                userType.SetIsLocalType();
-                xamlType = userType;
-                break;
-
-            case 50:   //  OJReviewDesktop.Views.Pages.SubmissionsPage
-                userType = new global::OJReviewDesktop.OJReviewDesktop_XamlTypeInfo.XamlUserType(this, typeName, type, GetXamlTypeByName("Microsoft.UI.Xaml.Controls.Page"));
-                userType.Activator = Activate_50_SubmissionsPage;
-                userType.StaticInitializer = StaticInitializer_50_SubmissionsPage;
-                userType.SetIsLocalType();
-                xamlType = userType;
-                break;
-
-            case 51:   //  Microsoft.UI.Xaml.Controls.TreeViewNode
+            case 45:   //  Microsoft.UI.Xaml.Controls.ProgressRingTemplateSettings
                 userType = new global::OJReviewDesktop.OJReviewDesktop_XamlTypeInfo.XamlUserType(this, typeName, type, GetXamlTypeByName("Microsoft.UI.Xaml.DependencyObject"));
-                userType.Activator = Activate_51_TreeViewNode;
-                userType.StaticInitializer = StaticInitializer_51_TreeViewNode;
+                userType.StaticInitializer = StaticInitializer_45_ProgressRingTemplateSettings;
+                userType.SetIsReturnTypeStub();
+                xamlType = userType;
+                break;
+
+            case 46:   //  OJReviewDesktop.Views.Pages.AccountsPage
+                userType = new global::OJReviewDesktop.OJReviewDesktop_XamlTypeInfo.XamlUserType(this, typeName, type, GetXamlTypeByName("Microsoft.UI.Xaml.Controls.Page"));
+                userType.Activator = Activate_46_AccountsPage;
+                userType.StaticInitializer = StaticInitializer_46_AccountsPage;
+                userType.SetIsLocalType();
+                xamlType = userType;
+                break;
+
+            case 47:   //  OJReviewDesktop.Views.Pages.AnalysisPage
+                userType = new global::OJReviewDesktop.OJReviewDesktop_XamlTypeInfo.XamlUserType(this, typeName, type, GetXamlTypeByName("Microsoft.UI.Xaml.Controls.Page"));
+                userType.Activator = Activate_47_AnalysisPage;
+                userType.StaticInitializer = StaticInitializer_47_AnalysisPage;
+                userType.SetIsLocalType();
+                xamlType = userType;
+                break;
+
+            case 48:   //  OJReviewDesktop.Views.Pages.DashboardPage
+                userType = new global::OJReviewDesktop.OJReviewDesktop_XamlTypeInfo.XamlUserType(this, typeName, type, GetXamlTypeByName("Microsoft.UI.Xaml.Controls.Page"));
+                userType.Activator = Activate_48_DashboardPage;
+                userType.StaticInitializer = StaticInitializer_48_DashboardPage;
+                userType.SetIsLocalType();
+                xamlType = userType;
+                break;
+
+            case 49:   //  OJReviewDesktop.Views.Pages.ProblemsPage
+                userType = new global::OJReviewDesktop.OJReviewDesktop_XamlTypeInfo.XamlUserType(this, typeName, type, GetXamlTypeByName("Microsoft.UI.Xaml.Controls.Page"));
+                userType.Activator = Activate_49_ProblemsPage;
+                userType.StaticInitializer = StaticInitializer_49_ProblemsPage;
+                userType.SetIsLocalType();
+                xamlType = userType;
+                break;
+
+            case 50:   //  OJReviewDesktop.Views.Pages.ReviewPage
+                userType = new global::OJReviewDesktop.OJReviewDesktop_XamlTypeInfo.XamlUserType(this, typeName, type, GetXamlTypeByName("Microsoft.UI.Xaml.Controls.Page"));
+                userType.Activator = Activate_50_ReviewPage;
+                userType.StaticInitializer = StaticInitializer_50_ReviewPage;
+                userType.SetIsLocalType();
+                xamlType = userType;
+                break;
+
+            case 51:   //  OJReviewDesktop.Views.Pages.SettingsPage
+                userType = new global::OJReviewDesktop.OJReviewDesktop_XamlTypeInfo.XamlUserType(this, typeName, type, GetXamlTypeByName("Microsoft.UI.Xaml.Controls.Page"));
+                userType.Activator = Activate_51_SettingsPage;
+                userType.StaticInitializer = StaticInitializer_51_SettingsPage;
+                userType.SetIsLocalType();
+                xamlType = userType;
+                break;
+
+            case 52:   //  OJReviewDesktop.Views.Pages.SubmissionsPage
+                userType = new global::OJReviewDesktop.OJReviewDesktop_XamlTypeInfo.XamlUserType(this, typeName, type, GetXamlTypeByName("Microsoft.UI.Xaml.Controls.Page"));
+                userType.Activator = Activate_52_SubmissionsPage;
+                userType.StaticInitializer = StaticInitializer_52_SubmissionsPage;
+                userType.SetIsLocalType();
+                xamlType = userType;
+                break;
+
+            case 53:   //  Microsoft.UI.Xaml.Controls.TreeViewNode
+                userType = new global::OJReviewDesktop.OJReviewDesktop_XamlTypeInfo.XamlUserType(this, typeName, type, GetXamlTypeByName("Microsoft.UI.Xaml.DependencyObject"));
+                userType.Activator = Activate_53_TreeViewNode;
+                userType.StaticInitializer = StaticInitializer_53_TreeViewNode;
                 userType.AddMemberName("Children");
                 userType.AddMemberName("Content");
                 userType.AddMemberName("Depth");
@@ -860,15 +887,15 @@ namespace OJReviewDesktop.OJReviewDesktop_XamlTypeInfo
                 xamlType = userType;
                 break;
 
-            case 52:   //  System.Collections.Generic.IList`1<Microsoft.UI.Xaml.Controls.TreeViewNode>
+            case 54:   //  System.Collections.Generic.IList`1<Microsoft.UI.Xaml.Controls.TreeViewNode>
                 userType = new global::OJReviewDesktop.OJReviewDesktop_XamlTypeInfo.XamlUserType(this, typeName, type, null);
-                userType.StaticInitializer = StaticInitializer_52_IList;
-                userType.CollectionAdd = VectorAdd_52_IList;
+                userType.StaticInitializer = StaticInitializer_54_IList;
+                userType.CollectionAdd = VectorAdd_54_IList;
                 userType.SetIsReturnTypeStub();
                 xamlType = userType;
                 break;
 
-            case 53:   //  Int32
+            case 55:   //  Int32
                 xamlType = new global::OJReviewDesktop.OJReviewDesktop_XamlTypeInfo.XamlSystemBaseType(typeName, type);
                 break;
             }
@@ -980,190 +1007,190 @@ namespace OJReviewDesktop.OJReviewDesktop_XamlTypeInfo
             var that = (global::Windows.UI.Color)instance;
             that.B = (global::System.Byte)Value;
         }
-        private object get_5_NavigationView_IsBackButtonVisible(object instance)
-        {
-            var that = (global::Microsoft.UI.Xaml.Controls.NavigationView)instance;
-            return that.IsBackButtonVisible;
-        }
-        private void set_5_NavigationView_IsBackButtonVisible(object instance, object Value)
-        {
-            var that = (global::Microsoft.UI.Xaml.Controls.NavigationView)instance;
-            that.IsBackButtonVisible = (global::Microsoft.UI.Xaml.Controls.NavigationViewBackButtonVisible)Value;
-        }
-        private object get_6_NavigationView_IsPaneToggleButtonVisible(object instance)
-        {
-            var that = (global::Microsoft.UI.Xaml.Controls.NavigationView)instance;
-            return that.IsPaneToggleButtonVisible;
-        }
-        private void set_6_NavigationView_IsPaneToggleButtonVisible(object instance, object Value)
-        {
-            var that = (global::Microsoft.UI.Xaml.Controls.NavigationView)instance;
-            that.IsPaneToggleButtonVisible = (global::System.Boolean)Value;
-        }
-        private object get_7_NavigationView_IsSettingsVisible(object instance)
-        {
-            var that = (global::Microsoft.UI.Xaml.Controls.NavigationView)instance;
-            return that.IsSettingsVisible;
-        }
-        private void set_7_NavigationView_IsSettingsVisible(object instance, object Value)
-        {
-            var that = (global::Microsoft.UI.Xaml.Controls.NavigationView)instance;
-            that.IsSettingsVisible = (global::System.Boolean)Value;
-        }
-        private object get_8_NavigationView_OpenPaneLength(object instance)
-        {
-            var that = (global::Microsoft.UI.Xaml.Controls.NavigationView)instance;
-            return that.OpenPaneLength;
-        }
-        private void set_8_NavigationView_OpenPaneLength(object instance, object Value)
-        {
-            var that = (global::Microsoft.UI.Xaml.Controls.NavigationView)instance;
-            that.OpenPaneLength = (global::System.Double)Value;
-        }
-        private object get_9_NavigationView_PaneDisplayMode(object instance)
-        {
-            var that = (global::Microsoft.UI.Xaml.Controls.NavigationView)instance;
-            return that.PaneDisplayMode;
-        }
-        private void set_9_NavigationView_PaneDisplayMode(object instance, object Value)
-        {
-            var that = (global::Microsoft.UI.Xaml.Controls.NavigationView)instance;
-            that.PaneDisplayMode = (global::Microsoft.UI.Xaml.Controls.NavigationViewPaneDisplayMode)Value;
-        }
-        private object get_10_NavigationView_PaneHeader(object instance)
-        {
-            var that = (global::Microsoft.UI.Xaml.Controls.NavigationView)instance;
-            return that.PaneHeader;
-        }
-        private void set_10_NavigationView_PaneHeader(object instance, object Value)
-        {
-            var that = (global::Microsoft.UI.Xaml.Controls.NavigationView)instance;
-            that.PaneHeader = (global::Microsoft.UI.Xaml.UIElement)Value;
-        }
-        private object get_11_NavigationView_MenuItems(object instance)
-        {
-            var that = (global::Microsoft.UI.Xaml.Controls.NavigationView)instance;
-            return that.MenuItems;
-        }
-        private object get_12_NavigationView_FooterMenuItems(object instance)
-        {
-            var that = (global::Microsoft.UI.Xaml.Controls.NavigationView)instance;
-            return that.FooterMenuItems;
-        }
-        private object get_13_NavigationView_AlwaysShowHeader(object instance)
+        private object get_5_NavigationView_AlwaysShowHeader(object instance)
         {
             var that = (global::Microsoft.UI.Xaml.Controls.NavigationView)instance;
             return that.AlwaysShowHeader;
         }
-        private void set_13_NavigationView_AlwaysShowHeader(object instance, object Value)
+        private void set_5_NavigationView_AlwaysShowHeader(object instance, object Value)
         {
             var that = (global::Microsoft.UI.Xaml.Controls.NavigationView)instance;
             that.AlwaysShowHeader = (global::System.Boolean)Value;
         }
-        private object get_14_NavigationView_AutoSuggestBox(object instance)
-        {
-            var that = (global::Microsoft.UI.Xaml.Controls.NavigationView)instance;
-            return that.AutoSuggestBox;
-        }
-        private void set_14_NavigationView_AutoSuggestBox(object instance, object Value)
-        {
-            var that = (global::Microsoft.UI.Xaml.Controls.NavigationView)instance;
-            that.AutoSuggestBox = (global::Microsoft.UI.Xaml.Controls.AutoSuggestBox)Value;
-        }
-        private object get_15_NavigationView_CompactModeThresholdWidth(object instance)
-        {
-            var that = (global::Microsoft.UI.Xaml.Controls.NavigationView)instance;
-            return that.CompactModeThresholdWidth;
-        }
-        private void set_15_NavigationView_CompactModeThresholdWidth(object instance, object Value)
-        {
-            var that = (global::Microsoft.UI.Xaml.Controls.NavigationView)instance;
-            that.CompactModeThresholdWidth = (global::System.Double)Value;
-        }
-        private object get_16_NavigationView_CompactPaneLength(object instance)
+        private object get_6_NavigationView_CompactPaneLength(object instance)
         {
             var that = (global::Microsoft.UI.Xaml.Controls.NavigationView)instance;
             return that.CompactPaneLength;
         }
-        private void set_16_NavigationView_CompactPaneLength(object instance, object Value)
+        private void set_6_NavigationView_CompactPaneLength(object instance, object Value)
         {
             var that = (global::Microsoft.UI.Xaml.Controls.NavigationView)instance;
             that.CompactPaneLength = (global::System.Double)Value;
         }
-        private object get_17_NavigationView_ContentOverlay(object instance)
+        private object get_7_NavigationView_IsBackButtonVisible(object instance)
         {
             var that = (global::Microsoft.UI.Xaml.Controls.NavigationView)instance;
-            return that.ContentOverlay;
+            return that.IsBackButtonVisible;
         }
-        private void set_17_NavigationView_ContentOverlay(object instance, object Value)
+        private void set_7_NavigationView_IsBackButtonVisible(object instance, object Value)
         {
             var that = (global::Microsoft.UI.Xaml.Controls.NavigationView)instance;
-            that.ContentOverlay = (global::Microsoft.UI.Xaml.UIElement)Value;
+            that.IsBackButtonVisible = (global::Microsoft.UI.Xaml.Controls.NavigationViewBackButtonVisible)Value;
         }
-        private object get_18_NavigationView_DisplayMode(object instance)
-        {
-            var that = (global::Microsoft.UI.Xaml.Controls.NavigationView)instance;
-            return that.DisplayMode;
-        }
-        private object get_19_NavigationView_ExpandedModeThresholdWidth(object instance)
-        {
-            var that = (global::Microsoft.UI.Xaml.Controls.NavigationView)instance;
-            return that.ExpandedModeThresholdWidth;
-        }
-        private void set_19_NavigationView_ExpandedModeThresholdWidth(object instance, object Value)
-        {
-            var that = (global::Microsoft.UI.Xaml.Controls.NavigationView)instance;
-            that.ExpandedModeThresholdWidth = (global::System.Double)Value;
-        }
-        private object get_20_NavigationView_FooterMenuItemsSource(object instance)
-        {
-            var that = (global::Microsoft.UI.Xaml.Controls.NavigationView)instance;
-            return that.FooterMenuItemsSource;
-        }
-        private void set_20_NavigationView_FooterMenuItemsSource(object instance, object Value)
-        {
-            var that = (global::Microsoft.UI.Xaml.Controls.NavigationView)instance;
-            that.FooterMenuItemsSource = (global::System.Object)Value;
-        }
-        private object get_21_NavigationView_Header(object instance)
-        {
-            var that = (global::Microsoft.UI.Xaml.Controls.NavigationView)instance;
-            return that.Header;
-        }
-        private void set_21_NavigationView_Header(object instance, object Value)
-        {
-            var that = (global::Microsoft.UI.Xaml.Controls.NavigationView)instance;
-            that.Header = (global::System.Object)Value;
-        }
-        private object get_22_NavigationView_HeaderTemplate(object instance)
-        {
-            var that = (global::Microsoft.UI.Xaml.Controls.NavigationView)instance;
-            return that.HeaderTemplate;
-        }
-        private void set_22_NavigationView_HeaderTemplate(object instance, object Value)
-        {
-            var that = (global::Microsoft.UI.Xaml.Controls.NavigationView)instance;
-            that.HeaderTemplate = (global::Microsoft.UI.Xaml.DataTemplate)Value;
-        }
-        private object get_23_NavigationView_IsBackEnabled(object instance)
-        {
-            var that = (global::Microsoft.UI.Xaml.Controls.NavigationView)instance;
-            return that.IsBackEnabled;
-        }
-        private void set_23_NavigationView_IsBackEnabled(object instance, object Value)
-        {
-            var that = (global::Microsoft.UI.Xaml.Controls.NavigationView)instance;
-            that.IsBackEnabled = (global::System.Boolean)Value;
-        }
-        private object get_24_NavigationView_IsPaneOpen(object instance)
+        private object get_8_NavigationView_IsPaneOpen(object instance)
         {
             var that = (global::Microsoft.UI.Xaml.Controls.NavigationView)instance;
             return that.IsPaneOpen;
         }
-        private void set_24_NavigationView_IsPaneOpen(object instance, object Value)
+        private void set_8_NavigationView_IsPaneOpen(object instance, object Value)
         {
             var that = (global::Microsoft.UI.Xaml.Controls.NavigationView)instance;
             that.IsPaneOpen = (global::System.Boolean)Value;
+        }
+        private object get_9_NavigationView_IsPaneToggleButtonVisible(object instance)
+        {
+            var that = (global::Microsoft.UI.Xaml.Controls.NavigationView)instance;
+            return that.IsPaneToggleButtonVisible;
+        }
+        private void set_9_NavigationView_IsPaneToggleButtonVisible(object instance, object Value)
+        {
+            var that = (global::Microsoft.UI.Xaml.Controls.NavigationView)instance;
+            that.IsPaneToggleButtonVisible = (global::System.Boolean)Value;
+        }
+        private object get_10_NavigationView_IsSettingsVisible(object instance)
+        {
+            var that = (global::Microsoft.UI.Xaml.Controls.NavigationView)instance;
+            return that.IsSettingsVisible;
+        }
+        private void set_10_NavigationView_IsSettingsVisible(object instance, object Value)
+        {
+            var that = (global::Microsoft.UI.Xaml.Controls.NavigationView)instance;
+            that.IsSettingsVisible = (global::System.Boolean)Value;
+        }
+        private object get_11_NavigationView_OpenPaneLength(object instance)
+        {
+            var that = (global::Microsoft.UI.Xaml.Controls.NavigationView)instance;
+            return that.OpenPaneLength;
+        }
+        private void set_11_NavigationView_OpenPaneLength(object instance, object Value)
+        {
+            var that = (global::Microsoft.UI.Xaml.Controls.NavigationView)instance;
+            that.OpenPaneLength = (global::System.Double)Value;
+        }
+        private object get_12_NavigationView_PaneDisplayMode(object instance)
+        {
+            var that = (global::Microsoft.UI.Xaml.Controls.NavigationView)instance;
+            return that.PaneDisplayMode;
+        }
+        private void set_12_NavigationView_PaneDisplayMode(object instance, object Value)
+        {
+            var that = (global::Microsoft.UI.Xaml.Controls.NavigationView)instance;
+            that.PaneDisplayMode = (global::Microsoft.UI.Xaml.Controls.NavigationViewPaneDisplayMode)Value;
+        }
+        private object get_13_NavigationView_PaneHeader(object instance)
+        {
+            var that = (global::Microsoft.UI.Xaml.Controls.NavigationView)instance;
+            return that.PaneHeader;
+        }
+        private void set_13_NavigationView_PaneHeader(object instance, object Value)
+        {
+            var that = (global::Microsoft.UI.Xaml.Controls.NavigationView)instance;
+            that.PaneHeader = (global::Microsoft.UI.Xaml.UIElement)Value;
+        }
+        private object get_14_NavigationView_MenuItems(object instance)
+        {
+            var that = (global::Microsoft.UI.Xaml.Controls.NavigationView)instance;
+            return that.MenuItems;
+        }
+        private object get_15_NavigationView_FooterMenuItems(object instance)
+        {
+            var that = (global::Microsoft.UI.Xaml.Controls.NavigationView)instance;
+            return that.FooterMenuItems;
+        }
+        private object get_16_NavigationView_AutoSuggestBox(object instance)
+        {
+            var that = (global::Microsoft.UI.Xaml.Controls.NavigationView)instance;
+            return that.AutoSuggestBox;
+        }
+        private void set_16_NavigationView_AutoSuggestBox(object instance, object Value)
+        {
+            var that = (global::Microsoft.UI.Xaml.Controls.NavigationView)instance;
+            that.AutoSuggestBox = (global::Microsoft.UI.Xaml.Controls.AutoSuggestBox)Value;
+        }
+        private object get_17_NavigationView_CompactModeThresholdWidth(object instance)
+        {
+            var that = (global::Microsoft.UI.Xaml.Controls.NavigationView)instance;
+            return that.CompactModeThresholdWidth;
+        }
+        private void set_17_NavigationView_CompactModeThresholdWidth(object instance, object Value)
+        {
+            var that = (global::Microsoft.UI.Xaml.Controls.NavigationView)instance;
+            that.CompactModeThresholdWidth = (global::System.Double)Value;
+        }
+        private object get_18_NavigationView_ContentOverlay(object instance)
+        {
+            var that = (global::Microsoft.UI.Xaml.Controls.NavigationView)instance;
+            return that.ContentOverlay;
+        }
+        private void set_18_NavigationView_ContentOverlay(object instance, object Value)
+        {
+            var that = (global::Microsoft.UI.Xaml.Controls.NavigationView)instance;
+            that.ContentOverlay = (global::Microsoft.UI.Xaml.UIElement)Value;
+        }
+        private object get_19_NavigationView_DisplayMode(object instance)
+        {
+            var that = (global::Microsoft.UI.Xaml.Controls.NavigationView)instance;
+            return that.DisplayMode;
+        }
+        private object get_20_NavigationView_ExpandedModeThresholdWidth(object instance)
+        {
+            var that = (global::Microsoft.UI.Xaml.Controls.NavigationView)instance;
+            return that.ExpandedModeThresholdWidth;
+        }
+        private void set_20_NavigationView_ExpandedModeThresholdWidth(object instance, object Value)
+        {
+            var that = (global::Microsoft.UI.Xaml.Controls.NavigationView)instance;
+            that.ExpandedModeThresholdWidth = (global::System.Double)Value;
+        }
+        private object get_21_NavigationView_FooterMenuItemsSource(object instance)
+        {
+            var that = (global::Microsoft.UI.Xaml.Controls.NavigationView)instance;
+            return that.FooterMenuItemsSource;
+        }
+        private void set_21_NavigationView_FooterMenuItemsSource(object instance, object Value)
+        {
+            var that = (global::Microsoft.UI.Xaml.Controls.NavigationView)instance;
+            that.FooterMenuItemsSource = (global::System.Object)Value;
+        }
+        private object get_22_NavigationView_Header(object instance)
+        {
+            var that = (global::Microsoft.UI.Xaml.Controls.NavigationView)instance;
+            return that.Header;
+        }
+        private void set_22_NavigationView_Header(object instance, object Value)
+        {
+            var that = (global::Microsoft.UI.Xaml.Controls.NavigationView)instance;
+            that.Header = (global::System.Object)Value;
+        }
+        private object get_23_NavigationView_HeaderTemplate(object instance)
+        {
+            var that = (global::Microsoft.UI.Xaml.Controls.NavigationView)instance;
+            return that.HeaderTemplate;
+        }
+        private void set_23_NavigationView_HeaderTemplate(object instance, object Value)
+        {
+            var that = (global::Microsoft.UI.Xaml.Controls.NavigationView)instance;
+            that.HeaderTemplate = (global::Microsoft.UI.Xaml.DataTemplate)Value;
+        }
+        private object get_24_NavigationView_IsBackEnabled(object instance)
+        {
+            var that = (global::Microsoft.UI.Xaml.Controls.NavigationView)instance;
+            return that.IsBackEnabled;
+        }
+        private void set_24_NavigationView_IsBackEnabled(object instance, object Value)
+        {
+            var that = (global::Microsoft.UI.Xaml.Controls.NavigationView)instance;
+            that.IsBackEnabled = (global::System.Boolean)Value;
         }
         private object get_25_NavigationView_IsPaneVisible(object instance)
         {
@@ -1550,52 +1577,107 @@ namespace OJReviewDesktop.OJReviewDesktop_XamlTypeInfo
             var that = (global::Microsoft.UI.Xaml.Controls.InfoBar)instance;
             that.Title = (global::System.String)Value;
         }
-        private object get_66_TreeViewNode_Children(object instance)
+        private object get_66_ProgressRing_IsActive(object instance)
+        {
+            var that = (global::Microsoft.UI.Xaml.Controls.ProgressRing)instance;
+            return that.IsActive;
+        }
+        private void set_66_ProgressRing_IsActive(object instance, object Value)
+        {
+            var that = (global::Microsoft.UI.Xaml.Controls.ProgressRing)instance;
+            that.IsActive = (global::System.Boolean)Value;
+        }
+        private object get_67_ProgressRing_IsIndeterminate(object instance)
+        {
+            var that = (global::Microsoft.UI.Xaml.Controls.ProgressRing)instance;
+            return that.IsIndeterminate;
+        }
+        private void set_67_ProgressRing_IsIndeterminate(object instance, object Value)
+        {
+            var that = (global::Microsoft.UI.Xaml.Controls.ProgressRing)instance;
+            that.IsIndeterminate = (global::System.Boolean)Value;
+        }
+        private object get_68_ProgressRing_Maximum(object instance)
+        {
+            var that = (global::Microsoft.UI.Xaml.Controls.ProgressRing)instance;
+            return that.Maximum;
+        }
+        private void set_68_ProgressRing_Maximum(object instance, object Value)
+        {
+            var that = (global::Microsoft.UI.Xaml.Controls.ProgressRing)instance;
+            that.Maximum = (global::System.Double)Value;
+        }
+        private object get_69_ProgressRing_Minimum(object instance)
+        {
+            var that = (global::Microsoft.UI.Xaml.Controls.ProgressRing)instance;
+            return that.Minimum;
+        }
+        private void set_69_ProgressRing_Minimum(object instance, object Value)
+        {
+            var that = (global::Microsoft.UI.Xaml.Controls.ProgressRing)instance;
+            that.Minimum = (global::System.Double)Value;
+        }
+        private object get_70_ProgressRing_TemplateSettings(object instance)
+        {
+            var that = (global::Microsoft.UI.Xaml.Controls.ProgressRing)instance;
+            return that.TemplateSettings;
+        }
+        private object get_71_ProgressRing_Value(object instance)
+        {
+            var that = (global::Microsoft.UI.Xaml.Controls.ProgressRing)instance;
+            return that.Value;
+        }
+        private void set_71_ProgressRing_Value(object instance, object Value)
+        {
+            var that = (global::Microsoft.UI.Xaml.Controls.ProgressRing)instance;
+            that.Value = (global::System.Double)Value;
+        }
+        private object get_72_TreeViewNode_Children(object instance)
         {
             var that = (global::Microsoft.UI.Xaml.Controls.TreeViewNode)instance;
             return that.Children;
         }
-        private object get_67_TreeViewNode_Content(object instance)
+        private object get_73_TreeViewNode_Content(object instance)
         {
             var that = (global::Microsoft.UI.Xaml.Controls.TreeViewNode)instance;
             return that.Content;
         }
-        private void set_67_TreeViewNode_Content(object instance, object Value)
+        private void set_73_TreeViewNode_Content(object instance, object Value)
         {
             var that = (global::Microsoft.UI.Xaml.Controls.TreeViewNode)instance;
             that.Content = (global::System.Object)Value;
         }
-        private object get_68_TreeViewNode_Depth(object instance)
+        private object get_74_TreeViewNode_Depth(object instance)
         {
             var that = (global::Microsoft.UI.Xaml.Controls.TreeViewNode)instance;
             return that.Depth;
         }
-        private object get_69_TreeViewNode_HasChildren(object instance)
+        private object get_75_TreeViewNode_HasChildren(object instance)
         {
             var that = (global::Microsoft.UI.Xaml.Controls.TreeViewNode)instance;
             return that.HasChildren;
         }
-        private object get_70_TreeViewNode_HasUnrealizedChildren(object instance)
+        private object get_76_TreeViewNode_HasUnrealizedChildren(object instance)
         {
             var that = (global::Microsoft.UI.Xaml.Controls.TreeViewNode)instance;
             return that.HasUnrealizedChildren;
         }
-        private void set_70_TreeViewNode_HasUnrealizedChildren(object instance, object Value)
+        private void set_76_TreeViewNode_HasUnrealizedChildren(object instance, object Value)
         {
             var that = (global::Microsoft.UI.Xaml.Controls.TreeViewNode)instance;
             that.HasUnrealizedChildren = (global::System.Boolean)Value;
         }
-        private object get_71_TreeViewNode_IsExpanded(object instance)
+        private object get_77_TreeViewNode_IsExpanded(object instance)
         {
             var that = (global::Microsoft.UI.Xaml.Controls.TreeViewNode)instance;
             return that.IsExpanded;
         }
-        private void set_71_TreeViewNode_IsExpanded(object instance, object Value)
+        private void set_77_TreeViewNode_IsExpanded(object instance, object Value)
         {
             var that = (global::Microsoft.UI.Xaml.Controls.TreeViewNode)instance;
             that.IsExpanded = (global::System.Boolean)Value;
         }
-        private object get_72_TreeViewNode_Parent(object instance)
+        private object get_78_TreeViewNode_Parent(object instance)
         {
             var that = (global::Microsoft.UI.Xaml.Controls.TreeViewNode)instance;
             return that.Parent;
@@ -1639,145 +1721,145 @@ namespace OJReviewDesktop.OJReviewDesktop_XamlTypeInfo
                 xamlMember.Getter = get_4_Color_B;
                 xamlMember.Setter = set_4_Color_B;
                 break;
+            case "Microsoft.UI.Xaml.Controls.NavigationView.AlwaysShowHeader":
+                userType = (global::OJReviewDesktop.OJReviewDesktop_XamlTypeInfo.XamlUserType)GetXamlTypeByName("Microsoft.UI.Xaml.Controls.NavigationView");
+                xamlMember = new global::OJReviewDesktop.OJReviewDesktop_XamlTypeInfo.XamlMember(this, "AlwaysShowHeader", "Boolean");
+                xamlMember.SetIsDependencyProperty();
+                xamlMember.Getter = get_5_NavigationView_AlwaysShowHeader;
+                xamlMember.Setter = set_5_NavigationView_AlwaysShowHeader;
+                break;
+            case "Microsoft.UI.Xaml.Controls.NavigationView.CompactPaneLength":
+                userType = (global::OJReviewDesktop.OJReviewDesktop_XamlTypeInfo.XamlUserType)GetXamlTypeByName("Microsoft.UI.Xaml.Controls.NavigationView");
+                xamlMember = new global::OJReviewDesktop.OJReviewDesktop_XamlTypeInfo.XamlMember(this, "CompactPaneLength", "Double");
+                xamlMember.SetIsDependencyProperty();
+                xamlMember.Getter = get_6_NavigationView_CompactPaneLength;
+                xamlMember.Setter = set_6_NavigationView_CompactPaneLength;
+                break;
             case "Microsoft.UI.Xaml.Controls.NavigationView.IsBackButtonVisible":
                 userType = (global::OJReviewDesktop.OJReviewDesktop_XamlTypeInfo.XamlUserType)GetXamlTypeByName("Microsoft.UI.Xaml.Controls.NavigationView");
                 xamlMember = new global::OJReviewDesktop.OJReviewDesktop_XamlTypeInfo.XamlMember(this, "IsBackButtonVisible", "Microsoft.UI.Xaml.Controls.NavigationViewBackButtonVisible");
                 xamlMember.SetIsDependencyProperty();
-                xamlMember.Getter = get_5_NavigationView_IsBackButtonVisible;
-                xamlMember.Setter = set_5_NavigationView_IsBackButtonVisible;
+                xamlMember.Getter = get_7_NavigationView_IsBackButtonVisible;
+                xamlMember.Setter = set_7_NavigationView_IsBackButtonVisible;
+                break;
+            case "Microsoft.UI.Xaml.Controls.NavigationView.IsPaneOpen":
+                userType = (global::OJReviewDesktop.OJReviewDesktop_XamlTypeInfo.XamlUserType)GetXamlTypeByName("Microsoft.UI.Xaml.Controls.NavigationView");
+                xamlMember = new global::OJReviewDesktop.OJReviewDesktop_XamlTypeInfo.XamlMember(this, "IsPaneOpen", "Boolean");
+                xamlMember.SetIsDependencyProperty();
+                xamlMember.Getter = get_8_NavigationView_IsPaneOpen;
+                xamlMember.Setter = set_8_NavigationView_IsPaneOpen;
                 break;
             case "Microsoft.UI.Xaml.Controls.NavigationView.IsPaneToggleButtonVisible":
                 userType = (global::OJReviewDesktop.OJReviewDesktop_XamlTypeInfo.XamlUserType)GetXamlTypeByName("Microsoft.UI.Xaml.Controls.NavigationView");
                 xamlMember = new global::OJReviewDesktop.OJReviewDesktop_XamlTypeInfo.XamlMember(this, "IsPaneToggleButtonVisible", "Boolean");
                 xamlMember.SetIsDependencyProperty();
-                xamlMember.Getter = get_6_NavigationView_IsPaneToggleButtonVisible;
-                xamlMember.Setter = set_6_NavigationView_IsPaneToggleButtonVisible;
+                xamlMember.Getter = get_9_NavigationView_IsPaneToggleButtonVisible;
+                xamlMember.Setter = set_9_NavigationView_IsPaneToggleButtonVisible;
                 break;
             case "Microsoft.UI.Xaml.Controls.NavigationView.IsSettingsVisible":
                 userType = (global::OJReviewDesktop.OJReviewDesktop_XamlTypeInfo.XamlUserType)GetXamlTypeByName("Microsoft.UI.Xaml.Controls.NavigationView");
                 xamlMember = new global::OJReviewDesktop.OJReviewDesktop_XamlTypeInfo.XamlMember(this, "IsSettingsVisible", "Boolean");
                 xamlMember.SetIsDependencyProperty();
-                xamlMember.Getter = get_7_NavigationView_IsSettingsVisible;
-                xamlMember.Setter = set_7_NavigationView_IsSettingsVisible;
+                xamlMember.Getter = get_10_NavigationView_IsSettingsVisible;
+                xamlMember.Setter = set_10_NavigationView_IsSettingsVisible;
                 break;
             case "Microsoft.UI.Xaml.Controls.NavigationView.OpenPaneLength":
                 userType = (global::OJReviewDesktop.OJReviewDesktop_XamlTypeInfo.XamlUserType)GetXamlTypeByName("Microsoft.UI.Xaml.Controls.NavigationView");
                 xamlMember = new global::OJReviewDesktop.OJReviewDesktop_XamlTypeInfo.XamlMember(this, "OpenPaneLength", "Double");
                 xamlMember.SetIsDependencyProperty();
-                xamlMember.Getter = get_8_NavigationView_OpenPaneLength;
-                xamlMember.Setter = set_8_NavigationView_OpenPaneLength;
+                xamlMember.Getter = get_11_NavigationView_OpenPaneLength;
+                xamlMember.Setter = set_11_NavigationView_OpenPaneLength;
                 break;
             case "Microsoft.UI.Xaml.Controls.NavigationView.PaneDisplayMode":
                 userType = (global::OJReviewDesktop.OJReviewDesktop_XamlTypeInfo.XamlUserType)GetXamlTypeByName("Microsoft.UI.Xaml.Controls.NavigationView");
                 xamlMember = new global::OJReviewDesktop.OJReviewDesktop_XamlTypeInfo.XamlMember(this, "PaneDisplayMode", "Microsoft.UI.Xaml.Controls.NavigationViewPaneDisplayMode");
                 xamlMember.SetIsDependencyProperty();
-                xamlMember.Getter = get_9_NavigationView_PaneDisplayMode;
-                xamlMember.Setter = set_9_NavigationView_PaneDisplayMode;
+                xamlMember.Getter = get_12_NavigationView_PaneDisplayMode;
+                xamlMember.Setter = set_12_NavigationView_PaneDisplayMode;
                 break;
             case "Microsoft.UI.Xaml.Controls.NavigationView.PaneHeader":
                 userType = (global::OJReviewDesktop.OJReviewDesktop_XamlTypeInfo.XamlUserType)GetXamlTypeByName("Microsoft.UI.Xaml.Controls.NavigationView");
                 xamlMember = new global::OJReviewDesktop.OJReviewDesktop_XamlTypeInfo.XamlMember(this, "PaneHeader", "Microsoft.UI.Xaml.UIElement");
                 xamlMember.SetIsDependencyProperty();
-                xamlMember.Getter = get_10_NavigationView_PaneHeader;
-                xamlMember.Setter = set_10_NavigationView_PaneHeader;
+                xamlMember.Getter = get_13_NavigationView_PaneHeader;
+                xamlMember.Setter = set_13_NavigationView_PaneHeader;
                 break;
             case "Microsoft.UI.Xaml.Controls.NavigationView.MenuItems":
                 userType = (global::OJReviewDesktop.OJReviewDesktop_XamlTypeInfo.XamlUserType)GetXamlTypeByName("Microsoft.UI.Xaml.Controls.NavigationView");
                 xamlMember = new global::OJReviewDesktop.OJReviewDesktop_XamlTypeInfo.XamlMember(this, "MenuItems", "System.Collections.Generic.IList`1<Object>");
                 xamlMember.SetIsDependencyProperty();
-                xamlMember.Getter = get_11_NavigationView_MenuItems;
+                xamlMember.Getter = get_14_NavigationView_MenuItems;
                 xamlMember.SetIsReadOnly();
                 break;
             case "Microsoft.UI.Xaml.Controls.NavigationView.FooterMenuItems":
                 userType = (global::OJReviewDesktop.OJReviewDesktop_XamlTypeInfo.XamlUserType)GetXamlTypeByName("Microsoft.UI.Xaml.Controls.NavigationView");
                 xamlMember = new global::OJReviewDesktop.OJReviewDesktop_XamlTypeInfo.XamlMember(this, "FooterMenuItems", "System.Collections.Generic.IList`1<Object>");
                 xamlMember.SetIsDependencyProperty();
-                xamlMember.Getter = get_12_NavigationView_FooterMenuItems;
+                xamlMember.Getter = get_15_NavigationView_FooterMenuItems;
                 xamlMember.SetIsReadOnly();
-                break;
-            case "Microsoft.UI.Xaml.Controls.NavigationView.AlwaysShowHeader":
-                userType = (global::OJReviewDesktop.OJReviewDesktop_XamlTypeInfo.XamlUserType)GetXamlTypeByName("Microsoft.UI.Xaml.Controls.NavigationView");
-                xamlMember = new global::OJReviewDesktop.OJReviewDesktop_XamlTypeInfo.XamlMember(this, "AlwaysShowHeader", "Boolean");
-                xamlMember.SetIsDependencyProperty();
-                xamlMember.Getter = get_13_NavigationView_AlwaysShowHeader;
-                xamlMember.Setter = set_13_NavigationView_AlwaysShowHeader;
                 break;
             case "Microsoft.UI.Xaml.Controls.NavigationView.AutoSuggestBox":
                 userType = (global::OJReviewDesktop.OJReviewDesktop_XamlTypeInfo.XamlUserType)GetXamlTypeByName("Microsoft.UI.Xaml.Controls.NavigationView");
                 xamlMember = new global::OJReviewDesktop.OJReviewDesktop_XamlTypeInfo.XamlMember(this, "AutoSuggestBox", "Microsoft.UI.Xaml.Controls.AutoSuggestBox");
                 xamlMember.SetIsDependencyProperty();
-                xamlMember.Getter = get_14_NavigationView_AutoSuggestBox;
-                xamlMember.Setter = set_14_NavigationView_AutoSuggestBox;
+                xamlMember.Getter = get_16_NavigationView_AutoSuggestBox;
+                xamlMember.Setter = set_16_NavigationView_AutoSuggestBox;
                 break;
             case "Microsoft.UI.Xaml.Controls.NavigationView.CompactModeThresholdWidth":
                 userType = (global::OJReviewDesktop.OJReviewDesktop_XamlTypeInfo.XamlUserType)GetXamlTypeByName("Microsoft.UI.Xaml.Controls.NavigationView");
                 xamlMember = new global::OJReviewDesktop.OJReviewDesktop_XamlTypeInfo.XamlMember(this, "CompactModeThresholdWidth", "Double");
                 xamlMember.SetIsDependencyProperty();
-                xamlMember.Getter = get_15_NavigationView_CompactModeThresholdWidth;
-                xamlMember.Setter = set_15_NavigationView_CompactModeThresholdWidth;
-                break;
-            case "Microsoft.UI.Xaml.Controls.NavigationView.CompactPaneLength":
-                userType = (global::OJReviewDesktop.OJReviewDesktop_XamlTypeInfo.XamlUserType)GetXamlTypeByName("Microsoft.UI.Xaml.Controls.NavigationView");
-                xamlMember = new global::OJReviewDesktop.OJReviewDesktop_XamlTypeInfo.XamlMember(this, "CompactPaneLength", "Double");
-                xamlMember.SetIsDependencyProperty();
-                xamlMember.Getter = get_16_NavigationView_CompactPaneLength;
-                xamlMember.Setter = set_16_NavigationView_CompactPaneLength;
+                xamlMember.Getter = get_17_NavigationView_CompactModeThresholdWidth;
+                xamlMember.Setter = set_17_NavigationView_CompactModeThresholdWidth;
                 break;
             case "Microsoft.UI.Xaml.Controls.NavigationView.ContentOverlay":
                 userType = (global::OJReviewDesktop.OJReviewDesktop_XamlTypeInfo.XamlUserType)GetXamlTypeByName("Microsoft.UI.Xaml.Controls.NavigationView");
                 xamlMember = new global::OJReviewDesktop.OJReviewDesktop_XamlTypeInfo.XamlMember(this, "ContentOverlay", "Microsoft.UI.Xaml.UIElement");
                 xamlMember.SetIsDependencyProperty();
-                xamlMember.Getter = get_17_NavigationView_ContentOverlay;
-                xamlMember.Setter = set_17_NavigationView_ContentOverlay;
+                xamlMember.Getter = get_18_NavigationView_ContentOverlay;
+                xamlMember.Setter = set_18_NavigationView_ContentOverlay;
                 break;
             case "Microsoft.UI.Xaml.Controls.NavigationView.DisplayMode":
                 userType = (global::OJReviewDesktop.OJReviewDesktop_XamlTypeInfo.XamlUserType)GetXamlTypeByName("Microsoft.UI.Xaml.Controls.NavigationView");
                 xamlMember = new global::OJReviewDesktop.OJReviewDesktop_XamlTypeInfo.XamlMember(this, "DisplayMode", "Microsoft.UI.Xaml.Controls.NavigationViewDisplayMode");
                 xamlMember.SetIsDependencyProperty();
-                xamlMember.Getter = get_18_NavigationView_DisplayMode;
+                xamlMember.Getter = get_19_NavigationView_DisplayMode;
                 xamlMember.SetIsReadOnly();
                 break;
             case "Microsoft.UI.Xaml.Controls.NavigationView.ExpandedModeThresholdWidth":
                 userType = (global::OJReviewDesktop.OJReviewDesktop_XamlTypeInfo.XamlUserType)GetXamlTypeByName("Microsoft.UI.Xaml.Controls.NavigationView");
                 xamlMember = new global::OJReviewDesktop.OJReviewDesktop_XamlTypeInfo.XamlMember(this, "ExpandedModeThresholdWidth", "Double");
                 xamlMember.SetIsDependencyProperty();
-                xamlMember.Getter = get_19_NavigationView_ExpandedModeThresholdWidth;
-                xamlMember.Setter = set_19_NavigationView_ExpandedModeThresholdWidth;
+                xamlMember.Getter = get_20_NavigationView_ExpandedModeThresholdWidth;
+                xamlMember.Setter = set_20_NavigationView_ExpandedModeThresholdWidth;
                 break;
             case "Microsoft.UI.Xaml.Controls.NavigationView.FooterMenuItemsSource":
                 userType = (global::OJReviewDesktop.OJReviewDesktop_XamlTypeInfo.XamlUserType)GetXamlTypeByName("Microsoft.UI.Xaml.Controls.NavigationView");
                 xamlMember = new global::OJReviewDesktop.OJReviewDesktop_XamlTypeInfo.XamlMember(this, "FooterMenuItemsSource", "Object");
                 xamlMember.SetIsDependencyProperty();
-                xamlMember.Getter = get_20_NavigationView_FooterMenuItemsSource;
-                xamlMember.Setter = set_20_NavigationView_FooterMenuItemsSource;
+                xamlMember.Getter = get_21_NavigationView_FooterMenuItemsSource;
+                xamlMember.Setter = set_21_NavigationView_FooterMenuItemsSource;
                 break;
             case "Microsoft.UI.Xaml.Controls.NavigationView.Header":
                 userType = (global::OJReviewDesktop.OJReviewDesktop_XamlTypeInfo.XamlUserType)GetXamlTypeByName("Microsoft.UI.Xaml.Controls.NavigationView");
                 xamlMember = new global::OJReviewDesktop.OJReviewDesktop_XamlTypeInfo.XamlMember(this, "Header", "Object");
                 xamlMember.SetIsDependencyProperty();
-                xamlMember.Getter = get_21_NavigationView_Header;
-                xamlMember.Setter = set_21_NavigationView_Header;
+                xamlMember.Getter = get_22_NavigationView_Header;
+                xamlMember.Setter = set_22_NavigationView_Header;
                 break;
             case "Microsoft.UI.Xaml.Controls.NavigationView.HeaderTemplate":
                 userType = (global::OJReviewDesktop.OJReviewDesktop_XamlTypeInfo.XamlUserType)GetXamlTypeByName("Microsoft.UI.Xaml.Controls.NavigationView");
                 xamlMember = new global::OJReviewDesktop.OJReviewDesktop_XamlTypeInfo.XamlMember(this, "HeaderTemplate", "Microsoft.UI.Xaml.DataTemplate");
                 xamlMember.SetIsDependencyProperty();
-                xamlMember.Getter = get_22_NavigationView_HeaderTemplate;
-                xamlMember.Setter = set_22_NavigationView_HeaderTemplate;
+                xamlMember.Getter = get_23_NavigationView_HeaderTemplate;
+                xamlMember.Setter = set_23_NavigationView_HeaderTemplate;
                 break;
             case "Microsoft.UI.Xaml.Controls.NavigationView.IsBackEnabled":
                 userType = (global::OJReviewDesktop.OJReviewDesktop_XamlTypeInfo.XamlUserType)GetXamlTypeByName("Microsoft.UI.Xaml.Controls.NavigationView");
                 xamlMember = new global::OJReviewDesktop.OJReviewDesktop_XamlTypeInfo.XamlMember(this, "IsBackEnabled", "Boolean");
                 xamlMember.SetIsDependencyProperty();
-                xamlMember.Getter = get_23_NavigationView_IsBackEnabled;
-                xamlMember.Setter = set_23_NavigationView_IsBackEnabled;
-                break;
-            case "Microsoft.UI.Xaml.Controls.NavigationView.IsPaneOpen":
-                userType = (global::OJReviewDesktop.OJReviewDesktop_XamlTypeInfo.XamlUserType)GetXamlTypeByName("Microsoft.UI.Xaml.Controls.NavigationView");
-                xamlMember = new global::OJReviewDesktop.OJReviewDesktop_XamlTypeInfo.XamlMember(this, "IsPaneOpen", "Boolean");
-                xamlMember.SetIsDependencyProperty();
-                xamlMember.Getter = get_24_NavigationView_IsPaneOpen;
-                xamlMember.Setter = set_24_NavigationView_IsPaneOpen;
+                xamlMember.Getter = get_24_NavigationView_IsBackEnabled;
+                xamlMember.Setter = set_24_NavigationView_IsBackEnabled;
                 break;
             case "Microsoft.UI.Xaml.Controls.NavigationView.IsPaneVisible":
                 userType = (global::OJReviewDesktop.OJReviewDesktop_XamlTypeInfo.XamlUserType)GetXamlTypeByName("Microsoft.UI.Xaml.Controls.NavigationView");
@@ -2066,50 +2148,91 @@ namespace OJReviewDesktop.OJReviewDesktop_XamlTypeInfo
                 xamlMember.Getter = get_65_InfoBar_Title;
                 xamlMember.Setter = set_65_InfoBar_Title;
                 break;
+            case "Microsoft.UI.Xaml.Controls.ProgressRing.IsActive":
+                userType = (global::OJReviewDesktop.OJReviewDesktop_XamlTypeInfo.XamlUserType)GetXamlTypeByName("Microsoft.UI.Xaml.Controls.ProgressRing");
+                xamlMember = new global::OJReviewDesktop.OJReviewDesktop_XamlTypeInfo.XamlMember(this, "IsActive", "Boolean");
+                xamlMember.SetIsDependencyProperty();
+                xamlMember.Getter = get_66_ProgressRing_IsActive;
+                xamlMember.Setter = set_66_ProgressRing_IsActive;
+                break;
+            case "Microsoft.UI.Xaml.Controls.ProgressRing.IsIndeterminate":
+                userType = (global::OJReviewDesktop.OJReviewDesktop_XamlTypeInfo.XamlUserType)GetXamlTypeByName("Microsoft.UI.Xaml.Controls.ProgressRing");
+                xamlMember = new global::OJReviewDesktop.OJReviewDesktop_XamlTypeInfo.XamlMember(this, "IsIndeterminate", "Boolean");
+                xamlMember.SetIsDependencyProperty();
+                xamlMember.Getter = get_67_ProgressRing_IsIndeterminate;
+                xamlMember.Setter = set_67_ProgressRing_IsIndeterminate;
+                break;
+            case "Microsoft.UI.Xaml.Controls.ProgressRing.Maximum":
+                userType = (global::OJReviewDesktop.OJReviewDesktop_XamlTypeInfo.XamlUserType)GetXamlTypeByName("Microsoft.UI.Xaml.Controls.ProgressRing");
+                xamlMember = new global::OJReviewDesktop.OJReviewDesktop_XamlTypeInfo.XamlMember(this, "Maximum", "Double");
+                xamlMember.SetIsDependencyProperty();
+                xamlMember.Getter = get_68_ProgressRing_Maximum;
+                xamlMember.Setter = set_68_ProgressRing_Maximum;
+                break;
+            case "Microsoft.UI.Xaml.Controls.ProgressRing.Minimum":
+                userType = (global::OJReviewDesktop.OJReviewDesktop_XamlTypeInfo.XamlUserType)GetXamlTypeByName("Microsoft.UI.Xaml.Controls.ProgressRing");
+                xamlMember = new global::OJReviewDesktop.OJReviewDesktop_XamlTypeInfo.XamlMember(this, "Minimum", "Double");
+                xamlMember.SetIsDependencyProperty();
+                xamlMember.Getter = get_69_ProgressRing_Minimum;
+                xamlMember.Setter = set_69_ProgressRing_Minimum;
+                break;
+            case "Microsoft.UI.Xaml.Controls.ProgressRing.TemplateSettings":
+                userType = (global::OJReviewDesktop.OJReviewDesktop_XamlTypeInfo.XamlUserType)GetXamlTypeByName("Microsoft.UI.Xaml.Controls.ProgressRing");
+                xamlMember = new global::OJReviewDesktop.OJReviewDesktop_XamlTypeInfo.XamlMember(this, "TemplateSettings", "Microsoft.UI.Xaml.Controls.ProgressRingTemplateSettings");
+                xamlMember.Getter = get_70_ProgressRing_TemplateSettings;
+                xamlMember.SetIsReadOnly();
+                break;
+            case "Microsoft.UI.Xaml.Controls.ProgressRing.Value":
+                userType = (global::OJReviewDesktop.OJReviewDesktop_XamlTypeInfo.XamlUserType)GetXamlTypeByName("Microsoft.UI.Xaml.Controls.ProgressRing");
+                xamlMember = new global::OJReviewDesktop.OJReviewDesktop_XamlTypeInfo.XamlMember(this, "Value", "Double");
+                xamlMember.SetIsDependencyProperty();
+                xamlMember.Getter = get_71_ProgressRing_Value;
+                xamlMember.Setter = set_71_ProgressRing_Value;
+                break;
             case "Microsoft.UI.Xaml.Controls.TreeViewNode.Children":
                 userType = (global::OJReviewDesktop.OJReviewDesktop_XamlTypeInfo.XamlUserType)GetXamlTypeByName("Microsoft.UI.Xaml.Controls.TreeViewNode");
                 xamlMember = new global::OJReviewDesktop.OJReviewDesktop_XamlTypeInfo.XamlMember(this, "Children", "System.Collections.Generic.IList`1<Microsoft.UI.Xaml.Controls.TreeViewNode>");
-                xamlMember.Getter = get_66_TreeViewNode_Children;
+                xamlMember.Getter = get_72_TreeViewNode_Children;
                 xamlMember.SetIsReadOnly();
                 break;
             case "Microsoft.UI.Xaml.Controls.TreeViewNode.Content":
                 userType = (global::OJReviewDesktop.OJReviewDesktop_XamlTypeInfo.XamlUserType)GetXamlTypeByName("Microsoft.UI.Xaml.Controls.TreeViewNode");
                 xamlMember = new global::OJReviewDesktop.OJReviewDesktop_XamlTypeInfo.XamlMember(this, "Content", "Object");
                 xamlMember.SetIsDependencyProperty();
-                xamlMember.Getter = get_67_TreeViewNode_Content;
-                xamlMember.Setter = set_67_TreeViewNode_Content;
+                xamlMember.Getter = get_73_TreeViewNode_Content;
+                xamlMember.Setter = set_73_TreeViewNode_Content;
                 break;
             case "Microsoft.UI.Xaml.Controls.TreeViewNode.Depth":
                 userType = (global::OJReviewDesktop.OJReviewDesktop_XamlTypeInfo.XamlUserType)GetXamlTypeByName("Microsoft.UI.Xaml.Controls.TreeViewNode");
                 xamlMember = new global::OJReviewDesktop.OJReviewDesktop_XamlTypeInfo.XamlMember(this, "Depth", "Int32");
                 xamlMember.SetIsDependencyProperty();
-                xamlMember.Getter = get_68_TreeViewNode_Depth;
+                xamlMember.Getter = get_74_TreeViewNode_Depth;
                 xamlMember.SetIsReadOnly();
                 break;
             case "Microsoft.UI.Xaml.Controls.TreeViewNode.HasChildren":
                 userType = (global::OJReviewDesktop.OJReviewDesktop_XamlTypeInfo.XamlUserType)GetXamlTypeByName("Microsoft.UI.Xaml.Controls.TreeViewNode");
                 xamlMember = new global::OJReviewDesktop.OJReviewDesktop_XamlTypeInfo.XamlMember(this, "HasChildren", "Boolean");
                 xamlMember.SetIsDependencyProperty();
-                xamlMember.Getter = get_69_TreeViewNode_HasChildren;
+                xamlMember.Getter = get_75_TreeViewNode_HasChildren;
                 xamlMember.SetIsReadOnly();
                 break;
             case "Microsoft.UI.Xaml.Controls.TreeViewNode.HasUnrealizedChildren":
                 userType = (global::OJReviewDesktop.OJReviewDesktop_XamlTypeInfo.XamlUserType)GetXamlTypeByName("Microsoft.UI.Xaml.Controls.TreeViewNode");
                 xamlMember = new global::OJReviewDesktop.OJReviewDesktop_XamlTypeInfo.XamlMember(this, "HasUnrealizedChildren", "Boolean");
-                xamlMember.Getter = get_70_TreeViewNode_HasUnrealizedChildren;
-                xamlMember.Setter = set_70_TreeViewNode_HasUnrealizedChildren;
+                xamlMember.Getter = get_76_TreeViewNode_HasUnrealizedChildren;
+                xamlMember.Setter = set_76_TreeViewNode_HasUnrealizedChildren;
                 break;
             case "Microsoft.UI.Xaml.Controls.TreeViewNode.IsExpanded":
                 userType = (global::OJReviewDesktop.OJReviewDesktop_XamlTypeInfo.XamlUserType)GetXamlTypeByName("Microsoft.UI.Xaml.Controls.TreeViewNode");
                 xamlMember = new global::OJReviewDesktop.OJReviewDesktop_XamlTypeInfo.XamlMember(this, "IsExpanded", "Boolean");
                 xamlMember.SetIsDependencyProperty();
-                xamlMember.Getter = get_71_TreeViewNode_IsExpanded;
-                xamlMember.Setter = set_71_TreeViewNode_IsExpanded;
+                xamlMember.Getter = get_77_TreeViewNode_IsExpanded;
+                xamlMember.Setter = set_77_TreeViewNode_IsExpanded;
                 break;
             case "Microsoft.UI.Xaml.Controls.TreeViewNode.Parent":
                 userType = (global::OJReviewDesktop.OJReviewDesktop_XamlTypeInfo.XamlUserType)GetXamlTypeByName("Microsoft.UI.Xaml.Controls.TreeViewNode");
                 xamlMember = new global::OJReviewDesktop.OJReviewDesktop_XamlTypeInfo.XamlMember(this, "Parent", "Microsoft.UI.Xaml.Controls.TreeViewNode");
-                xamlMember.Getter = get_72_TreeViewNode_Parent;
+                xamlMember.Getter = get_78_TreeViewNode_Parent;
                 xamlMember.SetIsReadOnly();
                 break;
             }

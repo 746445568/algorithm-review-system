@@ -1,0 +1,6 @@
+{
+  "name": "esm_default_main-37.10.3",
+  "private": true,
+  "type": "module",
+  "main": "main/index.mjs"
+}

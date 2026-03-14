@@ -91,13 +91,14 @@ namespace OJReviewDesktop.Views.Pages
                     Count = submissions.Count(item => item.SubmittedAt.LocalDateTime.Date == day)
                 })
                 .ToList();
+
             var max = Math.Max(points.Max(item => item.Count), 1);
             return points
                 .Select(item => new TrendPoint
                 {
                     Label = item.Label,
                     Count = item.Count,
-                    Height = 24 + (item.Count / (double)max * 176)
+                    Height = 22 + (item.Count / (double)max * 164)
                 })
                 .ToList();
         }
@@ -109,8 +110,8 @@ namespace OJReviewDesktop.Views.Pages
                 .Select(item => new WeakTagChartPoint
                 {
                     Label = item.Tag,
-                    Width = 24 + (item.AcRate / 100d * 220),
-                    ValueText = $"{item.AcRate:0}%",
+                    Width = 30 + (item.AcRate / 100d * 210),
+                    ValueText = $"{item.AcRate:0}%"
                 })
                 .ToList();
         }

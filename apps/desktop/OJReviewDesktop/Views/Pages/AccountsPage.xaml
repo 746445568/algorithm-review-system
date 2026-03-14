@@ -5,10 +5,12 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:models="using:OJReviewDesktop.Models">
     <ScrollViewer>
-        <StackPanel Spacing="24" Padding="12">
+        <StackPanel Padding="12" Spacing="24">
             <StackPanel Spacing="6">
-                <TextBlock Text="账号绑定" Style="{StaticResource PageTitle}" />
-                <TextBlock Text="每个平台维护一个主账号。保存公开 handle 后即可触发同步，无需保存 OJ 密码。" Style="{StaticResource PageDescription}" />
+                <TextBlock Style="{StaticResource PageTitle}" Text="账号绑定" />
+                <TextBlock
+                    Style="{StaticResource PageDescription}"
+                    Text="每个平台维护一个主账号。保存公开 handle 后即可触发同步，无需保存 OJ 密码。" />
             </StackPanel>
 
             <StackPanel x:Name="LoadingStatePanel" Spacing="24">
@@ -19,23 +21,23 @@
                     </Grid.ColumnDefinitions>
                     <Border Grid.Column="0" Style="{StaticResource AppCard}">
                         <StackPanel Spacing="14">
-                            <Rectangle Style="{StaticResource SkeletonBlock}" Width="120" Height="18" />
-                            <Rectangle Style="{StaticResource SkeletonBlock}" Height="42" />
-                            <Rectangle Style="{StaticResource SkeletonBlock}" Height="42" />
+                            <Rectangle Width="120" Height="18" Style="{StaticResource SkeletonBlock}" />
+                            <Rectangle Height="42" Style="{StaticResource SkeletonBlock}" />
+                            <Rectangle Height="42" Style="{StaticResource SkeletonBlock}" />
                         </StackPanel>
                     </Border>
                     <Border Grid.Column="1" Style="{StaticResource AppCard}">
                         <StackPanel Spacing="14">
-                            <Rectangle Style="{StaticResource SkeletonBlock}" Width="120" Height="18" />
-                            <Rectangle Style="{StaticResource SkeletonBlock}" Height="42" />
-                            <Rectangle Style="{StaticResource SkeletonBlock}" Height="42" />
+                            <Rectangle Width="120" Height="18" Style="{StaticResource SkeletonBlock}" />
+                            <Rectangle Height="42" Style="{StaticResource SkeletonBlock}" />
+                            <Rectangle Height="42" Style="{StaticResource SkeletonBlock}" />
                         </StackPanel>
                     </Border>
                 </Grid>
                 <Border Style="{StaticResource AppCard}">
                     <StackPanel Spacing="12">
-                        <Rectangle Style="{StaticResource SkeletonBlock}" Width="180" Height="18" />
-                        <Rectangle Style="{StaticResource SkeletonBlock}" Height="200" />
+                        <Rectangle Width="200" Height="18" Style="{StaticResource SkeletonBlock}" />
+                        <Rectangle Height="220" Style="{StaticResource SkeletonBlock}" />
                     </StackPanel>
                 </Border>
             </StackPanel>
@@ -50,23 +52,26 @@
                     <Border Grid.Column="0" Style="{StaticResource AppCard}">
                         <StackPanel Spacing="18">
                             <StackPanel Spacing="4">
-                                <TextBlock Text="Codeforces" Style="{StaticResource SectionTitle}" />
-                                <TextBlock Text="用于同步比赛、提交记录和错题数据。" Style="{StaticResource PageDescription}" />
+                                <TextBlock Style="{StaticResource SectionTitle}" Text="Codeforces" />
+                                <TextBlock Style="{StaticResource PageDescription}" Text="用于同步比赛、提交记录和错题数据。" />
                             </StackPanel>
                             <TextBox x:Name="CodeforcesHandleBox" Header="Handle" PlaceholderText="tourist" Style="{StaticResource InputTextBoxStyle}" />
-                            <Border
-                                x:Name="CodeforcesStatusBadge"
-                                Style="{StaticResource StatusBadge}"
-                                HorizontalAlignment="Left"
-                                Background="{Binding Text, ElementName=CodeforcesStatusText, Converter={StaticResource SyncStatusBrushConverter}, ConverterParameter=background}">
-                                <TextBlock
-                                    x:Name="CodeforcesStatusText"
-                                    FontFamily="{StaticResource AppMonoFontFamily}"
-                                    Foreground="{Binding Text, ElementName=CodeforcesStatusText, Converter={StaticResource SyncStatusBrushConverter}, ConverterParameter=foreground}" />
-                            </Border>
                             <StackPanel Orientation="Horizontal" Spacing="10">
-                                <Button Content="保存账号" Style="{StaticResource SecondaryButton}" Click="SaveCodeforcesButton_Click" />
-                                <Button Content="立即同步" Style="{StaticResource PrimaryButton}" Click="SyncCodeforcesButton_Click" />
+                                <Border
+                                    x:Name="CodeforcesStatusBadge"
+                                    HorizontalAlignment="Left"
+                                    Background="{Binding Text, ElementName=CodeforcesStatusText, Converter={StaticResource SyncStatusBrushConverter}, ConverterParameter=background}"
+                                    Style="{StaticResource StatusBadge}">
+                                    <TextBlock
+                                        x:Name="CodeforcesStatusText"
+                                        FontFamily="{StaticResource AppMonoFontFamily}"
+                                        Foreground="{Binding Text, ElementName=CodeforcesStatusText, Converter={StaticResource SyncStatusBrushConverter}, ConverterParameter=foreground}" />
+                                </Border>
+                                <ProgressRing x:Name="CodeforcesBusyRing" Width="18" Height="18" IsActive="False" Visibility="Collapsed" />
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" Spacing="10">
+                                <Button x:Name="SaveCodeforcesButton" Click="SaveCodeforcesButton_Click" Content="保存账号" Style="{StaticResource SecondaryButton}" />
+                                <Button x:Name="SyncCodeforcesButton" Click="SyncCodeforcesButton_Click" Content="立即同步" Style="{StaticResource PrimaryButton}" />
                             </StackPanel>
                         </StackPanel>
                     </Border>
@@ -74,23 +79,26 @@
                     <Border Grid.Column="1" Style="{StaticResource AppCard}">
                         <StackPanel Spacing="18">
                             <StackPanel Spacing="4">
-                                <TextBlock Text="AtCoder" Style="{StaticResource SectionTitle}" />
-                                <TextBlock Text="同步 AtCoder 的提交数据和比赛信息。" Style="{StaticResource PageDescription}" />
+                                <TextBlock Style="{StaticResource SectionTitle}" Text="AtCoder" />
+                                <TextBlock Style="{StaticResource PageDescription}" Text="同步 AtCoder 的提交数据和比赛信息。" />
                             </StackPanel>
                             <TextBox x:Name="AtCoderHandleBox" Header="Handle" PlaceholderText="chokudai" Style="{StaticResource InputTextBoxStyle}" />
-                            <Border
-                                x:Name="AtCoderStatusBadge"
-                                Style="{StaticResource StatusBadge}"
-                                HorizontalAlignment="Left"
-                                Background="{Binding Text, ElementName=AtCoderStatusText, Converter={StaticResource SyncStatusBrushConverter}, ConverterParameter=background}">
-                                <TextBlock
-                                    x:Name="AtCoderStatusText"
-                                    FontFamily="{StaticResource AppMonoFontFamily}"
-                                    Foreground="{Binding Text, ElementName=AtCoderStatusText, Converter={StaticResource SyncStatusBrushConverter}, ConverterParameter=foreground}" />
-                            </Border>
                             <StackPanel Orientation="Horizontal" Spacing="10">
-                                <Button Content="保存账号" Style="{StaticResource SecondaryButton}" Click="SaveAtCoderButton_Click" />
-                                <Button Content="立即同步" Style="{StaticResource PrimaryButton}" Click="SyncAtCoderButton_Click" />
+                                <Border
+                                    x:Name="AtCoderStatusBadge"
+                                    HorizontalAlignment="Left"
+                                    Background="{Binding Text, ElementName=AtCoderStatusText, Converter={StaticResource SyncStatusBrushConverter}, ConverterParameter=background}"
+                                    Style="{StaticResource StatusBadge}">
+                                    <TextBlock
+                                        x:Name="AtCoderStatusText"
+                                        FontFamily="{StaticResource AppMonoFontFamily}"
+                                        Foreground="{Binding Text, ElementName=AtCoderStatusText, Converter={StaticResource SyncStatusBrushConverter}, ConverterParameter=foreground}" />
+                                </Border>
+                                <ProgressRing x:Name="AtCoderBusyRing" Width="18" Height="18" IsActive="False" Visibility="Collapsed" />
+                            </StackPanel>
+                            <StackPanel Orientation="Horizontal" Spacing="10">
+                                <Button x:Name="SaveAtCoderButton" Click="SaveAtCoderButton_Click" Content="保存账号" Style="{StaticResource SecondaryButton}" />
+                                <Button x:Name="SyncAtCoderButton" Click="SyncAtCoderButton_Click" Content="立即同步" Style="{StaticResource PrimaryButton}" />
                             </StackPanel>
                         </StackPanel>
                     </Border>
@@ -102,18 +110,34 @@
                             <Grid.ColumnDefinitions>
                                 <ColumnDefinition Width="*" />
                                 <ColumnDefinition Width="Auto" />
+                                <ColumnDefinition Width="Auto" />
                             </Grid.ColumnDefinitions>
                             <StackPanel Spacing="4">
-                                <TextBlock Text="最近同步任务" Style="{StaticResource SectionTitle}" />
-                                <TextBlock Text="用于观察同步是否成功、拉取多少记录、是否需要重试。" Style="{StaticResource PageDescription}" />
+                                <TextBlock Style="{StaticResource SectionTitle}" Text="最近同步任务" />
+                                <TextBlock Style="{StaticResource PageDescription}" Text="观察同步是否成功、拉取了多少记录、是否需要重试。" />
                             </StackPanel>
-                            <Button Grid.Column="1" Content="刷新" Style="{StaticResource SecondaryButton}" Click="RefreshButton_Click" />
+                            <Button
+                                x:Name="RetryFailedButton"
+                                Grid.Column="1"
+                                Margin="0,0,10,0"
+                                Click="RetryFailedButton_Click"
+                                Content="重试失败任务"
+                                IsEnabled="False"
+                                Style="{StaticResource SecondaryButton}" />
+                            <Button Grid.Column="2" Click="RefreshButton_Click" Content="刷新" Style="{StaticResource SecondaryButton}" />
                         </Grid>
 
-                        <ListView x:Name="SyncTasksList" MaxHeight="480">
+                        <TextBlock
+                            x:Name="EmptyTasksHint"
+                            HorizontalAlignment="Center"
+                            Style="{StaticResource MutedCaption}"
+                            Text="当前还没有同步任务记录。"
+                            Visibility="Collapsed" />
+
+                        <ListView x:Name="SyncTasksList" MaxHeight="520">
                             <ListView.ItemTemplate>
                                 <DataTemplate x:DataType="models:SyncTaskItem">
-                                    <Border Margin="0,0,0,12" Style="{StaticResource SoftPanel}" Padding="16">
+                                    <Border Margin="0,0,0,12" Style="{StaticResource SoftPanel}">
                                         <Grid ColumnSpacing="14">
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="*" />
@@ -126,17 +150,20 @@
                                                         CornerRadius="999"
                                                         Padding="8,4">
                                                         <TextBlock
-                                                            Text="{Binding StatusText}"
                                                             FontFamily="{StaticResource AppMonoFontFamily}"
-                                                            Foreground="{Binding Status, Converter={StaticResource SyncStatusBrushConverter}, ConverterParameter=foreground}" />
+                                                            Foreground="{Binding Status, Converter={StaticResource SyncStatusBrushConverter}, ConverterParameter=foreground}"
+                                                            Text="{Binding StatusText}" />
                                                     </Border>
-                                                    <TextBlock Text="{Binding CreatedAtText}" Style="{StaticResource MutedCaption}" />
+                                                    <TextBlock Style="{StaticResource MutedCaption}" Text="{Binding CreatedAtText}" />
                                                 </StackPanel>
-                                                <TextBlock Text="{Binding ErrorMessage}" Style="{StaticResource MutedCaption}" Visibility="{Binding ErrorMessage, Converter={StaticResource StringVisibilityConverter}}" />
+                                                <TextBlock
+                                                    Style="{StaticResource MutedCaption}"
+                                                    Text="{Binding ErrorMessage}"
+                                                    Visibility="{Binding ErrorMessage, Converter={StaticResource StringVisibilityConverter}}" />
                                             </StackPanel>
                                             <StackPanel Grid.Column="1" HorizontalAlignment="Right" Spacing="6">
-                                                <TextBlock Text="{Binding FetchedText}" FontFamily="{StaticResource AppMonoFontFamily}" />
-                                                <TextBlock Text="{Binding SavedText}" Style="{StaticResource MutedCaption}" />
+                                                <TextBlock FontFamily="{StaticResource AppMonoFontFamily}" Text="{Binding FetchedText}" />
+                                                <TextBlock Style="{StaticResource MutedCaption}" Text="{Binding SavedText}" />
                                             </StackPanel>
                                         </Grid>
                                     </Border>
