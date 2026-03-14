@@ -1,0 +1,43 @@
+{
+  "name": "algorithm-review-system",
+  "version": "1.0.0",
+  "description": "算法错题复盘系统 - 面向朋友共享使用的轻量错题复盘工具",
+  "private": true,
+  "workspaces": [
+    "backend",
+    "frontend"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:backend": "bash ./scripts/dev-backend.sh",
+    "dev:frontend": "bash ./scripts/dev-frontend.sh",
+    "start": "concurrently \"npm run start:backend\" \"npm run start:frontend\"",
+    "start:backend": "bash ./scripts/start-backend.sh",
+    "start:frontend": "bash ./scripts/start-frontend.sh",
+    "ports:clean": "bash ./scripts/kill-ports.sh",
+    "serve:friends": "bash ./scripts/serve-friends.sh",
+    "pm2:start": "bash ./scripts/pm2-start.sh",
+    "pm2:stop": "bash ./scripts/pm2-stop.sh",
+    "build": "npm run build --workspace=backend && npm run build --workspace=frontend",
+    "db:migrate": "npx prisma migrate dev",
+    "db:generate": "npx prisma generate",
+    "db:studio": "npx prisma studio",
+    "ops:backup": "bash ./scripts/backup-sqlite.sh",
+    "ops:restore": "bash ./scripts/restore-sqlite.sh",
+    "ops:smoke": "bash ./scripts/smoke-test.sh"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "prisma": "^5.10.0"
+  },
+  "engines": {
+    "node": ">=18.0.0"
+  },
+  "main": "index.js",
+  "directories": {
+    "doc": "docs"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}

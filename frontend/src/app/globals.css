@@ -1,0 +1,70 @@
+﻿@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --foreground-rgb: 15, 23, 42;
+  --muted-rgb: 100, 116, 139;
+  --background-rgb: 248, 250, 252;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  min-height: 100vh;
+  color: rgb(var(--foreground-rgb));
+  background:
+    radial-gradient(circle at top left, rgba(59, 130, 246, 0.12), transparent 24%),
+    radial-gradient(circle at top right, rgba(14, 165, 233, 0.14), transparent 22%),
+    linear-gradient(180deg, #f8fbff 0%, #f5f7fb 35%, #f8fafc 100%);
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+@layer base {
+  input,
+  select,
+  textarea {
+    @apply border-slate-200 bg-white text-slate-900 placeholder:text-slate-400;
+  }
+
+  input:focus,
+  select:focus,
+  textarea:focus {
+    @apply outline-none ring-4 ring-primary-100 border-primary-400;
+  }
+}
+
+@layer components {
+  .page-shell {
+    @apply mx-auto max-w-7xl px-4 pb-10 pt-6 sm:px-6 lg:px-8;
+  }
+
+  .glass-card {
+    @apply rounded-2xl border border-white/60 bg-white/90 shadow-[0_20px_60px_-24px_rgba(15,23,42,0.22)] backdrop-blur;
+  }
+
+  .soft-card {
+    @apply rounded-2xl border border-slate-200/80 bg-white shadow-[0_12px_30px_-18px_rgba(15,23,42,0.22)];
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
+
+pre[class*='language-'] {
+  border-radius: 1rem;
+  margin: 1rem 0;
+}

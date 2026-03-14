@@ -1,0 +1,106 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<Page
+    x:Class="OJReviewDesktop.Views.MainPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d">
+    <Grid Background="{StaticResource AppBackgroundBrush}">
+        <NavigationView
+            x:Name="RootNav"
+            IsBackButtonVisible="Collapsed"
+            IsPaneToggleButtonVisible="True"
+            IsSettingsVisible="False"
+            OpenPaneLength="228"
+            PaneDisplayMode="LeftCompact"
+            SelectionChanged="OnSelectionChanged">
+            <NavigationView.PaneHeader>
+                <StackPanel Margin="16,16,16,8" Spacing="16">
+                    <StackPanel Orientation="Horizontal" Spacing="12">
+                        <Border Width="40" Height="40" CornerRadius="14" Background="{StaticResource AccentBrush}">
+                            <FontIcon Glyph="&#xE7C3;" Foreground="White" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                        </Border>
+                        <StackPanel Spacing="2">
+                            <TextBlock Text="算法复盘平台" FontSize="18" FontWeight="SemiBold" />
+                            <TextBlock Text="Competitive Programming Review" Style="{StaticResource MutedCaption}" />
+                        </StackPanel>
+                    </StackPanel>
+
+                    <Border Style="{StaticResource SoftPanel}" Padding="14">
+                        <StackPanel Spacing="4">
+                            <TextBlock Text="当前工作区" Style="{StaticResource MutedCaption}" />
+                            <TextBlock x:Name="WorkspaceNameText" Text="本地单用户工作区" FontWeight="SemiBold" />
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </NavigationView.PaneHeader>
+
+            <NavigationView.MenuItems>
+                <NavigationViewItem Content="总览" Icon="Home" Tag="dashboard" />
+                <NavigationViewItem Content="账号绑定" Icon="Contact" Tag="accounts" />
+                <NavigationViewItem Content="提交记录" Icon="Library" Tag="submissions" />
+                <NavigationViewItem Content="题库" Icon="Document" Tag="problems" />
+                <NavigationViewItem Content="错题复盘" Icon="Favorite" Tag="review" />
+                <NavigationViewItem Content="AI 分析" Icon="Preview" Tag="analysis" />
+            </NavigationView.MenuItems>
+
+            <NavigationView.FooterMenuItems>
+                <NavigationViewItem Content="设置" Icon="Setting" Tag="settings" />
+            </NavigationView.FooterMenuItems>
+
+            <Grid Padding="28,20,28,28" RowSpacing="24">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                </Grid.RowDefinitions>
+
+                <Border Grid.Row="0" Style="{StaticResource AppCard}">
+                    <Grid ColumnSpacing="20">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+
+                        <StackPanel Spacing="6">
+                            <TextBlock Text="把多平台 OJ 提交沉淀成真正可复用的复盘资产" Style="{StaticResource PageTitle}" />
+                            <TextBlock
+                                Text="统一同步 Codeforces、AtCoder 与手动录题数据，在一个本地工作台里完成筛选、复盘、分析与追踪。"
+                                Style="{StaticResource PageDescription}" />
+                        </StackPanel>
+
+                        <StackPanel Grid.Column="1" HorizontalAlignment="Right" Spacing="10">
+                            <TextBlock x:Name="ServiceStatusText" HorizontalAlignment="Right" Style="{StaticResource MutedCaption}" />
+                            <Border
+                                Background="{Binding Text, ElementName=ServiceStatusTone, Converter={StaticResource SyncStatusBrushConverter}, ConverterParameter=background}"
+                                CornerRadius="999"
+                                Padding="10,4">
+                                <TextBlock
+                                    x:Name="ServiceStatusTone"
+                                    FontFamily="{StaticResource AppMonoFontFamily}"
+                                    FontSize="12"
+                                    FontWeight="SemiBold"
+                                    Foreground="{Binding Text, ElementName=ServiceStatusTone, Converter={StaticResource SyncStatusBrushConverter}, ConverterParameter=foreground}"
+                                    Text="RUNNING" />
+                            </Border>
+                            <ComboBox
+                                x:Name="ThemeModeBox"
+                                MinWidth="156"
+                                SelectedIndex="0"
+                                SelectionChanged="ThemeModeBox_SelectionChanged"
+                                Style="{StaticResource InputComboBoxStyle}">
+                                <ComboBoxItem Content="跟随系统" Tag="follow-system" />
+                                <ComboBoxItem Content="浅色模式" Tag="light" />
+                                <ComboBoxItem Content="深色模式" Tag="dark" />
+                            </ComboBox>
+                        </StackPanel>
+                    </Grid>
+                </Border>
+
+                <Border Grid.Row="1" Background="{StaticResource SurfaceBackgroundBrush}" BorderBrush="{StaticResource AppBorderBrush}" BorderThickness="1" CornerRadius="24" Padding="8">
+                    <Frame x:Name="ContentFrame" />
+                </Border>
+            </Grid>
+        </NavigationView>
+    </Grid>
+</Page>

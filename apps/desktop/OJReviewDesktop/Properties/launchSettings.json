@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "OJReviewDesktop (Package)": {
+      "commandName": "MsixPackage"
+    },
+    "OJReviewDesktop (Unpackaged)": {
+      "commandName": "Project"
+    }
+  }
+}

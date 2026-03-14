@@ -1,0 +1,7 @@
+#!/usr/bin/env bash
+set -euo pipefail
+if [[ "${1-}" == "config" && "${2-}" == "get" && "${3-}" == "registry" ]]; then
+  echo "${npm_config_registry:-https://registry.npmjs.org/}"
+  exit 0
+fi
+exec /usr/bin/npm "$@"

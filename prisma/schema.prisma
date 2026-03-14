@@ -1,0 +1,162 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id               String            @id @default(cuid())
+  handle           String            @unique
+  displayName      String?
+  avatarUrl        String?
+  rating           Int?
+  createdAt        DateTime          @default(now())
+  updatedAt        DateTime          @updatedAt
+  sessions         Session[]
+  externalAccounts ExternalAccount[]
+  problems         Problem[]
+  submissions      Submission[]
+  reviewQueues     ReviewQueue[]
+  problemSearches  ProblemSearch[]
+}
+
+model Session {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model ExternalAccount {
+  id             String   @id @default(cuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  provider       String
+  providerUserId String
+  handle         String
+  avatarUrl      String?
+  rating         Int?
+  lastSyncedAt   DateTime?
+  lastSyncStatus String   @default("idle")
+  lastSyncAttemptAt DateTime?
+  lastSuccessfulSyncAt DateTime?
+  lastSyncError String?
+  lastImportedProblems Int @default(0)
+  lastImportedSubmissions Int @default(0)
+  lastSyncDurationMs Int?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([provider, providerUserId])
+  @@unique([userId, provider])
+  @@index([handle])
+}
+
+model Problem {
+  id                 String        @id @default(cuid())
+  userId             String
+  user               User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  title              String
+  description        String
+  source             String?
+  url                String?
+  difficulty         String
+  tags               String
+  provider           String?
+  externalProblemKey String?
+  contestId          Int?
+  problemIndex       String?
+  externalUrl        String?
+  imported           Boolean       @default(false)
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+  submissions        Submission[]
+  reviewQueue        ReviewQueue[]
+  searchEntry        ProblemSearch?
+
+  @@index([userId])
+  @@index([difficulty])
+  @@index([tags])
+  @@unique([userId, provider, externalProblemKey])
+}
+
+model Submission {
+  id                   String    @id @default(cuid())
+  userId               String
+  user                 User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  problemId            String
+  problem              Problem   @relation(fields: [problemId], references: [id], onDelete: Cascade)
+  code                 String?
+  language             String
+  status               String
+  errorMessage         String?
+  errorType            String?
+  runtime              Int?
+  memory               Int?
+  externalSubmissionId String?   @unique
+  submittedAt          DateTime?
+  createdAt            DateTime  @default(now())
+  review               Review?
+
+  @@index([userId])
+  @@index([problemId])
+  @@index([status])
+}
+
+model Review {
+  id                     String     @id @default(cuid())
+  submissionId           String     @unique
+  submission             Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  aiAnalysis             String
+  improvementSuggestions String
+  keyPoints              String
+  similarProblems        String?
+  createdAt              DateTime   @default(now())
+  updatedAt              DateTime   @updatedAt
+
+  @@index([submissionId])
+}
+
+model ReviewQueue {
+  id             String   @id @default(cuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  problemId      String
+  problem        Problem  @relation(fields: [problemId], references: [id], onDelete: Cascade)
+  nextReviewDate DateTime
+  interval       Int      @default(1)
+  priority       Int      @default(1)
+  completed      Boolean  @default(false)
+  reviewCount    Int      @default(0)
+  lastReviewedAt DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([userId])
+  @@index([nextReviewDate])
+  @@index([completed])
+}
+
+model ProblemSearch {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  problemId   String   @unique
+  problem     Problem  @relation(fields: [problemId], references: [id], onDelete: Cascade)
+  title       String
+  description String
+  tags        String
+  source      String?
+
+  @@index([userId])
+  @@map("problem_search")
+}
