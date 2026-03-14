@@ -42,6 +42,15 @@ const (
 	TaskTypeAnalysis TaskType = "analysis_task"
 )
 
+type ReviewStatus string
+
+const (
+	ReviewStatusTodo      ReviewStatus = "TODO"
+	ReviewStatusReviewing ReviewStatus = "REVIEWING"
+	ReviewStatusScheduled ReviewStatus = "SCHEDULED"
+	ReviewStatusDone      ReviewStatus = "DONE"
+)
+
 type OwnerProfile struct {
 	ID        int64     `json:"id"`
 	Name      string    `json:"name"`
@@ -109,6 +118,14 @@ type ReviewSnapshot struct {
 	ID          int64     `json:"id"`
 	GeneratedAt time.Time `json:"generatedAt"`
 	SummaryJSON string    `json:"summaryJson"`
+}
+
+type ProblemReviewState struct {
+	ProblemID     int64        `json:"problemId"`
+	Status        ReviewStatus `json:"status"`
+	Notes         string       `json:"notes"`
+	NextReviewAt  *time.Time   `json:"nextReviewAt,omitempty"`
+	LastUpdatedAt time.Time    `json:"lastUpdatedAt"`
 }
 
 type AnalysisTask struct {

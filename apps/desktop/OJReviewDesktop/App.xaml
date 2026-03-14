@@ -16,7 +16,7 @@
             <ResourceDictionary.ThemeDictionaries>
                 <ResourceDictionary x:Key="Light">
                     <Color x:Key="AppBackgroundColor">#FFFAFAFA</Color>
-                    <Color x:Key="SurfaceBackgroundColor">#FFF4F4F5</Color>
+                    <Color x:Key="SurfaceBackgroundColor">#FFF5F5F7</Color>
                     <Color x:Key="CardBackgroundColor">#FFFFFFFF</Color>
                     <Color x:Key="BorderColor">#FFE4E4E7</Color>
                     <Color x:Key="AccentColor">#FF2563EB</Color>
@@ -27,12 +27,12 @@
                     <Color x:Key="WarningColor">#FFD97706</Color>
                     <Color x:Key="DangerColor">#FFDC2626</Color>
                     <Color x:Key="InfoColor">#FF2563EB</Color>
-                    <Color x:Key="SkeletonBaseColor">#FFF4F4F5</Color>
-                    <Color x:Key="SkeletonHighlightColor">#FFE4E4E7</Color>
+                    <Color x:Key="SkeletonBaseColor">#FFF1F1F4</Color>
+                    <Color x:Key="SkeletonHighlightColor">#FFE7E7EC</Color>
                 </ResourceDictionary>
                 <ResourceDictionary x:Key="Dark">
                     <Color x:Key="AppBackgroundColor">#FF09090B</Color>
-                    <Color x:Key="SurfaceBackgroundColor">#FF101014</Color>
+                    <Color x:Key="SurfaceBackgroundColor">#FF0F0F12</Color>
                     <Color x:Key="CardBackgroundColor">#FF121215</Color>
                     <Color x:Key="BorderColor">#FF27272A</Color>
                     <Color x:Key="AccentColor">#FF3B82F6</Color>
@@ -43,7 +43,7 @@
                     <Color x:Key="WarningColor">#FFFBBF24</Color>
                     <Color x:Key="DangerColor">#FFFB7185</Color>
                     <Color x:Key="InfoColor">#FF60A5FA</Color>
-                    <Color x:Key="SkeletonBaseColor">#FF17171C</Color>
+                    <Color x:Key="SkeletonBaseColor">#FF18181B</Color>
                     <Color x:Key="SkeletonHighlightColor">#FF27272A</Color>
                 </ResourceDictionary>
             </ResourceDictionary.ThemeDictionaries>
@@ -73,6 +73,7 @@
             <Style TargetType="Control">
                 <Setter Property="FontFamily" Value="{StaticResource AppChineseFontFamily}" />
                 <Setter Property="Foreground" Value="{StaticResource ForegroundBrush}" />
+                <Setter Property="UseSystemFocusVisuals" Value="True" />
             </Style>
 
             <Style TargetType="Page">
@@ -82,24 +83,26 @@
             <Style TargetType="TextBlock">
                 <Setter Property="FontFamily" Value="{StaticResource AppChineseFontFamily}" />
                 <Setter Property="Foreground" Value="{StaticResource ForegroundBrush}" />
+                <Setter Property="TextWrapping" Value="NoWrap" />
             </Style>
 
             <Style x:Key="PageTitle" TargetType="TextBlock">
-                <Setter Property="FontSize" Value="32" />
+                <Setter Property="FontSize" Value="34" />
                 <Setter Property="FontWeight" Value="SemiBold" />
-                <Setter Property="CharacterSpacing" Value="-8" />
+                <Setter Property="CharacterSpacing" Value="-10" />
             </Style>
 
             <Style x:Key="PageDescription" TargetType="TextBlock">
                 <Setter Property="Foreground" Value="{StaticResource SecondaryForegroundBrush}" />
                 <Setter Property="TextWrapping" Value="WrapWholeWords" />
                 <Setter Property="LineHeight" Value="22" />
+                <Setter Property="MaxWidth" Value="840" />
             </Style>
 
             <Style x:Key="SectionTitle" TargetType="TextBlock">
                 <Setter Property="FontSize" Value="18" />
                 <Setter Property="FontWeight" Value="SemiBold" />
-                <Setter Property="CharacterSpacing" Value="-2" />
+                <Setter Property="CharacterSpacing" Value="-4" />
             </Style>
 
             <Style x:Key="MetricLabel" TargetType="TextBlock">
@@ -109,25 +112,32 @@
 
             <Style x:Key="MetricValue" TargetType="TextBlock">
                 <Setter Property="FontFamily" Value="{StaticResource AppMonoFontFamily}" />
-                <Setter Property="FontSize" Value="36" />
+                <Setter Property="FontSize" Value="38" />
                 <Setter Property="FontWeight" Value="SemiBold" />
-                <Setter Property="CharacterSpacing" Value="-4" />
+                <Setter Property="CharacterSpacing" Value="-6" />
             </Style>
 
             <Style x:Key="MonoText" TargetType="TextBlock">
                 <Setter Property="FontFamily" Value="{StaticResource AppMonoFontFamily}" />
             </Style>
 
+            <Style x:Key="MutedCaption" TargetType="TextBlock">
+                <Setter Property="Foreground" Value="{StaticResource MutedForegroundBrush}" />
+                <Setter Property="TextWrapping" Value="WrapWholeWords" />
+            </Style>
+
             <Style x:Key="AppCard" TargetType="Border">
                 <Setter Property="Background" Value="{StaticResource CardBackgroundBrush}" />
                 <Setter Property="BorderBrush" Value="{StaticResource AppBorderBrush}" />
                 <Setter Property="BorderThickness" Value="1" />
-                <Setter Property="CornerRadius" Value="18" />
+                <Setter Property="CornerRadius" Value="20" />
                 <Setter Property="Padding" Value="24" />
             </Style>
 
             <Style x:Key="SoftPanel" TargetType="Border" BasedOn="{StaticResource AppCard}">
                 <Setter Property="Background" Value="{StaticResource SurfaceBackgroundBrush}" />
+                <Setter Property="CornerRadius" Value="18" />
+                <Setter Property="Padding" Value="18" />
             </Style>
 
             <Style x:Key="PrimaryButton" TargetType="Button">
@@ -137,16 +147,17 @@
                 <Setter Property="BorderThickness" Value="1" />
                 <Setter Property="CornerRadius" Value="12" />
                 <Setter Property="Padding" Value="16,10" />
-                <Setter Property="UseSystemFocusVisuals" Value="True" />
+                <Setter Property="MinHeight" Value="40" />
             </Style>
 
             <Style x:Key="SecondaryButton" TargetType="Button">
-                <Setter Property="Background" Value="{StaticResource SurfaceBackgroundBrush}" />
+                <Setter Property="Background" Value="Transparent" />
                 <Setter Property="Foreground" Value="{StaticResource ForegroundBrush}" />
                 <Setter Property="BorderBrush" Value="{StaticResource AppBorderBrush}" />
                 <Setter Property="BorderThickness" Value="1" />
                 <Setter Property="CornerRadius" Value="12" />
                 <Setter Property="Padding" Value="16,10" />
+                <Setter Property="MinHeight" Value="40" />
             </Style>
 
             <Style x:Key="InputTextBoxStyle" TargetType="TextBox">
@@ -155,6 +166,7 @@
                 <Setter Property="BorderThickness" Value="1" />
                 <Setter Property="CornerRadius" Value="12" />
                 <Setter Property="Padding" Value="14,10" />
+                <Setter Property="MinHeight" Value="42" />
             </Style>
 
             <Style x:Key="InputPasswordBoxStyle" TargetType="PasswordBox">
@@ -163,6 +175,7 @@
                 <Setter Property="BorderThickness" Value="1" />
                 <Setter Property="CornerRadius" Value="12" />
                 <Setter Property="Padding" Value="14,10" />
+                <Setter Property="MinHeight" Value="42" />
             </Style>
 
             <Style x:Key="InputComboBoxStyle" TargetType="ComboBox">
@@ -171,7 +184,7 @@
                 <Setter Property="BorderThickness" Value="1" />
                 <Setter Property="CornerRadius" Value="12" />
                 <Setter Property="Padding" Value="10,4" />
-                <Setter Property="MinHeight" Value="40" />
+                <Setter Property="MinHeight" Value="42" />
             </Style>
 
             <Style x:Key="OutlinedChip" TargetType="Border">
@@ -186,11 +199,6 @@
                 <Setter Property="CornerRadius" Value="999" />
                 <Setter Property="Padding" Value="8,4" />
                 <Setter Property="Background" Value="{StaticResource SurfaceBackgroundBrush}" />
-            </Style>
-
-            <Style x:Key="MutedCaption" TargetType="TextBlock">
-                <Setter Property="Foreground" Value="{StaticResource MutedForegroundBrush}" />
-                <Setter Property="TextWrapping" Value="WrapWholeWords" />
             </Style>
 
             <Style x:Key="SkeletonBlock" TargetType="Rectangle">
@@ -211,7 +219,14 @@
             <Style TargetType="ListView">
                 <Setter Property="Background" Value="Transparent" />
                 <Setter Property="BorderThickness" Value="0" />
-                <Setter Property="IsItemClickEnabled" Value="False" />
+                <Setter Property="SelectionMode" Value="None" />
+            </Style>
+
+            <!-- 列表项悬停与点击反馈 -->
+            <Style x:Key="InteractiveListItemStyle" TargetType="ListViewItem">
+                <Setter Property="Padding" Value="12,10" />
+                <Setter Property="HorizontalContentAlignment" Value="Stretch" />
+                <Setter Property="VerticalContentAlignment" Value="Stretch" />
             </Style>
         </ResourceDictionary>
     </Application.Resources>

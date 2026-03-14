@@ -1,0 +1,1 @@
+import electronMain from 'electron/main'; const app = electronMain?.app; console.log(JSON.stringify({moduleType: typeof electronMain, keys: electronMain ? Object.keys(electronMain) : [], appType: typeof app, hasApp: !!app, cwd: process.cwd()})); if (app) { app.exit(0); } else { process.exit(7); }

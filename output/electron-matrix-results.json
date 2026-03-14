@@ -1,0 +1,324 @@
+{
+  "startedAt": "2026-03-14T10:20:00.392070Z",
+  "node": "v25.5.0",
+  "npm": "11.8.0",
+  "env": {
+    "ELECTRON_RUN_AS_NODE": "1",
+    "NODE_OPTIONS": null,
+    "ELECTRON_NO_ASAR": null,
+    "NODE_PATH": null
+  },
+  "versions": {
+    "34.5.8": {
+      "install": {
+        "returncode": 0,
+        "stdout": "\nadded 70 packages in 39s\n\n17 packages are looking for funding\n  run `npm fund` for details\n",
+        "stderr": ""
+      },
+      "cases": {
+        "esm_named_main": {
+          "direct": {
+            "returncode": 1,
+            "stdout": "",
+            "stderr": "node:internal/modules/esm/translators:326\n    return { module, exportNames: new SafeSet(['default', ...Object.keys(module.exports)]) };\n                                                                                ^\n\nTypeError: Cannot read properties of undefined (reading 'exports')\n    at cjsPreparseModuleExports (node:internal/modules/esm/translators:326:81)\n    at createCJSModuleWrap (node:internal/modules/esm/translators:227:35)\n    at ModuleLoader.<anonymous> (node:internal/modules/esm/translators:287:10)\n    at #translate (node:internal/modules/esm/loader:431:12)\n    at ModuleLoader.loadAndTranslate (node:internal/modules/esm/loader:478:27)\n\nNode.js v20.19.1\n"
+          },
+          "via_cli": {
+            "returncode": 1,
+            "stdout": "",
+            "stderr": "node:internal/modules/esm/translators:326\n    return { module, exportNames: new SafeSet(['default', ...Object.keys(module.exports)]) };\n                                                                                ^\n\nTypeError: Cannot read properties of undefined (reading 'exports')\n    at cjsPreparseModuleExports (node:internal/modules/esm/translators:326:81)\n    at createCJSModuleWrap (node:internal/modules/esm/translators:227:35)\n    at ModuleLoader.<anonymous> (node:internal/modules/esm/translators:287:10)\n    at #translate (node:internal/modules/esm/loader:431:12)\n    at ModuleLoader.loadAndTranslate (node:internal/modules/esm/loader:478:27)\n\nNode.js v20.19.1\n"
+          }
+        },
+        "esm_default_main": {
+          "direct": {
+            "returncode": 1,
+            "stdout": "",
+            "stderr": "node:internal/modules/esm/translators:326\n    return { module, exportNames: new SafeSet(['default', ...Object.keys(module.exports)]) };\n                                                                                ^\n\nTypeError: Cannot read properties of undefined (reading 'exports')\n    at cjsPreparseModuleExports (node:internal/modules/esm/translators:326:81)\n    at createCJSModuleWrap (node:internal/modules/esm/translators:227:35)\n    at ModuleLoader.<anonymous> (node:internal/modules/esm/translators:287:10)\n    at #translate (node:internal/modules/esm/loader:431:12)\n    at ModuleLoader.loadAndTranslate (node:internal/modules/esm/loader:478:27)\n\nNode.js v20.19.1\n"
+          },
+          "via_cli": {
+            "returncode": 1,
+            "stdout": "",
+            "stderr": "node:internal/modules/esm/translators:326\n    return { module, exportNames: new SafeSet(['default', ...Object.keys(module.exports)]) };\n                                                                                ^\n\nTypeError: Cannot read properties of undefined (reading 'exports')\n    at cjsPreparseModuleExports (node:internal/modules/esm/translators:326:81)\n    at createCJSModuleWrap (node:internal/modules/esm/translators:227:35)\n    at ModuleLoader.<anonymous> (node:internal/modules/esm/translators:287:10)\n    at #translate (node:internal/modules/esm/loader:431:12)\n    at ModuleLoader.loadAndTranslate (node:internal/modules/esm/loader:478:27)\n\nNode.js v20.19.1\n"
+          }
+        },
+        "esm_default_electron": {
+          "direct": {
+            "returncode": 1,
+            "stdout": "",
+            "stderr": "node:internal/modules/esm/translators:326\n    return { module, exportNames: new SafeSet(['default', ...Object.keys(module.exports)]) };\n                                                                                ^\n\nTypeError: Cannot read properties of undefined (reading 'exports')\n    at cjsPreparseModuleExports (node:internal/modules/esm/translators:326:81)\n    at createCJSModuleWrap (node:internal/modules/esm/translators:227:35)\n    at ModuleLoader.<anonymous> (node:internal/modules/esm/translators:287:10)\n    at #translate (node:internal/modules/esm/loader:431:12)\n    at ModuleLoader.loadAndTranslate (node:internal/modules/esm/loader:478:27)\n\nNode.js v20.19.1\n"
+          },
+          "via_cli": {
+            "returncode": 1,
+            "stdout": "",
+            "stderr": "node:internal/modules/esm/translators:326\n    return { module, exportNames: new SafeSet(['default', ...Object.keys(module.exports)]) };\n                                                                                ^\n\nTypeError: Cannot read properties of undefined (reading 'exports')\n    at cjsPreparseModuleExports (node:internal/modules/esm/translators:326:81)\n    at createCJSModuleWrap (node:internal/modules/esm/translators:227:35)\n    at ModuleLoader.<anonymous> (node:internal/modules/esm/translators:287:10)\n    at #translate (node:internal/modules/esm/loader:431:12)\n    at ModuleLoader.loadAndTranslate (node:internal/modules/esm/loader:478:27)\n\nNode.js v20.19.1\n"
+          }
+        },
+        "cjs_require_electron": {
+          "direct": {
+            "returncode": 7,
+            "stdout": "{\"case\":\"cjs_require_electron\",\"moduleType\":\"string\",\"keys\":[],\"value\":\"C:\\\\Users\\\\ackun\\\\AppData\\\\Local\\\\Temp\\\\ojreview-electron-matrix\\\\electron-34.5.8\\\\node_modules\\\\electron\\\\dist\\\\electron.exe\",\"appType\":\"undefined\",\"hasApp\":false}\n",
+            "stderr": ""
+          },
+          "via_cli": {
+            "returncode": 7,
+            "stdout": "{\"case\":\"cjs_require_electron\",\"moduleType\":\"string\",\"keys\":[],\"value\":\"C:\\\\Users\\\\ackun\\\\AppData\\\\Local\\\\Temp\\\\ojreview-electron-matrix\\\\electron-34.5.8\\\\node_modules\\\\electron\\\\dist\\\\electron.exe\",\"appType\":\"undefined\",\"hasApp\":false}\n",
+            "stderr": ""
+          }
+        }
+      }
+    },
+    "35.7.5": {
+      "install": {
+        "returncode": 0,
+        "stdout": "\nadded 70 packages in 3m\n\n17 packages are looking for funding\n  run `npm fund` for details\n",
+        "stderr": ""
+      },
+      "cases": {
+        "esm_named_main": {
+          "direct": {
+            "returncode": 1,
+            "stdout": "",
+            "stderr": "node:internal/modules/esm/translators:295\n    return { module, exportNames: new SafeSet(['default', ...Object.keys(module.exports)]) };\n                                                                                ^\n\nTypeError: Cannot read properties of undefined (reading 'exports')\n    at cjsPreparseModuleExports (node:internal/modules/esm/translators:295:81)\n    at createCJSModuleWrap (node:internal/modules/esm/translators:187:35)\n    at ModuleLoader.<anonymous> (node:internal/modules/esm/translators:247:10)\n    at #translate (node:internal/modules/esm/loader:534:12)\n    at ModuleLoader.loadAndTranslate (node:internal/modules/esm/loader:581:27)\n\nNode.js v22.16.0\n"
+          },
+          "via_cli": {
+            "returncode": 1,
+            "stdout": "",
+            "stderr": "node:internal/modules/esm/translators:295\n    return { module, exportNames: new SafeSet(['default', ...Object.keys(module.exports)]) };\n                                                                                ^\n\nTypeError: Cannot read properties of undefined (reading 'exports')\n    at cjsPreparseModuleExports (node:internal/modules/esm/translators:295:81)\n    at createCJSModuleWrap (node:internal/modules/esm/translators:187:35)\n    at ModuleLoader.<anonymous> (node:internal/modules/esm/translators:247:10)\n    at #translate (node:internal/modules/esm/loader:534:12)\n    at ModuleLoader.loadAndTranslate (node:internal/modules/esm/loader:581:27)\n\nNode.js v22.16.0\n"
+          }
+        },
+        "esm_default_main": {
+          "direct": {
+            "returncode": 1,
+            "stdout": "",
+            "stderr": "node:internal/modules/esm/translators:295\n    return { module, exportNames: new SafeSet(['default', ...Object.keys(module.exports)]) };\n                                                                                ^\n\nTypeError: Cannot read properties of undefined (reading 'exports')\n    at cjsPreparseModuleExports (node:internal/modules/esm/translators:295:81)\n    at createCJSModuleWrap (node:internal/modules/esm/translators:187:35)\n    at ModuleLoader.<anonymous> (node:internal/modules/esm/translators:247:10)\n    at #translate (node:internal/modules/esm/loader:534:12)\n    at ModuleLoader.loadAndTranslate (node:internal/modules/esm/loader:581:27)\n\nNode.js v22.16.0\n"
+          },
+          "via_cli": {
+            "returncode": 1,
+            "stdout": "",
+            "stderr": "node:internal/modules/esm/translators:295\n    return { module, exportNames: new SafeSet(['default', ...Object.keys(module.exports)]) };\n                                                                                ^\n\nTypeError: Cannot read properties of undefined (reading 'exports')\n    at cjsPreparseModuleExports (node:internal/modules/esm/translators:295:81)\n    at createCJSModuleWrap (node:internal/modules/esm/translators:187:35)\n    at ModuleLoader.<anonymous> (node:internal/modules/esm/translators:247:10)\n    at #translate (node:internal/modules/esm/loader:534:12)\n    at ModuleLoader.loadAndTranslate (node:internal/modules/esm/loader:581:27)\n\nNode.js v22.16.0\n"
+          }
+        },
+        "esm_default_electron": {
+          "direct": {
+            "returncode": 1,
+            "stdout": "",
+            "stderr": "node:internal/modules/esm/translators:295\n    return { module, exportNames: new SafeSet(['default', ...Object.keys(module.exports)]) };\n                                                                                ^\n\nTypeError: Cannot read properties of undefined (reading 'exports')\n    at cjsPreparseModuleExports (node:internal/modules/esm/translators:295:81)\n    at createCJSModuleWrap (node:internal/modules/esm/translators:187:35)\n    at ModuleLoader.<anonymous> (node:internal/modules/esm/translators:247:10)\n    at #translate (node:internal/modules/esm/loader:534:12)\n    at ModuleLoader.loadAndTranslate (node:internal/modules/esm/loader:581:27)\n\nNode.js v22.16.0\n"
+          },
+          "via_cli": {
+            "returncode": 1,
+            "stdout": "",
+            "stderr": "node:internal/modules/esm/translators:295\n    return { module, exportNames: new SafeSet(['default', ...Object.keys(module.exports)]) };\n                                                                                ^\n\nTypeError: Cannot read properties of undefined (reading 'exports')\n    at cjsPreparseModuleExports (node:internal/modules/esm/translators:295:81)\n    at createCJSModuleWrap (node:internal/modules/esm/translators:187:35)\n    at ModuleLoader.<anonymous> (node:internal/modules/esm/translators:247:10)\n    at #translate (node:internal/modules/esm/loader:534:12)\n    at ModuleLoader.loadAndTranslate (node:internal/modules/esm/loader:581:27)\n\nNode.js v22.16.0\n"
+          }
+        },
+        "cjs_require_electron": {
+          "direct": {
+            "returncode": 7,
+            "stdout": "{\"case\":\"cjs_require_electron\",\"moduleType\":\"string\",\"keys\":[],\"value\":\"C:\\\\Users\\\\ackun\\\\AppData\\\\Local\\\\Temp\\\\ojreview-electron-matrix\\\\electron-35.7.5\\\\node_modules\\\\electron\\\\dist\\\\electron.exe\",\"appType\":\"undefined\",\"hasApp\":false}\n",
+            "stderr": ""
+          },
+          "via_cli": {
+            "returncode": 7,
+            "stdout": "{\"case\":\"cjs_require_electron\",\"moduleType\":\"string\",\"keys\":[],\"value\":\"C:\\\\Users\\\\ackun\\\\AppData\\\\Local\\\\Temp\\\\ojreview-electron-matrix\\\\electron-35.7.5\\\\node_modules\\\\electron\\\\dist\\\\electron.exe\",\"appType\":\"undefined\",\"hasApp\":false}\n",
+            "stderr": ""
+          }
+        }
+      }
+    },
+    "36.9.1": {
+      "install": {
+        "returncode": 0,
+        "stdout": "\nadded 70 packages in 2m\n\n17 packages are looking for funding\n  run `npm fund` for details\n",
+        "stderr": ""
+      },
+      "cases": {
+        "esm_named_main": {
+          "direct": {
+            "returncode": 1,
+            "stdout": "",
+            "stderr": "node:internal/modules/esm/translators:297\n    return { module, exportNames: new SafeSet(['default', ...Object.keys(module.exports)]) };\n                                                                                ^\n\nTypeError: Cannot read properties of undefined (reading 'exports')\n    at cjsPreparseModuleExports (node:internal/modules/esm/translators:297:81)\n    at createCJSModuleWrap (node:internal/modules/esm/translators:189:35)\n    at ModuleLoader.<anonymous> (node:internal/modules/esm/translators:249:10)\n    at #translate (node:internal/modules/esm/loader:540:12)\n    at ModuleLoader.loadAndTranslate (node:internal/modules/esm/loader:587:27)\n    at async ModuleJob._link (node:internal/modules/esm/module_job:162:19)\n\nNode.js v22.19.0\n"
+          },
+          "via_cli": {
+            "returncode": 1,
+            "stdout": "",
+            "stderr": "node:internal/modules/esm/translators:297\n    return { module, exportNames: new SafeSet(['default', ...Object.keys(module.exports)]) };\n                                                                                ^\n\nTypeError: Cannot read properties of undefined (reading 'exports')\n    at cjsPreparseModuleExports (node:internal/modules/esm/translators:297:81)\n    at createCJSModuleWrap (node:internal/modules/esm/translators:189:35)\n    at ModuleLoader.<anonymous> (node:internal/modules/esm/translators:249:10)\n    at #translate (node:internal/modules/esm/loader:540:12)\n    at ModuleLoader.loadAndTranslate (node:internal/modules/esm/loader:587:27)\n    at async ModuleJob._link (node:internal/modules/esm/module_job:162:19)\n\nNode.js v22.19.0\n"
+          }
+        },
+        "esm_default_main": {
+          "direct": {
+            "returncode": 1,
+            "stdout": "",
+            "stderr": "node:internal/modules/esm/translators:297\n    return { module, exportNames: new SafeSet(['default', ...Object.keys(module.exports)]) };\n                                                                                ^\n\nTypeError: Cannot read properties of undefined (reading 'exports')\n    at cjsPreparseModuleExports (node:internal/modules/esm/translators:297:81)\n    at createCJSModuleWrap (node:internal/modules/esm/translators:189:35)\n    at ModuleLoader.<anonymous> (node:internal/modules/esm/translators:249:10)\n    at #translate (node:internal/modules/esm/loader:540:12)\n    at ModuleLoader.loadAndTranslate (node:internal/modules/esm/loader:587:27)\n    at async ModuleJob._link (node:internal/modules/esm/module_job:162:19)\n\nNode.js v22.19.0\n"
+          },
+          "via_cli": {
+            "returncode": 1,
+            "stdout": "",
+            "stderr": "node:internal/modules/esm/translators:297\n    return { module, exportNames: new SafeSet(['default', ...Object.keys(module.exports)]) };\n                                                                                ^\n\nTypeError: Cannot read properties of undefined (reading 'exports')\n    at cjsPreparseModuleExports (node:internal/modules/esm/translators:297:81)\n    at createCJSModuleWrap (node:internal/modules/esm/translators:189:35)\n    at ModuleLoader.<anonymous> (node:internal/modules/esm/translators:249:10)\n    at #translate (node:internal/modules/esm/loader:540:12)\n    at ModuleLoader.loadAndTranslate (node:internal/modules/esm/loader:587:27)\n    at async ModuleJob._link (node:internal/modules/esm/module_job:162:19)\n\nNode.js v22.19.0\n"
+          }
+        },
+        "esm_default_electron": {
+          "direct": {
+            "returncode": 1,
+            "stdout": "",
+            "stderr": "node:internal/modules/esm/translators:297\n    return { module, exportNames: new SafeSet(['default', ...Object.keys(module.exports)]) };\n                                                                                ^\n\nTypeError: Cannot read properties of undefined (reading 'exports')\n    at cjsPreparseModuleExports (node:internal/modules/esm/translators:297:81)\n    at createCJSModuleWrap (node:internal/modules/esm/translators:189:35)\n    at ModuleLoader.<anonymous> (node:internal/modules/esm/translators:249:10)\n    at #translate (node:internal/modules/esm/loader:540:12)\n    at ModuleLoader.loadAndTranslate (node:internal/modules/esm/loader:587:27)\n    at async ModuleJob._link (node:internal/modules/esm/module_job:162:19)\n\nNode.js v22.19.0\n"
+          },
+          "via_cli": {
+            "returncode": 1,
+            "stdout": "",
+            "stderr": "node:internal/modules/esm/translators:297\n    return { module, exportNames: new SafeSet(['default', ...Object.keys(module.exports)]) };\n                                                                                ^\n\nTypeError: Cannot read properties of undefined (reading 'exports')\n    at cjsPreparseModuleExports (node:internal/modules/esm/translators:297:81)\n    at createCJSModuleWrap (node:internal/modules/esm/translators:189:35)\n    at ModuleLoader.<anonymous> (node:internal/modules/esm/translators:249:10)\n    at #translate (node:internal/modules/esm/loader:540:12)\n    at ModuleLoader.loadAndTranslate (node:internal/modules/esm/loader:587:27)\n    at async ModuleJob._link (node:internal/modules/esm/module_job:162:19)\n\nNode.js v22.19.0\n"
+          }
+        },
+        "cjs_require_electron": {
+          "direct": {
+            "returncode": 7,
+            "stdout": "{\"case\":\"cjs_require_electron\",\"moduleType\":\"string\",\"keys\":[],\"value\":\"C:\\\\Users\\\\ackun\\\\AppData\\\\Local\\\\Temp\\\\ojreview-electron-matrix\\\\electron-36.9.1\\\\node_modules\\\\electron\\\\dist\\\\electron.exe\",\"appType\":\"undefined\",\"hasApp\":false}\n",
+            "stderr": ""
+          },
+          "via_cli": {
+            "returncode": 7,
+            "stdout": "{\"case\":\"cjs_require_electron\",\"moduleType\":\"string\",\"keys\":[],\"value\":\"C:\\\\Users\\\\ackun\\\\AppData\\\\Local\\\\Temp\\\\ojreview-electron-matrix\\\\electron-36.9.1\\\\node_modules\\\\electron\\\\dist\\\\electron.exe\",\"appType\":\"undefined\",\"hasApp\":false}\n",
+            "stderr": ""
+          }
+        }
+      }
+    },
+    "37.10.3": {
+      "install": {
+        "returncode": 0,
+        "stdout": "\nadded 70 packages in 7s\n\n17 packages are looking for funding\n  run `npm fund` for details\n",
+        "stderr": ""
+      },
+      "cases": {
+        "esm_named_main": {
+          "direct": {
+            "returncode": 1,
+            "stdout": "",
+            "stderr": "file:///C:/Users/ackun/AppData/Local/Temp/ojreview-electron-matrix/electron-37.10.3/cases/esm_named_main/main/index.mjs:1\nimport { app } from 'electron/main'; console.log(JSON.stringify({case:'esm_named_main', appType: typeof app, hasApp: !!app})); app.exit(0);\n         ^^^\nSyntaxError: The requested module 'electron/main' does not provide an export named 'app'\n    at ModuleJob._instantiate (node:internal/modules/esm/module_job:226:21)\n    at async ModuleJob.run (node:internal/modules/esm/module_job:335:5)\n    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:665:26)\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:132:5)\n\nNode.js v22.21.1\n"
+          },
+          "via_cli": {
+            "returncode": 1,
+            "stdout": "",
+            "stderr": "file:///C:/Users/ackun/AppData/Local/Temp/ojreview-electron-matrix/electron-37.10.3/cases/esm_named_main/main/index.mjs:1\nimport { app } from 'electron/main'; console.log(JSON.stringify({case:'esm_named_main', appType: typeof app, hasApp: !!app})); app.exit(0);\n         ^^^\nSyntaxError: The requested module 'electron/main' does not provide an export named 'app'\n    at ModuleJob._instantiate (node:internal/modules/esm/module_job:226:21)\n    at async ModuleJob.run (node:internal/modules/esm/module_job:335:5)\n    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:665:26)\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:132:5)\n\nNode.js v22.21.1\n"
+          }
+        },
+        "esm_default_main": {
+          "direct": {
+            "returncode": 7,
+            "stdout": "{\"case\":\"esm_default_main\",\"moduleType\":\"object\",\"keys\":[],\"appType\":\"undefined\",\"hasApp\":false}\n",
+            "stderr": ""
+          },
+          "via_cli": {
+            "returncode": 7,
+            "stdout": "{\"case\":\"esm_default_main\",\"moduleType\":\"object\",\"keys\":[],\"appType\":\"undefined\",\"hasApp\":false}\n",
+            "stderr": ""
+          }
+        },
+        "esm_default_electron": {
+          "direct": {
+            "returncode": 7,
+            "stdout": "{\"case\":\"esm_default_electron\",\"moduleType\":\"object\",\"keys\":[],\"appType\":\"undefined\",\"hasApp\":false}\n",
+            "stderr": ""
+          },
+          "via_cli": {
+            "returncode": 7,
+            "stdout": "{\"case\":\"esm_default_electron\",\"moduleType\":\"object\",\"keys\":[],\"appType\":\"undefined\",\"hasApp\":false}\n",
+            "stderr": ""
+          }
+        },
+        "cjs_require_electron": {
+          "direct": {
+            "returncode": 7,
+            "stdout": "{\"case\":\"cjs_require_electron\",\"moduleType\":\"string\",\"keys\":[],\"value\":\"C:\\\\Users\\\\ackun\\\\AppData\\\\Local\\\\Temp\\\\ojreview-electron-matrix\\\\electron-37.10.3\\\\node_modules\\\\electron\\\\dist\\\\electron.exe\",\"appType\":\"undefined\",\"hasApp\":false}\n",
+            "stderr": ""
+          },
+          "via_cli": {
+            "returncode": 7,
+            "stdout": "{\"case\":\"cjs_require_electron\",\"moduleType\":\"string\",\"keys\":[],\"value\":\"C:\\\\Users\\\\ackun\\\\AppData\\\\Local\\\\Temp\\\\ojreview-electron-matrix\\\\electron-37.10.3\\\\node_modules\\\\electron\\\\dist\\\\electron.exe\",\"appType\":\"undefined\",\"hasApp\":false}\n",
+            "stderr": ""
+          }
+        }
+      }
+    },
+    "38.3.0": {
+      "install": {
+        "returncode": 0,
+        "stdout": "\nadded 70 packages in 3m\n\n17 packages are looking for funding\n  run `npm fund` for details\n",
+        "stderr": ""
+      },
+      "cases": {
+        "esm_named_main": {
+          "direct": {
+            "returncode": 1,
+            "stdout": "",
+            "stderr": "file:///C:/Users/ackun/AppData/Local/Temp/ojreview-electron-matrix/electron-38.3.0/cases/esm_named_main/main/index.mjs:1\nimport { app } from 'electron/main'; console.log(JSON.stringify({case:'esm_named_main', appType: typeof app, hasApp: !!app})); app.exit(0);\n         ^^^\nSyntaxError: The requested module 'electron/main' does not provide an export named 'app'\n    at ModuleJob._instantiate (node:internal/modules/esm/module_job:228:21)\n    at async ModuleJob.run (node:internal/modules/esm/module_job:337:5)\n    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:665:26)\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:132:5)\n\nNode.js v22.20.0\n"
+          },
+          "via_cli": {
+            "returncode": 1,
+            "stdout": "",
+            "stderr": "file:///C:/Users/ackun/AppData/Local/Temp/ojreview-electron-matrix/electron-38.3.0/cases/esm_named_main/main/index.mjs:1\nimport { app } from 'electron/main'; console.log(JSON.stringify({case:'esm_named_main', appType: typeof app, hasApp: !!app})); app.exit(0);\n         ^^^\nSyntaxError: The requested module 'electron/main' does not provide an export named 'app'\n    at ModuleJob._instantiate (node:internal/modules/esm/module_job:228:21)\n    at async ModuleJob.run (node:internal/modules/esm/module_job:337:5)\n    at async onImport.tracePromise.__proto__ (node:internal/modules/esm/loader:665:26)\n    at async asyncRunEntryPointWithESMLoader (node:internal/modules/run_main:132:5)\n\nNode.js v22.20.0\n"
+          }
+        },
+        "esm_default_main": {
+          "direct": {
+            "returncode": 7,
+            "stdout": "{\"case\":\"esm_default_main\",\"moduleType\":\"object\",\"keys\":[],\"appType\":\"undefined\",\"hasApp\":false}\n",
+            "stderr": ""
+          },
+          "via_cli": {
+            "returncode": 7,
+            "stdout": "{\"case\":\"esm_default_main\",\"moduleType\":\"object\",\"keys\":[],\"appType\":\"undefined\",\"hasApp\":false}\n",
+            "stderr": ""
+          }
+        },
+        "esm_default_electron": {
+          "direct": {
+            "returncode": 7,
+            "stdout": "{\"case\":\"esm_default_electron\",\"moduleType\":\"object\",\"keys\":[],\"appType\":\"undefined\",\"hasApp\":false}\n",
+            "stderr": ""
+          },
+          "via_cli": {
+            "returncode": 7,
+            "stdout": "{\"case\":\"esm_default_electron\",\"moduleType\":\"object\",\"keys\":[],\"appType\":\"undefined\",\"hasApp\":false}\n",
+            "stderr": ""
+          }
+        },
+        "cjs_require_electron": {
+          "direct": {
+            "returncode": 7,
+            "stdout": "{\"case\":\"cjs_require_electron\",\"moduleType\":\"string\",\"keys\":[],\"value\":\"C:\\\\Users\\\\ackun\\\\AppData\\\\Local\\\\Temp\\\\ojreview-electron-matrix\\\\electron-38.3.0\\\\node_modules\\\\electron\\\\dist\\\\electron.exe\",\"appType\":\"undefined\",\"hasApp\":false}\n",
+            "stderr": ""
+          },
+          "via_cli": {
+            "returncode": 7,
+            "stdout": "{\"case\":\"cjs_require_electron\",\"moduleType\":\"string\",\"keys\":[],\"value\":\"C:\\\\Users\\\\ackun\\\\AppData\\\\Local\\\\Temp\\\\ojreview-electron-matrix\\\\electron-38.3.0\\\\node_modules\\\\electron\\\\dist\\\\electron.exe\",\"appType\":\"undefined\",\"hasApp\":false}\n",
+            "stderr": ""
+          }
+        }
+      }
+    }
+  },
+  "environmentMatrix": {
+    "c_path": {
+      "direct": {
+        "returncode": 7,
+        "stdout": "{\"case\":\"esm_default_main\",\"moduleType\":\"object\",\"keys\":[],\"appType\":\"undefined\",\"hasApp\":false}\n",
+        "stderr": ""
+      },
+      "via_cli": {
+        "returncode": 7,
+        "stdout": "{\"case\":\"esm_default_main\",\"moduleType\":\"object\",\"keys\":[],\"appType\":\"undefined\",\"hasApp\":false}\n",
+        "stderr": ""
+      }
+    },
+    "z_path": {
+      "direct": {
+        "returncode": 7,
+        "stdout": "{\"case\":\"esm_default_main\",\"moduleType\":\"object\",\"keys\":[],\"appType\":\"undefined\",\"hasApp\":false}\n",
+        "stderr": ""
+      },
+      "via_cli": {
+        "returncode": 7,
+        "stdout": "{\"case\":\"esm_default_main\",\"moduleType\":\"object\",\"keys\":[],\"appType\":\"undefined\",\"hasApp\":false}\n",
+        "stderr": ""
+      }
+    }
+  }
+}

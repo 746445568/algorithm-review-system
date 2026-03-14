@@ -56,6 +56,8 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("GET /api/submissions", s.handleSubmissions)
 	s.mux.HandleFunc("GET /api/problems", s.handleProblems)
 	s.mux.HandleFunc("GET /api/review/summary", s.handleReviewSummary)
+	s.mux.HandleFunc("GET /api/review/items/{problemId}", s.handleGetProblemReviewState)
+	s.mux.HandleFunc("PUT /api/review/items/{problemId}", s.handlePutProblemReviewState)
 	s.mux.HandleFunc("GET /api/contests", s.handleContests)
 	s.mux.HandleFunc("POST /api/contests/sync", s.handleSyncContests)
 	s.mux.HandleFunc("POST /api/analysis/generate", s.handleAnalysisGenerate)
@@ -200,6 +202,53 @@ func (s *Server) handleReviewSummary(w http.ResponseWriter, _ *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, summary)
+}
+
+func (s *Server) handleGetProblemReviewState(w http.ResponseWriter, r *http.Request) {
+	problemID, err := strconv.ParseInt(r.PathValue("problemId"), 10, 64)
+	if err != nil || problemID <= 0 {
+		writeError(w, http.StatusBadRequest, "invalid problem id")
+		return
+	}
+
+	state, err := s.db.GetProblemReviewState(problemID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	writeJSON(w, http.StatusOK, state)
+}
+
+func (s *Server) handlePutProblemReviewState(w http.ResponseWriter, r *http.Request) {
+	problemID, err := strconv.ParseInt(r.PathValue("problemId"), 10, 64)
+	if err != nil || problemID <= 0 {
+		writeError(w, http.StatusBadRequest, "invalid problem id")
+		return
+	}
+
+	var payload struct {
+		Status       models.ReviewStatus `json:"status"`
+		Notes        string              `json:"notes"`
+		NextReviewAt *time.Time          `json:"nextReviewAt"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid json body")
+		return
+	}
+
+	state, err := s.db.SaveProblemReviewState(models.ProblemReviewState{
+		ProblemID:    problemID,
+		Status:       payload.Status,
+		Notes:        payload.Notes,
+		NextReviewAt: payload.NextReviewAt,
+	})
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	writeJSON(w, http.StatusOK, state)
 }
 
 func (s *Server) handleContests(w http.ResponseWriter, r *http.Request) {

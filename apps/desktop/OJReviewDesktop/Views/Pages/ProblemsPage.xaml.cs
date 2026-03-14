@@ -1,7 +1,12 @@
+using Microsoft.UI.Dispatching;
+using Windows.System;
+
 namespace OJReviewDesktop.Views.Pages
 {
     public sealed partial class ProblemsPage : Page
     {
+        private DispatcherQueueTimer? _searchDebounce;
+
         public ProblemsPage()
         {
             InitializeComponent();
@@ -12,6 +17,41 @@ namespace OJReviewDesktop.Views.Pages
         {
             PlatformFilterBox.SelectedIndex = 0;
             await RefreshAsync();
+        }
+
+        private void SearchBox_TextChanged(object sender, Microsoft.UI.Xaml.Controls.TextChangedEventArgs e)
+        {
+            _searchDebounce?.Stop();
+            _searchDebounce = DispatcherQueue.CreateTimer();
+            _searchDebounce.Interval = TimeSpan.FromMilliseconds(400);
+            _searchDebounce.Tick += async (s, _) =>
+            {
+                if (s is DispatcherQueueTimer t) t.Stop();
+                await RefreshAsync();
+            };
+            _searchDebounce.Start();
+        }
+
+        private async void ProblemsList_ItemClick(object sender, ItemClickEventArgs e)
+        {
+            if (e.ClickedItem is ProblemItem problem && !string.IsNullOrWhiteSpace(problem.Url))
+            {
+                try
+                {
+                    await Launcher.LaunchUriAsync(new Uri(problem.Url));
+                }
+                catch
+                {
+                    StatusBar.Message = "无法打开链接";
+                    StatusBar.Severity = InfoBarSeverity.Warning;
+                    StatusBar.IsOpen = true;
+                }
+            }
+        }
+
+        private async void PlatformFilterBox_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (IsLoaded) await RefreshAsync();
         }
 
         private async void RefreshButton_Click(object sender, RoutedEventArgs e)

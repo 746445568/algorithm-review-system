@@ -5,10 +5,12 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:models="using:OJReviewDesktop.Models">
     <ScrollViewer>
-        <StackPanel Spacing="24" Padding="12">
+        <StackPanel Padding="12" Spacing="24">
             <StackPanel Spacing="6">
-                <TextBlock Text="题库" Style="{StaticResource PageTitle}" />
-                <TextBlock Text="统一查看归一化后的题目记录，后续的错题聚合和每日一题都基于这里的题库。" Style="{StaticResource PageDescription}" />
+                <TextBlock Style="{StaticResource PageTitle}" Text="题库" />
+                <TextBlock
+                    Style="{StaticResource PageDescription}"
+                    Text="统一查看归一化后的题目记录，后续的错题聚合和每日一题都会基于这里的题库。" />
             </StackPanel>
 
             <Border Style="{StaticResource AppCard}">
@@ -18,55 +20,62 @@
                         <ColumnDefinition Width="*" />
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
-                    <ComboBox x:Name="PlatformFilterBox" Style="{StaticResource InputComboBoxStyle}">
+                    <ComboBox x:Name="PlatformFilterBox" Style="{StaticResource InputComboBoxStyle}" SelectionChanged="PlatformFilterBox_SelectionChanged">
                         <ComboBoxItem Content="全部平台" Tag="" />
                         <ComboBoxItem Content="Codeforces" Tag="CODEFORCES" />
                         <ComboBoxItem Content="AtCoder" Tag="ATCODER" />
                     </ComboBox>
-                    <TextBox Grid.Column="1" x:Name="SearchBox" Style="{StaticResource InputTextBoxStyle}" PlaceholderText="搜索题目标题或关键字" />
-                    <Button Grid.Column="2" Content="刷新" Style="{StaticResource SecondaryButton}" Click="RefreshButton_Click" />
+                    <TextBox
+                        x:Name="SearchBox"
+                        Grid.Column="1"
+                        PlaceholderText="搜索题目标题或关键字"
+                        Style="{StaticResource InputTextBoxStyle}"
+                        TextChanged="SearchBox_TextChanged" />
+                    <Button Grid.Column="2" Click="RefreshButton_Click" Content="刷新" Style="{StaticResource SecondaryButton}" />
                 </Grid>
             </Border>
 
             <StackPanel x:Name="LoadingStatePanel" Spacing="16">
                 <Border Style="{StaticResource AppCard}">
                     <StackPanel Spacing="12">
-                        <Rectangle Style="{StaticResource SkeletonBlock}" Width="180" Height="18" />
-                        <Rectangle Style="{StaticResource SkeletonBlock}" Height="92" />
-                        <Rectangle Style="{StaticResource SkeletonBlock}" Height="92" />
+                        <Rectangle Width="180" Height="18" Style="{StaticResource SkeletonBlock}" />
+                        <Rectangle Height="92" Style="{StaticResource SkeletonBlock}" />
+                        <Rectangle Height="92" Style="{StaticResource SkeletonBlock}" />
                     </StackPanel>
                 </Border>
             </StackPanel>
 
             <Border x:Name="ContentCard" Style="{StaticResource AppCard}" Visibility="Collapsed">
-                <ListView x:Name="ProblemsList" MaxHeight="620">
+                <ListView x:Name="ProblemsList" MaxHeight="660" IsItemClickEnabled="True" ItemClick="ProblemsList_ItemClick">
                     <ListView.ItemTemplate>
                         <DataTemplate x:DataType="models:ProblemItem">
-                            <Border Margin="0,0,0,12" Style="{StaticResource SoftPanel}" Padding="18">
-                                <StackPanel Spacing="10">
+                            <Border Margin="0,0,0,12" Style="{StaticResource SoftPanel}">
+                                <StackPanel Spacing="12">
                                     <Grid ColumnSpacing="12">
                                         <Grid.ColumnDefinitions>
                                             <ColumnDefinition Width="*" />
                                             <ColumnDefinition Width="Auto" />
                                         </Grid.ColumnDefinitions>
                                         <StackPanel Spacing="6">
-                                            <TextBlock Text="{Binding Title}" FontSize="16" FontWeight="SemiBold" TextWrapping="WrapWholeWords" />
+                                            <TextBlock FontSize="16" FontWeight="SemiBold" Text="{Binding Title}" TextWrapping="WrapWholeWords" />
                                             <StackPanel Orientation="Horizontal" Spacing="10">
-                                                <TextBlock Text="{Binding PlatformText}" Style="{StaticResource MutedCaption}" />
-                                                <TextBlock Text="{Binding ContestText}" Style="{StaticResource MutedCaption}" />
+                                                <FontIcon Glyph="&#xE774;" />
+                                                <TextBlock Style="{StaticResource MutedCaption}" Text="{Binding PlatformText}" />
+                                                <FontIcon Glyph="&#xE787;" />
+                                                <TextBlock Style="{StaticResource MutedCaption}" Text="{Binding ContestText}" />
                                             </StackPanel>
                                         </StackPanel>
-                                        <Border Grid.Column="1" Style="{StaticResource StatusBadge}" HorizontalAlignment="Right">
-                                            <TextBlock Text="{Binding Difficulty}" FontFamily="{StaticResource AppMonoFontFamily}" />
+                                        <Border Grid.Column="1" Style="{StaticResource StatusBadge}">
+                                            <TextBlock FontFamily="{StaticResource AppMonoFontFamily}" Text="{Binding DifficultyText}" />
                                         </Border>
                                     </Grid>
 
                                     <StackPanel Orientation="Horizontal" Spacing="8">
-                                        <FontIcon Glyph="&#xE8FD;" Foreground="{StaticResource AccentBrush}" />
-                                        <TextBlock Text="{Binding TagsText}" Style="{StaticResource MutedCaption}" TextWrapping="WrapWholeWords" />
+                                        <FontIcon Foreground="{StaticResource AccentBrush}" Glyph="&#xE8FD;" />
+                                        <TextBlock Style="{StaticResource MutedCaption}" Text="{Binding TagsText}" TextWrapping="WrapWholeWords" />
                                     </StackPanel>
 
-                                    <TextBlock Text="{Binding Url}" Foreground="{StaticResource AccentBrush}" TextWrapping="WrapWholeWords" />
+                                    <TextBlock Foreground="{StaticResource AccentBrush}" Text="{Binding Url}" TextWrapping="WrapWholeWords" />
                                 </StackPanel>
                             </Border>
                         </DataTemplate>

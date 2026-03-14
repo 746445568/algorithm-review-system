@@ -5,28 +5,30 @@
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
     xmlns:models="using:OJReviewDesktop.Models">
     <ScrollViewer>
-        <StackPanel Spacing="24" Padding="12">
+        <StackPanel Padding="12" Spacing="24">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*" />
                     <ColumnDefinition Width="Auto" />
                 </Grid.ColumnDefinitions>
                 <StackPanel Spacing="6">
-                    <TextBlock Text="错题复盘" Style="{StaticResource PageTitle}" />
-                    <TextBlock Text="按题目和按比赛两种视图查看错误模式，快速定位需要优先补的题。" Style="{StaticResource PageDescription}" />
+                    <TextBlock Style="{StaticResource PageTitle}" Text="错题复盘" />
+                    <TextBlock
+                        Style="{StaticResource PageDescription}"
+                        Text="按题目和按比赛两种视图查看错误模式，快速定位需要优先补强的题。" />
                 </StackPanel>
                 <CommandBar Grid.Column="1" DefaultLabelPosition="Right">
-                    <AppBarToggleButton x:ConnectionId='19' x:Name="ProblemViewButton" Label="按题目" IsChecked="True"                                 />
-                    <AppBarToggleButton x:ConnectionId='20' x:Name="ContestViewButton" Label="按比赛"                                 />
-                    <AppBarButton x:ConnectionId='21' Label="刷新" Icon="Refresh"                             />
+                    <AppBarToggleButton x:ConnectionId='19' x:Name="ProblemViewButton"                                 IsChecked="True" Label="按题目" />
+                    <AppBarToggleButton x:ConnectionId='20' x:Name="ContestViewButton"                                 Label="按比赛" />
+                    <AppBarButton x:ConnectionId='21'                             Icon="Refresh" Label="刷新" />
                 </CommandBar>
             </Grid>
 
             <StackPanel x:ConnectionId='2' x:Name="LoadingStatePanel" Spacing="16">
                 <Border Style="{StaticResource AppCard}">
                     <StackPanel Spacing="12">
-                        <Rectangle Style="{StaticResource SkeletonBlock}" Width="180" Height="18" />
-                        <Rectangle Style="{StaticResource SkeletonBlock}" Height="140" />
+                        <Rectangle Width="180" Height="18" Style="{StaticResource SkeletonBlock}" />
+                        <Rectangle Height="160" Style="{StaticResource SkeletonBlock}" />
                     </StackPanel>
                 </Border>
                 <Grid ColumnSpacing="24">
@@ -35,10 +37,10 @@
                         <ColumnDefinition Width="*" />
                     </Grid.ColumnDefinitions>
                     <Border Grid.Column="0" Style="{StaticResource AppCard}">
-                        <Rectangle Style="{StaticResource SkeletonBlock}" Height="180" />
+                        <Rectangle Height="200" Style="{StaticResource SkeletonBlock}" />
                     </Border>
                     <Border Grid.Column="1" Style="{StaticResource AppCard}">
-                        <Rectangle Style="{StaticResource SkeletonBlock}" Height="180" />
+                        <Rectangle Height="200" Style="{StaticResource SkeletonBlock}" />
                     </Border>
                 </Grid>
             </StackPanel>
@@ -46,43 +48,41 @@
             <StackPanel x:ConnectionId='3' x:Name="ContentPanel" Spacing="24" Visibility="Collapsed">
                 <Border x:ConnectionId='5' x:Name="ProblemViewCard" Style="{StaticResource AppCard}">
                     <StackPanel Spacing="16">
-                        <TextBlock Text="按题目聚合" Style="{StaticResource SectionTitle}" />
+                        <TextBlock Style="{StaticResource SectionTitle}" Text="按题目聚合" />
                         <ListView x:ConnectionId='16' x:Name="ProblemSummariesList" MaxHeight="460">
                             <ListView.ItemTemplate>
                                 <DataTemplate                                       >
-                                    <Border Margin="0,0,0,12" Style="{StaticResource SoftPanel}" Padding="18">
+                                    <Border Margin="0,0,0,12" Style="{StaticResource SoftPanel}">
                                         <StackPanel Spacing="10">
-                                            <Grid ColumnSpacing="10">
+                                            <Grid ColumnSpacing="12">
                                                 <Grid.ColumnDefinitions>
                                                     <ColumnDefinition Width="*" />
                                                     <ColumnDefinition Width="Auto" />
                                                 </Grid.ColumnDefinitions>
                                                 <StackPanel Spacing="6">
-                                                    <TextBlock Text="{Binding Title}" FontWeight="SemiBold" TextWrapping="WrapWholeWords" />
-                                                    <StackPanel Orientation="Horizontal" Spacing="8">
-                                                        <TextBlock Text="{Binding PlatformText}" Style="{StaticResource MutedCaption}" />
-                                                        <TextBlock Text="{Binding ContestText}" Style="{StaticResource MutedCaption}" />
+                                                    <TextBlock FontSize="16" FontWeight="SemiBold" Text="{Binding Title}" TextWrapping="WrapWholeWords" />
+                                                    <StackPanel Orientation="Horizontal" Spacing="10">
+                                                        <TextBlock Style="{StaticResource MutedCaption}" Text="{Binding PlatformText}" />
+                                                        <TextBlock Style="{StaticResource MutedCaption}" Text="{Binding ContestText}" />
                                                     </StackPanel>
                                                 </StackPanel>
                                                 <Border
                                                     Grid.Column="1"
-                                                    Background="{Binding LatestVerdict, Converter={StaticResource VerdictBrushConverter}, ConverterParameter=background}"
+                                                    Background="{Binding Verdict, Converter={StaticResource VerdictBrushConverter}, ConverterParameter=background}"
                                                     CornerRadius="999"
-                                                    Padding="10,4"
-                                                    VerticalAlignment="Top">
+                                                    Padding="10,4">
                                                     <TextBlock
-                                                        Text="{Binding VerdictText}"
                                                         FontFamily="{StaticResource AppMonoFontFamily}"
-                                                        Foreground="{Binding LatestVerdict, Converter={StaticResource VerdictBrushConverter}, ConverterParameter=foreground}" />
+                                                        Foreground="{Binding Verdict, Converter={StaticResource VerdictBrushConverter}, ConverterParameter=foreground}"
+                                                        Text="{Binding VerdictText}" />
                                                 </Border>
                                             </Grid>
 
-                                            <StackPanel Orientation="Horizontal" Spacing="18">
-                                                <TextBlock Text="{Binding AttemptText}" FontFamily="{StaticResource AppMonoFontFamily}" />
-                                                <TextBlock Text="{Binding SolvedLaterText}" Style="{StaticResource MutedCaption}" />
+                                            <StackPanel Orientation="Horizontal" Spacing="12">
+                                                <TextBlock FontFamily="{StaticResource AppMonoFontFamily}" Text="{Binding AttemptText}" />
+                                                <TextBlock Style="{StaticResource MutedCaption}" Text="{Binding SolvedLaterText}" />
                                             </StackPanel>
-
-                                            <TextBlock Text="{Binding TagsText}" Style="{StaticResource MutedCaption}" TextWrapping="WrapWholeWords" />
+                                            <TextBlock Style="{StaticResource MutedCaption}" Text="{Binding TagsText}" TextWrapping="WrapWholeWords" />
                                         </StackPanel>
                                     </Border>
                                 </DataTemplate>
@@ -93,14 +93,14 @@
 
                 <Border x:ConnectionId='6' x:Name="ContestViewCard" Style="{StaticResource AppCard}" Visibility="Collapsed">
                     <StackPanel Spacing="16">
-                        <TextBlock Text="按比赛聚合" Style="{StaticResource SectionTitle}" />
-                        <ListView x:ConnectionId='13' x:Name="ContestGroupsList" MaxHeight="420">
+                        <TextBlock Style="{StaticResource SectionTitle}" Text="按比赛聚合" />
+                        <ListView x:ConnectionId='13' x:Name="ContestGroupsList" MaxHeight="460">
                             <ListView.ItemTemplate>
                                 <DataTemplate                                     >
-                                    <Border Margin="0,0,0,12" Style="{StaticResource SoftPanel}" Padding="18">
-                                        <StackPanel Spacing="6">
-                                            <TextBlock Text="{Binding ContestText}" FontWeight="SemiBold" TextWrapping="WrapWholeWords" />
-                                            <TextBlock Text="{Binding MetaText}" Style="{StaticResource MutedCaption}" TextWrapping="WrapWholeWords" />
+                                    <Border Margin="0,0,0,12" Style="{StaticResource SoftPanel}">
+                                        <StackPanel Spacing="8">
+                                            <TextBlock FontWeight="SemiBold" Text="{Binding ContestText}" TextWrapping="WrapWholeWords" />
+                                            <TextBlock FontFamily="{StaticResource AppMonoFontFamily}" Text="{Binding MetaText}" />
                                         </StackPanel>
                                     </Border>
                                 </DataTemplate>
@@ -117,8 +117,8 @@
 
                     <Border Grid.Column="0" Style="{StaticResource AppCard}">
                         <StackPanel Spacing="16">
-                            <TextBlock Text="重复出错题" Style="{StaticResource SectionTitle}" />
-                            <ListView x:ConnectionId='10' x:Name="RepeatedFailuresList" MaxHeight="300">
+                            <TextBlock Style="{StaticResource SectionTitle}" Text="重复出错题" />
+                            <ListView x:ConnectionId='10' x:Name="RepeatedFailuresList" MaxHeight="320">
                                 <ListView.ItemTemplate>
                                     <DataTemplate                                        >
                                         <Grid Margin="0,0,0,12" ColumnSpacing="12">
@@ -127,7 +127,7 @@
                                                 <ColumnDefinition Width="Auto" />
                                             </Grid.ColumnDefinitions>
                                             <TextBlock Text="{Binding Title}" TextWrapping="WrapWholeWords" />
-                                            <TextBlock Grid.Column="1" Text="{Binding FailedCountText}" FontFamily="{StaticResource AppMonoFontFamily}" />
+                                            <TextBlock Grid.Column="1" FontFamily="{StaticResource AppMonoFontFamily}" Text="{Binding FailedCountText}" />
                                         </Grid>
                                     </DataTemplate>
                                 </ListView.ItemTemplate>
@@ -137,13 +137,13 @@
 
                     <Border Grid.Column="1" Style="{StaticResource AppCard}">
                         <StackPanel Spacing="16">
-                            <TextBlock Text="最近未解决" Style="{StaticResource SectionTitle}" />
-                            <ListView x:ConnectionId='7' x:Name="RecentUnsolvedList" MaxHeight="300">
+                            <TextBlock Style="{StaticResource SectionTitle}" Text="最近未解决" />
+                            <ListView x:ConnectionId='7' x:Name="RecentUnsolvedList" MaxHeight="320">
                                 <ListView.ItemTemplate>
                                     <DataTemplate                                       >
                                         <StackPanel Margin="0,0,0,12" Spacing="4">
-                                            <TextBlock Text="{Binding Title}" FontWeight="SemiBold" TextWrapping="WrapWholeWords" />
-                                            <TextBlock Text="{Binding LastSubmittedText}" FontFamily="{StaticResource AppMonoFontFamily}" Style="{StaticResource MutedCaption}" />
+                                            <TextBlock FontWeight="SemiBold" Text="{Binding Title}" TextWrapping="WrapWholeWords" />
+                                            <TextBlock FontFamily="{StaticResource AppMonoFontFamily}" Style="{StaticResource MutedCaption}" Text="{Binding LastSubmittedText}" />
                                         </StackPanel>
                                     </DataTemplate>
                                 </ListView.ItemTemplate>

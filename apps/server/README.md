@@ -17,4 +17,4 @@ This directory contains the Go-based local service for the Windows desktop rewri
 2. real AtCoder adapter
 3. normalized problem/submission writes from adapters
 4. review aggregation by problem
-5. packaged `ojreviewd.exe` delivery with the WinUI app
+5. packaged `ojreviewd.exe` delivery with the Electron app

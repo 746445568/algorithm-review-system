@@ -15,6 +15,11 @@ namespace OJReviewDesktop.Views.Pages
             await RefreshAsync();
         }
 
+        private async void Filter_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (IsLoaded) await RefreshAsync();
+        }
+
         private async void RefreshButton_Click(object sender, RoutedEventArgs e)
         {
             await RefreshAsync();

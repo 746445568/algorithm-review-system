@@ -4,10 +4,12 @@
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
     <ScrollViewer>
-        <StackPanel Spacing="24" Padding="12">
+        <StackPanel Padding="12" Spacing="24">
             <StackPanel Spacing="6">
-                <TextBlock Text="AI 分析" Style="{StaticResource PageTitle}" />
-                <TextBlock Text="AI 只做增强层。配置完成后可以生成分析任务；未配置时主流程不受影响。" Style="{StaticResource PageDescription}" />
+                <TextBlock Style="{StaticResource PageTitle}" Text="AI 分析" />
+                <TextBlock
+                    Style="{StaticResource PageDescription}"
+                    Text="AI 只做增强层。配置完成后可以生成结构化分析任务；未配置时主流程不受影响。" />
             </StackPanel>
 
             <Grid ColumnSpacing="24">
@@ -18,15 +20,15 @@
 
                 <Border Grid.Column="0" Style="{StaticResource AppCard}">
                     <StackPanel Spacing="16">
-                        <TextBlock Text="任务控制台" Style="{StaticResource SectionTitle}" />
-                        <TextBlock Text="生成一次结构化分析，观察任务状态与错误信息。" Style="{StaticResource PageDescription}" />
+                        <TextBlock Style="{StaticResource SectionTitle}" Text="任务控制台" />
+                        <TextBlock Style="{StaticResource PageDescription}" Text="生成一次结构化分析，观察任务状态与错误信息。" />
                         <StackPanel Orientation="Horizontal" Spacing="10">
-                            <Button x:ConnectionId='5' Content="生成分析" Style="{StaticResource PrimaryButton}"                              />
-                            <Button x:ConnectionId='6' Content="刷新任务" Style="{StaticResource SecondaryButton}"                                 />
+                            <Button x:ConnectionId='5'                              Content="生成分析" Style="{StaticResource PrimaryButton}" />
+                            <Button x:ConnectionId='6'                                 Content="刷新任务" Style="{StaticResource SecondaryButton}" />
                         </StackPanel>
-                        <Border Style="{StaticResource SoftPanel}" Padding="16">
+                        <Border Style="{StaticResource SoftPanel}">
                             <StackPanel Spacing="8">
-                                <TextBlock Text="任务状态" Style="{StaticResource MutedCaption}" />
+                                <TextBlock Style="{StaticResource MutedCaption}" Text="任务状态" />
                                 <TextBlock x:ConnectionId='4' x:Name="TaskMetaText" FontFamily="{StaticResource AppMonoFontFamily}" />
                             </StackPanel>
                         </Border>
@@ -35,7 +37,7 @@
 
                 <Border Grid.Column="1" Style="{StaticResource AppCard}">
                     <StackPanel Spacing="16">
-                        <TextBlock Text="分析结果" Style="{StaticResource SectionTitle}" />
+                        <TextBlock Style="{StaticResource SectionTitle}" Text="分析结果" />
                         <TextBox x:ConnectionId='3'
                             x:Name="AnalysisResultBox"
                             AcceptsReturn="True"
