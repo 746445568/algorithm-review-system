@@ -157,7 +157,22 @@ async function fetchCodeforcesSubmissions(handle: string, lastSyncedAt?: Date | 
 
   for (let page = 0; page < MAX_SYNC_PAGES && !shouldStop; page += 1) {
     const from = page * 100 + 1;
-    const response = await fetch(`${API_BASE}/user.status?handle=${encodeURIComponent(handle)}&from=${from}&count=100`);
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 15_000);
+    let response: Response;
+    try {
+      response = await fetch(`${API_BASE}/user.status?handle=${encodeURIComponent(handle)}&from=${from}&count=100`, {
+        signal: controller.signal,
+      });
+    } catch (err: any) {
+      clearTimeout(timeout);
+      if (err?.name === 'AbortError') {
+        throw new Error('Codeforces API 请求超时，请稍后重试');
+      }
+      throw err;
+    } finally {
+      clearTimeout(timeout);
+    }
     if (!response.ok) {
       throw new Error(`Codeforces 提交同步失败：${response.status}`);
     }

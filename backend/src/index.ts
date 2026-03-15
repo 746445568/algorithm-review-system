@@ -22,7 +22,18 @@ const writeLimiter = createRateLimitMiddleware({
 });
 
 app.set('trust proxy', 1);
-app.use(cors({ credentials: true, origin: true }));
+const allowedOrigin = process.env.BACKEND_ORIGIN || 'http://localhost:3000';
+app.use(cors({
+  credentials: true,
+  origin: (origin, callback) => {
+    // 允许无 origin 的请求（服务端-服务端、curl 等）以及配置的来源
+    if (!origin || origin === allowedOrigin) {
+      callback(null, true);
+    } else {
+      callback(new Error('不允许的来源'));
+    }
+  },
+}));
 app.use(express.json({ limit: '10mb' }));
 app.use(express.text({ limit: '10mb' }));
 app.use(attachCurrentUser);
@@ -66,6 +77,14 @@ async function main() {
       expiresAt: {
         lt: new Date(),
       },
+    },
+  });
+  // 进程崩溃重启时，将卡住的同步状态重置为 error
+  await prisma.externalAccount.updateMany({
+    where: { lastSyncStatus: 'syncing' },
+    data: {
+      lastSyncStatus: 'error',
+      lastSyncError: '服务重启，同步中断，请重新同步',
     },
   });
   console.log('数据库连接成功');
