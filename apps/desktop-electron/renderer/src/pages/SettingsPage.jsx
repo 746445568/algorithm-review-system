@@ -10,20 +10,19 @@ const defaultAISettings = {
 };
 
 const providerOptions = [
-  { value: "openai", label: "OpenAI-compatible" },
+  { value: "openai", label: "OpenAI 兼容" },
   { value: "deepseek", label: "DeepSeek" },
   { value: "ollama", label: "Ollama" },
 ];
 
 const themeOptions = [
-  { value: "follow-system", label: "Follow system" },
-  { value: "light", label: "Light" },
-  { value: "dark", label: "Dark" },
+  { value: "follow-system", label: "跟随系统" },
+  { value: "light", label: "浅色" },
+  { value: "dark", label: "深色" },
 ];
 
-export function SettingsPage({ runtimeInfo, serviceStatus }) {
+export function SettingsPage({ runtimeInfo, serviceStatus, themeMode, onThemeChange }) {
   const [aiSettings, setAISettings] = useState(defaultAISettings);
-  const [themeMode, setThemeMode] = useState("follow-system");
   const [loading, setLoading] = useState(true);
   const [savingAI, setSavingAI] = useState(false);
   const [testingAI, setTestingAI] = useState(false);
@@ -62,7 +61,8 @@ export function SettingsPage({ runtimeInfo, serviceStatus }) {
         baseUrl: nextAISettings?.baseUrl ?? "",
         apiKey: nextAISettings?.apiKey ?? "",
       });
-      setThemeMode(nextTheme?.mode ?? "follow-system");
+      const resolvedTheme = nextTheme?.mode ?? "follow-system";
+      onThemeChange(resolvedTheme);
     } catch (nextError) {
       if (requestId !== refreshSequenceRef.current) {
         return;
@@ -89,7 +89,7 @@ export function SettingsPage({ runtimeInfo, serviceStatus }) {
 
     try {
       await api.saveAISettings(aiSettings);
-      setNotice("AI settings saved.");
+      setNotice("AI 设置已保存。");
     } catch (nextError) {
       setError(nextError.message);
     } finally {
@@ -106,7 +106,7 @@ export function SettingsPage({ runtimeInfo, serviceStatus }) {
     try {
       const result = await api.testAISettings(aiSettings);
       setTestResult(result);
-      setNotice(result.ok ? "AI settings test passed." : "");
+      setNotice(result.ok ? "AI 配置测试通过。" : "");
     } catch (nextError) {
       setError(nextError.message);
     } finally {
@@ -120,8 +120,11 @@ export function SettingsPage({ runtimeInfo, serviceStatus }) {
     setNotice("");
 
     try {
-      await api.saveThemeSettings(themeMode);
-      setNotice("Theme preference saved.");
+      onThemeChange(themeMode);
+      if (serviceStatus.state === "healthy") {
+        await api.saveThemeSettings(themeMode);
+      }
+      setNotice("主题偏好已保存。");
     } catch (nextError) {
       setError(nextError.message);
     } finally {
@@ -138,7 +141,7 @@ export function SettingsPage({ runtimeInfo, serviceStatus }) {
       const result = await api.exportDiagnostics();
       const nextPath = result?.path ?? "";
       setDiagPath(nextPath);
-      setNotice("Diagnostics exported.");
+      setNotice("诊断信息已导出。");
     } catch (nextError) {
       setError(nextError.message);
     } finally {
@@ -150,17 +153,17 @@ export function SettingsPage({ runtimeInfo, serviceStatus }) {
     <div className="page-grid two-column">
       <section className="panel">
         <div className="panel-header">
-          <h3>Runtime</h3>
-          <span className="caption">Local service and storage layout</span>
+          <h3>运行时信息</h3>
+          <span className="caption">本地服务和存储布局</span>
         </div>
-        {loading ? <p className="muted">Loading settings...</p> : null}
+        {loading ? <p className="muted">正在加载设置...</p> : null}
         {error ? <p className="error-text">{error}</p> : null}
         {notice ? <p className="success-text">{notice}</p> : null}
 
         <div className="stack-list">
           <article className="inline-card">
             <div>
-              <strong>Service state</strong>
+              <strong>服务状态</strong>
               <p>{serviceStatus.message}</p>
             </div>
             <div className="meta-pill">
@@ -171,8 +174,8 @@ export function SettingsPage({ runtimeInfo, serviceStatus }) {
 
           <article className="inline-card">
             <div>
-              <strong>Runtime dir</strong>
-              <p>{runtimeInfo.runtimeDir || "pending"}</p>
+              <strong>数据目录</strong>
+              <p>{runtimeInfo.runtimeDir || "等待中"}</p>
             </div>
             <button
               type="button"
@@ -180,14 +183,14 @@ export function SettingsPage({ runtimeInfo, serviceStatus }) {
               disabled={!runtimeInfo.runtimeDir}
               onClick={() => window.desktopBridge?.openPath(runtimeInfo.runtimeDir)}
             >
-              Open folder
+              打开文件夹
             </button>
           </article>
 
           <article className="inline-card">
             <div>
-              <strong>App shell path</strong>
-              <p>{runtimeInfo.appPath || "pending"}</p>
+              <strong>应用路径</strong>
+              <p>{runtimeInfo.appPath || "等待中"}</p>
             </div>
             <button
               type="button"
@@ -195,7 +198,7 @@ export function SettingsPage({ runtimeInfo, serviceStatus }) {
               disabled={!runtimeInfo.appPath}
               onClick={() => window.desktopBridge?.openPath(runtimeInfo.appPath)}
             >
-              Open path
+              打开路径
             </button>
           </article>
         </div>
@@ -203,13 +206,13 @@ export function SettingsPage({ runtimeInfo, serviceStatus }) {
 
       <section className="panel">
         <div className="panel-header">
-          <h3>Diagnostics</h3>
-          <span className="caption">Export runtime metadata for debugging</span>
+          <h3>诊断信息</h3>
+          <span className="caption">导出运行时元数据用于调试</span>
         </div>
         <div className="form-stack">
           {serviceUnavailable ? (
             <p className="muted">
-              Service-backed settings are disabled until {runtimeInfo.serviceUrl || serviceStatus.url} is healthy.
+              本地服务 {runtimeInfo.serviceUrl || serviceStatus.url} 未就绪，设置暂不可用。
             </p>
           ) : null}
           <button
@@ -218,13 +221,13 @@ export function SettingsPage({ runtimeInfo, serviceStatus }) {
             disabled={diagExporting || serviceUnavailable}
             onClick={() => void exportDiagnostics()}
           >
-            {diagExporting ? "Exporting..." : "Export diagnostics"}
+            {diagExporting ? "导出中..." : "导出诊断信息"}
           </button>
 
           {diagPath ? (
             <article className="inline-card">
               <div>
-                <strong>Latest export</strong>
+                <strong>最近导出</strong>
                 <p>{diagPath}</p>
               </div>
               <button
@@ -232,23 +235,23 @@ export function SettingsPage({ runtimeInfo, serviceStatus }) {
                 className="ghost-button"
                 onClick={() => window.desktopBridge?.openPath(diagPath)}
               >
-                Open file
+                打开文件
               </button>
             </article>
           ) : (
-            <p className="muted">No diagnostics export has been generated in this session.</p>
+            <p className="muted">本次会话尚未生成诊断导出。</p>
           )}
         </div>
       </section>
 
       <section className="panel">
         <div className="panel-header">
-          <h3>AI provider</h3>
-          <span className="caption">Backed by /api/settings/ai and /api/settings/ai/test</span>
+          <h3>AI 服务</h3>
+          <span className="caption">通过 /api/settings/ai 接口配置</span>
         </div>
         <div className="form-stack">
           <label>
-            <span>Provider</span>
+            <span>服务商</span>
             <select
               value={aiSettings.provider}
               onChange={(event) =>
@@ -258,7 +261,7 @@ export function SettingsPage({ runtimeInfo, serviceStatus }) {
                 }))
               }
             >
-              <option value="">Select provider</option>
+              <option value="">选择服务商</option>
               {providerOptions.map((option) => (
                 <option key={option.value} value={option.value}>
                   {option.label}
@@ -268,7 +271,7 @@ export function SettingsPage({ runtimeInfo, serviceStatus }) {
           </label>
 
           <label>
-            <span>Model</span>
+            <span>模型</span>
             <input
               value={aiSettings.model}
               placeholder="gpt-4.1 / deepseek-chat / llama3.1"
@@ -282,10 +285,10 @@ export function SettingsPage({ runtimeInfo, serviceStatus }) {
           </label>
 
           <label>
-            <span>Base URL</span>
+            <span>接口地址</span>
             <input
               value={aiSettings.baseUrl}
-              placeholder="Optional for custom OpenAI-compatible endpoints"
+              placeholder="可选，用于自定义 OpenAI 兼容接口"
               onChange={(event) =>
                 setAISettings((current) => ({
                   ...current,
@@ -296,11 +299,11 @@ export function SettingsPage({ runtimeInfo, serviceStatus }) {
           </label>
 
           <label>
-            <span>API key</span>
+            <span>API 密钥</span>
             <input
               type="password"
               value={aiSettings.apiKey}
-              placeholder="Stored locally with encryption"
+              placeholder="本地加密存储"
               onChange={(event) =>
                 setAISettings((current) => ({
                   ...current,
@@ -317,7 +320,7 @@ export function SettingsPage({ runtimeInfo, serviceStatus }) {
               disabled={testingAI || serviceUnavailable}
               onClick={() => void testAISettings()}
             >
-              {testingAI ? "Testing..." : "Test configuration"}
+              {testingAI ? "测试中..." : "测试配置"}
             </button>
             <button
               type="button"
@@ -325,14 +328,14 @@ export function SettingsPage({ runtimeInfo, serviceStatus }) {
               disabled={savingAI || serviceUnavailable}
               onClick={() => void saveAISettings()}
             >
-              {savingAI ? "Saving..." : "Save AI settings"}
+              {savingAI ? "保存中..." : "保存 AI 设置"}
             </button>
           </div>
 
           {testResult ? (
             <article className="inline-card">
               <div>
-                <strong>{testResult.ok ? "Configuration valid" : "Configuration failed"}</strong>
+                <strong>{testResult.ok ? "配置有效" : "配置失败"}</strong>
                 <p>{testResult.message}</p>
               </div>
             </article>
@@ -342,13 +345,13 @@ export function SettingsPage({ runtimeInfo, serviceStatus }) {
 
       <section className="panel">
         <div className="panel-header">
-          <h3>Appearance</h3>
-          <span className="caption">Persisted in local app settings</span>
+          <h3>外观</h3>
+          <span className="caption">保存在本地应用设置中</span>
         </div>
         <div className="form-stack">
           <label>
-            <span>Theme mode</span>
-            <select value={themeMode} onChange={(event) => setThemeMode(event.target.value)}>
+            <span>主题模式</span>
+            <select value={themeMode} onChange={(event) => onThemeChange(event.target.value)}>
               {themeOptions.map((option) => (
                 <option key={option.value} value={option.value}>
                   {option.label}
@@ -359,16 +362,16 @@ export function SettingsPage({ runtimeInfo, serviceStatus }) {
 
           <div className="editor-toolbar">
             <span className="meta-pill review-state-pill">
-              Theme
+              主题
               <span>{themeMode}</span>
             </span>
             <button
               type="button"
               className="primary-button"
-              disabled={savingTheme || serviceUnavailable}
+              disabled={savingTheme}
               onClick={() => void saveThemeSettings()}
             >
-              {savingTheme ? "Saving..." : "Save theme preference"}
+              {savingTheme ? "保存中..." : "保存主题偏好"}
             </button>
           </div>
         </div>

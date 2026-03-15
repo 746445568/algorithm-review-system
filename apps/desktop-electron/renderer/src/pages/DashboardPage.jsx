@@ -73,31 +73,30 @@ export function DashboardPage({ serviceStatus, runtimeInfo }) {
     <div className="page-grid">
       <section className="panel hero-panel">
         <div className="hero-copy">
-          <span className="section-label">runtime health</span>
+          <span className="section-label">运行状态</span>
           <h3>
-            {data.owner?.app?.name ?? "OJ Review Desktop"} on{" "}
-            {serviceStatus.state === "healthy" ? "real local data" : "bootstrapping"}
+            {data.owner?.app?.name ?? "OJ 错题复盘"}{" "}
+            {serviceStatus.state === "healthy" ? "已连接本地数据" : "正在启动"}
           </h3>
           <p>
-            This dashboard is wired to the Go local service rather than mock JSON. It now
-            tracks both sync activity and the actual review pipeline state for each problem.
+            仪表盘已接入本地 Go 服务的真实数据，实时追踪同步活动和每道题的复习状态。
           </p>
         </div>
         <div className="hero-stats">
           <div>
-            <span>Service</span>
+            <span>服务状态</span>
             <strong>{statusLabel(serviceStatus.state)}</strong>
           </div>
           <div>
-            <span>Accounts</span>
+            <span>绑定账号</span>
             <strong>{data.accounts.length}</strong>
           </div>
           <div>
-            <span>Due now</span>
+            <span>待复习</span>
             <strong>{data.reviewSummary?.dueReviewCount ?? 0}</strong>
           </div>
           <div>
-            <span>Scheduled</span>
+            <span>已排期</span>
             <strong>{data.reviewSummary?.scheduledReviewCount ?? 0}</strong>
           </div>
         </div>
@@ -105,45 +104,45 @@ export function DashboardPage({ serviceStatus, runtimeInfo }) {
 
       <section className="panel stats-strip">
         <article>
-          <span>Total submissions</span>
+          <span>总提交数</span>
           <strong>{data.reviewSummary?.totalSubmissions ?? 0}</strong>
         </article>
         <article>
-          <span>Todo</span>
+          <span>待复习</span>
           <strong>{reviewCounts.TODO ?? 0}</strong>
         </article>
         <article>
-          <span>Reviewing</span>
+          <span>复习中</span>
           <strong>{reviewCounts.REVIEWING ?? 0}</strong>
         </article>
         <article>
-          <span>Done</span>
+          <span>已完成</span>
           <strong>{reviewCounts.DONE ?? 0}</strong>
         </article>
       </section>
 
       <section className="panel">
         <div className="panel-header">
-          <h3>Connected accounts</h3>
+          <h3>已绑定账号</h3>
           <button
             type="button"
             className="ghost-button"
             disabled={serviceUnavailable}
             onClick={() => void refresh()}
           >
-            Refresh
+            刷新
           </button>
         </div>
         {serviceUnavailable ? (
           <p className="muted">
-            Waiting for the local service at {runtimeInfo.serviceUrl || serviceStatus.url} to become healthy.
+            等待本地服务 {runtimeInfo.serviceUrl || serviceStatus.url} 就绪。
           </p>
         ) : null}
-        {loading ? <p className="muted">Loading dashboard data...</p> : null}
+        {loading ? <p className="muted">正在加载仪表盘数据...</p> : null}
         {error ? <p className="error-text">{error}</p> : null}
         <div className="stack-list">
           {data.accounts.length === 0 ? (
-            <p className="muted">No platform accounts connected yet.</p>
+            <p className="muted">尚未绑定任何平台账号。</p>
           ) : (
             data.accounts.map((account) => (
               <article key={account.id} className="inline-card">
@@ -163,28 +162,28 @@ export function DashboardPage({ serviceStatus, runtimeInfo }) {
 
       <section className="panel">
         <div className="panel-header">
-          <h3>Review pipeline</h3>
-          <span className="caption">Current queue shape</span>
+          <h3>复习管线</h3>
+          <span className="caption">当前队列概况</span>
         </div>
         <div className="stack-list">
           <article className="inline-card">
             <div>
-              <strong>Scheduled</strong>
-              <p>Problems with a next review time</p>
+              <strong>已排期</strong>
+              <p>设置了下次复习时间的题目</p>
             </div>
             <div className="meta-pill">{data.reviewSummary?.scheduledReviewCount ?? 0}</div>
           </article>
           <article className="inline-card">
             <div>
-              <strong>Due now</strong>
-              <p>Items whose next review time has passed</p>
+              <strong>待复习</strong>
+              <p>复习时间已到的题目</p>
             </div>
             <div className="meta-pill">{data.reviewSummary?.dueReviewCount ?? 0}</div>
           </article>
           <article className="inline-card">
             <div>
-              <strong>Recovered</strong>
-              <p>Problems that eventually reached AC</p>
+              <strong>已恢复</strong>
+              <p>最终通过 (AC) 的题目</p>
             </div>
             <div className="meta-pill">
               {data.reviewSummary?.problemSummaries?.filter((item) => item.solvedLater).length ?? 0}
@@ -195,22 +194,22 @@ export function DashboardPage({ serviceStatus, runtimeInfo }) {
 
       <section className="panel">
         <div className="panel-header">
-          <h3>Weak tags</h3>
-          <span className="caption">Top low-accuracy clusters</span>
+          <h3>薄弱标签</h3>
+          <span className="caption">正确率最低的知识点</span>
         </div>
         <div className="stack-list">
           {weakTags.length === 0 ? (
-            <p className="muted">No aggregated tag signal yet.</p>
+            <p className="muted">暂无标签统计数据。</p>
           ) : (
             weakTags.map((item) => (
               <article key={item.tag} className="inline-card">
                 <div>
                   <strong>{item.tag}</strong>
-                  <p>{item.attempts} attempts</p>
+                  <p>{item.attempts} 次尝试</p>
                 </div>
                 <div className="meta-pill">
                   {item.acRate}%
-                  <span>{item.acCount} AC</span>
+                  <span>{item.acCount} 次 AC</span>
                 </div>
               </article>
             ))
@@ -220,12 +219,12 @@ export function DashboardPage({ serviceStatus, runtimeInfo }) {
 
       <section className="panel">
         <div className="panel-header">
-          <h3>Repeated failures</h3>
-          <span className="caption">Problems that still loop</span>
+          <h3>反复失败</h3>
+          <span className="caption">仍在循环出错的题目</span>
         </div>
         <div className="stack-list">
           {repeatedFailures.length === 0 ? (
-            <p className="muted">Nothing has crossed the repeated-failure threshold.</p>
+            <p className="muted">没有题目超过反复失败阈值。</p>
           ) : (
             repeatedFailures.map((item) => (
               <article key={`${item.problemId}-${item.externalProblemId}`} className="inline-card">
@@ -233,7 +232,7 @@ export function DashboardPage({ serviceStatus, runtimeInfo }) {
                   <strong>{item.title}</strong>
                   <p>{item.externalProblemId}</p>
                 </div>
-                <div className="meta-pill">{item.failedCount} fails</div>
+                <div className="meta-pill">{item.failedCount} 次失败</div>
               </article>
             ))
           )}
@@ -242,12 +241,12 @@ export function DashboardPage({ serviceStatus, runtimeInfo }) {
 
       <section className="panel">
         <div className="panel-header">
-          <h3>Recent unsolved</h3>
-          <span className="caption">Fresh items for review</span>
+          <h3>最近未解决</h3>
+          <span className="caption">需要复习的新题目</span>
         </div>
         <div className="stack-list">
           {recentUnsolved.length === 0 ? (
-            <p className="muted">No unsolved items in the current snapshot.</p>
+            <p className="muted">当前快照中没有未解决的题目。</p>
           ) : (
             recentUnsolved.map((item) => (
               <article key={`${item.problemId}-${item.externalProblemId}`} className="inline-card">
@@ -264,44 +263,44 @@ export function DashboardPage({ serviceStatus, runtimeInfo }) {
 
       <section className="panel">
         <div className="panel-header">
-          <h3>Latest task</h3>
-          <span className="caption">Most recent sync activity</span>
+          <h3>最新任务</h3>
+          <span className="caption">最近一次同步活动</span>
         </div>
         {latestTask ? (
           <div className="task-card">
             <strong>{statusLabel(latestTask.status)}</strong>
             <p>{formatDate(latestTask.createdAt)}</p>
             <p>
-              fetched {latestTask.fetchedCount} / inserted {latestTask.insertedCount}
+              拉取 {latestTask.fetchedCount} / 写入 {latestTask.insertedCount}
             </p>
             {latestTask.errorMessage ? (
               <p className="error-text">{latestTask.errorMessage}</p>
             ) : null}
           </div>
         ) : (
-          <p className="muted">No sync tasks yet.</p>
+          <p className="muted">尚无同步任务。</p>
         )}
       </section>
 
       <section className="panel full-span">
         <div className="panel-header">
-          <h3>Runtime</h3>
-          <span className="caption">Local shell context</span>
+          <h3>运行时信息</h3>
+          <span className="caption">本地环境上下文</span>
         </div>
         <div className="mini-stats">
           <article>
-            <span>Runtime dir</span>
-            <strong title={runtimeInfo.runtimeDir || "pending"}>
-              {runtimeInfo.runtimeDir || "pending"}
+            <span>数据目录</span>
+            <strong title={runtimeInfo.runtimeDir || "等待中"}>
+              {runtimeInfo.runtimeDir || "等待中"}
             </strong>
           </article>
           <article>
-            <span>Service URL</span>
-            <strong>{runtimeInfo.serviceUrl || "pending"}</strong>
+            <span>服务地址</span>
+            <strong>{runtimeInfo.serviceUrl || "等待中"}</strong>
           </article>
           <article>
-            <span>Packaged</span>
-            <strong>{runtimeInfo.isPackaged ? "Yes" : "No"}</strong>
+            <span>打包模式</span>
+            <strong>{runtimeInfo.isPackaged ? "是" : "否"}</strong>
           </article>
         </div>
       </section>

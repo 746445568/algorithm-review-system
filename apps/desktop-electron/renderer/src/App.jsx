@@ -1,15 +1,36 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { DashboardPage } from "./pages/DashboardPage.jsx";
 import { AccountsPage } from "./pages/AccountsPage.jsx";
 import { ReviewPage } from "./pages/ReviewPage.jsx";
 import { SettingsPage } from "./pages/SettingsPage.jsx";
 import { api } from "./lib/api.js";
+import { formatDate } from "./lib/format.js";
+import { useOfflineData } from "./hooks/useOfflineData.js";
+
+function resolveEffectiveTheme(mode) {
+  if (mode === "dark") return "dark";
+  if (mode === "light") return "light";
+  // follow-system
+  return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+}
+
+function applyThemeToDOM(mode) {
+  const effective = resolveEffectiveTheme(mode);
+  if (effective === "dark") {
+    document.documentElement.setAttribute("data-theme", "dark");
+  } else {
+    document.documentElement.removeAttribute("data-theme");
+  }
+}
+
+// Apply immediately at module load to prevent flash
+applyThemeToDOM(localStorage.getItem("ojreview-theme") ?? "follow-system");
 
 const navItems = [
-  { id: "dashboard", label: "Dashboard", kicker: "overview" },
-  { id: "accounts", label: "Accounts", kicker: "sync" },
-  { id: "review", label: "Review", kicker: "workflow" },
-  { id: "settings", label: "Settings", kicker: "configure" },
+  { id: "dashboard", label: "仪表盘", kicker: "总览" },
+  { id: "accounts", label: "账号管理", kicker: "同步" },
+  { id: "review", label: "错题复习", kicker: "工作流" },
+  { id: "settings", label: "设置", kicker: "配置" },
 ];
 
 const initialStatus = {
@@ -30,6 +51,30 @@ export function App() {
     appPath: "",
     isPackaged: false,
   });
+  const { isOnline, isSyncing, lastSyncAt, sync } = useOfflineData();
+  const [themeMode, setThemeMode] = useState(
+    () => localStorage.getItem("ojreview-theme") ?? "follow-system"
+  );
+
+  const handleThemeChange = useCallback((mode) => {
+    localStorage.setItem("ojreview-theme", mode);
+    setThemeMode(mode);
+    applyThemeToDOM(mode);
+  }, []);
+
+  // Re-apply theme on every render cycle to guard against external resets
+  useEffect(() => {
+    applyThemeToDOM(themeMode);
+  }, [themeMode]);
+
+  // Listen for system theme changes when in follow-system mode
+  useEffect(() => {
+    if (themeMode !== "follow-system") return;
+    const mql = window.matchMedia("(prefers-color-scheme: dark)");
+    const handler = () => applyThemeToDOM("follow-system");
+    mql.addEventListener("change", handler);
+    return () => mql.removeEventListener("change", handler);
+  }, [themeMode]);
 
   useEffect(() => {
     let unsubscribe = () => {};
@@ -82,20 +127,32 @@ export function App() {
     };
   }, []);
 
+  useEffect(() => {
+    void sync();
+
+    const intervalId = window.setInterval(() => {
+      void sync();
+    }, 5 * 60 * 1000);
+
+    return () => {
+      window.clearInterval(intervalId);
+    };
+  }, [sync]);
+
   const activeNav = useMemo(
     () => navItems.find((item) => item.id === page) ?? navItems[0],
     [page]
   );
+  const lastSyncLabel = lastSyncAt ? formatDate(lastSyncAt.toISOString()) : "尚未同步";
 
   return (
     <div className="app-shell">
       <aside className="sidebar">
         <div className="brand-block">
-          <span className="brand-eyebrow">competitive programming</span>
-          <h1>OJ Review</h1>
+          <span className="brand-eyebrow">算法竞赛</span>
+          <h1>OJ 错题复盘</h1>
           <p>
-            Electron shell over the local Go service. This cut only focuses on
-            real data, runtime stability, and the first usable review loop.
+            基于本地 Go 服务的 Electron 桌面端，专注于真实数据、运行稳定性和可用的复习闭环。
           </p>
         </div>
 
@@ -114,21 +171,21 @@ export function App() {
         </nav>
 
         <section className="sidebar-runtime">
-          <span className="section-label">runtime</span>
+          <span className="section-label">运行时</span>
           <dl>
             <div>
-              <dt>service</dt>
+              <dt>服务地址</dt>
               <dd>{serviceStatus.url}</dd>
             </div>
             <div>
-              <dt>dir</dt>
-              <dd title={runtimeInfo.runtimeDir || "not ready"}>
-                {runtimeInfo.runtimeDir || "pending"}
+              <dt>数据目录</dt>
+              <dd title={runtimeInfo.runtimeDir || "未就绪"}>
+                {runtimeInfo.runtimeDir || "等待中"}
               </dd>
             </div>
             <div>
-              <dt>mode</dt>
-              <dd>{runtimeInfo.isPackaged ? "packaged" : "development"}</dd>
+              <dt>模式</dt>
+              <dd>{runtimeInfo.isPackaged ? "发布版" : "开发版"}</dd>
             </div>
           </dl>
         </section>
@@ -137,11 +194,22 @@ export function App() {
       <main className="workspace">
         <header className="workspace-header">
           <div>
-            <span className="section-label">current page</span>
+            <span className="section-label">当前页面</span>
             <h2>{activeNav.label}</h2>
           </div>
 
           <div className="header-actions">
+            <span className={`service-pill ${isOnline ? "healthy" : "error"}`}>
+              {isOnline ? "在线" : "离线"}
+            </span>
+            <button
+              type="button"
+              className="ghost-button"
+              disabled={isSyncing}
+              onClick={() => void sync()}
+            >
+              {isSyncing ? "同步中..." : "立即同步"}
+            </button>
             <span className={`service-pill ${serviceStatus.state}`}>
               {serviceStatus.state}
             </span>
@@ -150,7 +218,7 @@ export function App() {
               className="ghost-button"
               onClick={() => window.desktopBridge?.restartService()}
             >
-              Restart local service
+              重启服务
             </button>
           </div>
         </header>
@@ -159,8 +227,9 @@ export function App() {
           <div>
             <strong>{serviceStatus.message}</strong>
             <p>
-              source: {serviceStatus.source}
-              {serviceStatus.pid ? ` / pid ${serviceStatus.pid}` : ""}
+              来源: {serviceStatus.source}
+              {serviceStatus.pid ? ` / 进程 ${serviceStatus.pid}` : ""}
+              {` / 上次同步 ${lastSyncLabel}`}
             </p>
           </div>
         </section>
@@ -178,7 +247,12 @@ export function App() {
         ) : null}
 
         {page === "settings" ? (
-          <SettingsPage runtimeInfo={runtimeInfo} serviceStatus={serviceStatus} />
+          <SettingsPage
+            runtimeInfo={runtimeInfo}
+            serviceStatus={serviceStatus}
+            themeMode={themeMode}
+            onThemeChange={handleThemeChange}
+          />
         ) : null}
       </main>
     </div>

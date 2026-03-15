@@ -1,24 +1,75 @@
 {
-  "name": "ojreview-desktop-electron",
-  "version": "0.1.0",
+  "name": "ojreview-desktop",
+  "version": "1.0.0",
   "private": true,
   "type": "module",
   "description": "Electron desktop shell for OJ Review",
   "main": "main/index.mjs",
+  "build": {
+    "appId": "com.ojreview.desktop",
+    "productName": "OJ Review Desktop",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main/**/*",
+      "preload/**/*",
+      "renderer/dist/**/*",
+      "bin/**/*",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "bin",
+        "to": "bin",
+        "filter": "**/*"
+      }
+    ],
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "portable",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "icon": "build/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true
+    }
+  },
   "scripts": {
     "dev": "node ./scripts/dev.mjs",
     "dev:renderer": "vite --config ./renderer/vite.config.mjs",
-    "build": "node ./scripts/build.mjs",
     "start": "node ./scripts/start-static.mjs",
-    "start:static": "node ./scripts/start-static.mjs"
+    "start:static": "node ./scripts/start-static.mjs",
+    "build": "npm run build:renderer && npm run build:electron",
+    "build:renderer": "vite build renderer",
+    "build:electron": "node ./scripts/build.mjs",
+    "pack": "electron-builder --dir",
+    "dist": "electron-builder",
+    "postinstall": "electron-builder install-app-deps"
   },
   "dependencies": {
+    "idb": "^8.0.3",
     "react": "^19.1.1",
     "react-dom": "^19.1.1"
   },
   "devDependencies": {
     "@vitejs/plugin-react": "^5.0.2",
     "electron": "^37.2.6",
+    "electron-builder": "^25.0.0",
     "vite": "^7.1.3"
   }
 }

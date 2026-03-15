@@ -1,6 +1,6 @@
 export function formatDate(value) {
   if (!value) {
-    return "pending";
+    return "等待中";
   }
 
   const date = new Date(value);
@@ -33,37 +33,37 @@ export function platformLabel(platform) {
 export function statusLabel(status) {
   switch ((status || "").toUpperCase()) {
     case "HEALTHY":
-      return "Healthy";
+      return "正常";
     case "IDLE":
-      return "Idle";
+      return "空闲";
     case "STARTING":
-      return "Starting";
+      return "启动中";
     case "STOPPING":
-      return "Stopping";
+      return "停止中";
     case "STOPPED":
-      return "Stopped";
+      return "已停止";
     case "PENDING":
-      return "Pending";
+      return "等待中";
     case "RUNNING":
-      return "Running";
+      return "运行中";
     case "SUCCESS":
-      return "Success";
+      return "成功";
     case "FAILED":
-      return "Failed";
+      return "失败";
     case "PARTIAL_SUCCESS":
-      return "Partial";
+      return "部分成功";
     case "ACTIVE":
-      return "Active";
+      return "活跃";
     case "TODO":
-      return "Todo";
+      return "待复习";
     case "REVIEWING":
-      return "Reviewing";
+      return "复习中";
     case "SCHEDULED":
-      return "Scheduled";
+      return "已排期";
     case "DONE":
-      return "Done";
+      return "已完成";
     default:
-      return status || "Unknown";
+      return status || "未知";
   }
 }
 

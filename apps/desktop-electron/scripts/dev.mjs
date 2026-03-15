@@ -20,6 +20,9 @@ const electronArgs = [
   appRoot,
   "--disable-gpu",
   "--no-sandbox",
+  "--disable-software-rasterizer",
+  "--in-process-gpu",
+  "--disable-gpu-sandbox",
 ];
 let rendererProcess;
 let electronProcess;

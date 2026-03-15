@@ -22,7 +22,7 @@ function isMissingReviewStateRoute(error) {
 }
 
 function buildReviewStateRouteMessage(serviceUrl) {
-  return `The running ojreviewd.exe at ${serviceUrl} is older than this renderer build. Review-state read/write needs a binary rebuilt from the current apps/server source.`;
+  return `当前运行的 ojreviewd (${serviceUrl}) 版本过旧，不支持复习状态读写。请从 apps/server 源码重新构建。`;
 }
 
 function buildReviewStats(problemSummaries = []) {
@@ -277,7 +277,7 @@ export function ReviewPage({ serviceStatus, runtimeInfo }) {
       setReviewStateSupported(true);
       setReviewStateSupportMessage("");
       setSummary((current) => applyReviewState(current, selectedProblemId, saved));
-      setReviewNotice("Review state saved.");
+      setReviewNotice("复习状态已保存。");
     } catch (nextError) {
       if (isMissingReviewStateRoute(nextError)) {
         setReviewStateSupported(false);
@@ -297,33 +297,33 @@ export function ReviewPage({ serviceStatus, runtimeInfo }) {
     <div className="review-layout">
       <section className="panel review-list-panel">
         <div className="panel-header">
-          <h3>Review backlog</h3>
+          <h3>复习队列</h3>
           <button
             type="button"
             className="ghost-button"
             disabled={serviceUnavailable}
             onClick={() => void refresh()}
           >
-            Refresh
+            刷新
           </button>
         </div>
         {serviceUnavailable ? (
           <p className="muted">
-            Review data is unavailable until the local service at {runtimeInfo.serviceUrl || serviceStatus.url} is healthy.
+            本地服务 {runtimeInfo.serviceUrl || serviceStatus.url} 未就绪，复习数据暂不可用。
           </p>
         ) : null}
 
         <div className="mini-stats">
           <article>
-            <span>Due now</span>
+            <span>待复习</span>
             <strong>{summary?.dueReviewCount ?? 0}</strong>
           </article>
           <article>
-            <span>Scheduled</span>
+            <span>已排期</span>
             <strong>{summary?.scheduledReviewCount ?? 0}</strong>
           </article>
           <article>
-            <span>Reviewing</span>
+            <span>复习中</span>
             <strong>{reviewCounts.REVIEWING ?? 0}</strong>
           </article>
         </div>
@@ -331,11 +331,11 @@ export function ReviewPage({ serviceStatus, runtimeInfo }) {
         <div className="filter-row">
           <input
             value={search}
-            placeholder="Search title or problem id"
+            placeholder="搜索题目名或题号"
             onChange={(event) => setSearch(event.target.value)}
           />
           <select value={platform} onChange={(event) => setPlatform(event.target.value)}>
-            <option value="">All platforms</option>
+            <option value="">全部平台</option>
             <option value="CODEFORCES">Codeforces</option>
             <option value="ATCODER">AtCoder</option>
           </select>
@@ -346,17 +346,17 @@ export function ReviewPage({ serviceStatus, runtimeInfo }) {
             value={reviewStatusFilter}
             onChange={(event) => setReviewStatusFilter(event.target.value)}
           >
-            <option value="">All review states</option>
-            <option value="TODO">Todo</option>
-            <option value="REVIEWING">Reviewing</option>
-            <option value="SCHEDULED">Scheduled</option>
-            <option value="DONE">Done</option>
+            <option value="">全部状态</option>
+            <option value="TODO">待复习</option>
+            <option value="REVIEWING">复习中</option>
+            <option value="SCHEDULED">已排期</option>
+            <option value="DONE">已完成</option>
           </select>
           <select value={scheduleFilter} onChange={(event) => setScheduleFilter(event.target.value)}>
-            <option value="">Any schedule</option>
-            <option value="DUE">Due now</option>
-            <option value="SCHEDULED">Has schedule</option>
-            <option value="UNSCHEDULED">No schedule</option>
+            <option value="">全部排期</option>
+            <option value="DUE">已到期</option>
+            <option value="SCHEDULED">有排期</option>
+            <option value="UNSCHEDULED">无排期</option>
           </select>
           <label className="checkbox-label">
             <input
@@ -364,16 +364,16 @@ export function ReviewPage({ serviceStatus, runtimeInfo }) {
               checked={onlyUnsolved}
               onChange={(event) => setOnlyUnsolved(event.target.checked)}
             />
-            only unsolved
+            仅显示未通过
           </label>
         </div>
 
-        {loading ? <p className="muted">Loading review data...</p> : null}
+        {loading ? <p className="muted">正在加载复习数据...</p> : null}
         {error ? <p className="error-text">{error}</p> : null}
 
         <div className="review-list">
           {filteredProblems.length === 0 ? (
-            <p className="muted">No problem matches the current filters.</p>
+            <p className="muted">没有符合当前筛选条件的题目。</p>
           ) : (
             filteredProblems.map((item) => (
               <button
@@ -390,10 +390,10 @@ export function ReviewPage({ serviceStatus, runtimeInfo }) {
                   <p>{item.externalProblemId}</p>
                   <span className="review-card-note">
                     {item.reviewDue
-                      ? "Due now"
+                      ? "已到期"
                       : item.nextReviewAt
-                        ? `Next ${formatDate(item.nextReviewAt)}`
-                        : "No schedule"}
+                        ? `下次 ${formatDate(item.nextReviewAt)}`
+                        : "无排期"}
                   </span>
                 </div>
                 <div className="review-meta">
@@ -402,7 +402,7 @@ export function ReviewPage({ serviceStatus, runtimeInfo }) {
                   </span>
                   <span className="meta-pill">
                     {statusLabel(item.reviewStatus)}
-                    <span>{item.attemptCount} tries</span>
+                    <span>{item.attemptCount} 次尝试</span>
                   </span>
                 </div>
               </button>
@@ -419,31 +419,31 @@ export function ReviewPage({ serviceStatus, runtimeInfo }) {
               <h3>{selectedProblem.title}</h3>
               <p className="detail-subtitle">
                 {selectedProblem.externalProblemId}
-                {selectedProblem.contestId ? ` / contest ${selectedProblem.contestId}` : ""}
+                {selectedProblem.contestId ? ` / 比赛 ${selectedProblem.contestId}` : ""}
               </p>
 
               <div className="detail-metrics">
                 <article>
-                  <span>Attempts</span>
+                  <span>尝试次数</span>
                   <strong>{selectedProblem.attemptCount}</strong>
                 </article>
                 <article>
-                  <span>Review state</span>
+                  <span>复习状态</span>
                   <strong>{statusLabel(selectedProblem.reviewStatus)}</strong>
                 </article>
                 <article>
-                  <span>Next review</span>
-                  <strong>{selectedProblem.nextReviewAt ? formatDate(selectedProblem.nextReviewAt) : "Not set"}</strong>
+                  <span>下次复习</span>
+                  <strong>{selectedProblem.nextReviewAt ? formatDate(selectedProblem.nextReviewAt) : "未设置"}</strong>
                 </article>
                 <article>
-                  <span>Status</span>
-                  <strong>{selectedProblem.solvedLater ? "Recovered" : "Still blocked"}</strong>
+                  <span>解题状态</span>
+                  <strong>{selectedProblem.solvedLater ? "已恢复" : "仍未通过"}</strong>
                 </article>
               </div>
 
               <div className="tag-row">
                 {selectedTags.length === 0 ? (
-                  <span className="muted">No tags were normalized yet.</span>
+                  <span className="muted">暂无标签。</span>
                 ) : (
                   selectedTags.map((tag) => (
                     <span key={tag} className="tag-chip">
@@ -459,23 +459,23 @@ export function ReviewPage({ serviceStatus, runtimeInfo }) {
                   className="ghost-button"
                   onClick={() => window.desktopBridge?.openExternal(selectedProblemRecord.url)}
                 >
-                  Open problem statement
+                  打开题目页面
                 </button>
               ) : null}
             </>
           ) : (
-            <p className="muted">Choose a problem from the left to inspect its attempts.</p>
+            <p className="muted">从左侧列表选择一道题目以查看详情。</p>
           )}
         </div>
 
         <div className="panel submission-panel">
           <div className="panel-header">
-            <h3>Submission timeline</h3>
-            <span className="caption">Real rows from /api/submissions</span>
+            <h3>提交记录</h3>
+            <span className="caption">来自 /api/submissions 的真实数据</span>
           </div>
           <div className="stack-list">
             {selectedSubmissions.length === 0 ? (
-              <p className="muted">No submissions found for this problem in the current fetch window.</p>
+              <p className="muted">当前拉取范围内未找到该题的提交记录。</p>
             ) : (
               selectedSubmissions.map((submission) => (
                 <article key={submission.id} className="submission-row">
@@ -483,7 +483,7 @@ export function ReviewPage({ serviceStatus, runtimeInfo }) {
                     <span className={`status-chip ${verdictTone(submission.verdict)}`}>
                       {submission.verdict}
                     </span>
-                    <strong>{submission.language || "Unknown language"}</strong>
+                    <strong>{submission.language || "未知语言"}</strong>
                     <p>{formatDate(submission.submittedAt)}</p>
                   </div>
                   <div className="submission-metrics">
@@ -498,20 +498,20 @@ export function ReviewPage({ serviceStatus, runtimeInfo }) {
 
         <div className="panel raw-panel">
           <div className="panel-header">
-            <h3>Representative raw payload</h3>
-            <span className="caption">Current service still exposes raw_json rather than source code.</span>
+            <h3>原始数据</h3>
+            <span className="caption">当前服务返回的是 raw_json 而非源码。</span>
           </div>
           {representativeSubmission ? (
             <pre>{formatRawJSON(representativeSubmission.rawJson)}</pre>
           ) : (
-            <p className="muted">No raw payload available for the selected problem.</p>
+            <p className="muted">该题无可用的原始数据。</p>
           )}
         </div>
 
         <div className="panel review-editor-panel">
           <div className="panel-header">
-            <h3>Review state</h3>
-            <span className="caption">Status, notes, and next review schedule</span>
+            <h3>复习状态</h3>
+            <span className="caption">状态、笔记和下次复习时间</span>
           </div>
           {selectedProblem ? (
             <div className="form-stack">
@@ -519,7 +519,7 @@ export function ReviewPage({ serviceStatus, runtimeInfo }) {
                 <p className="error-text">{reviewStateSupportMessage}</p>
               ) : null}
               <label>
-                <span>Status</span>
+                <span>状态</span>
                 <select
                   value={reviewState.status}
                   disabled={!reviewStateSupported}
@@ -530,15 +530,15 @@ export function ReviewPage({ serviceStatus, runtimeInfo }) {
                     }))
                   }
                 >
-                  <option value="TODO">Todo</option>
-                  <option value="REVIEWING">Reviewing</option>
-                  <option value="SCHEDULED">Scheduled</option>
-                  <option value="DONE">Done</option>
+                  <option value="TODO">待复习</option>
+                  <option value="REVIEWING">复习中</option>
+                  <option value="SCHEDULED">已排期</option>
+                  <option value="DONE">已完成</option>
                 </select>
               </label>
 
               <label>
-                <span>Next review at</span>
+                <span>下次复习时间</span>
                 <input
                   type="datetime-local"
                   value={reviewState.nextReviewAt}
@@ -553,12 +553,12 @@ export function ReviewPage({ serviceStatus, runtimeInfo }) {
               </label>
 
               <label>
-                <span>Notes</span>
+                <span>笔记</span>
                 <textarea
                   rows="8"
                   value={reviewState.notes}
                   disabled={!reviewStateSupported}
-                  placeholder="Record root cause, corrected idea, and what to watch next time."
+                  placeholder="记录错误原因、正确思路和下次注意事项。"
                   onChange={(event) =>
                     setReviewState((current) => ({
                       ...current,
@@ -571,7 +571,7 @@ export function ReviewPage({ serviceStatus, runtimeInfo }) {
               <div className="editor-toolbar">
                 <span className="meta-pill review-state-pill">
                   {statusLabel(reviewState.status)}
-                  <span>{reviewState.lastUpdatedAt ? formatDate(reviewState.lastUpdatedAt) : "Not saved yet"}</span>
+                  <span>{reviewState.lastUpdatedAt ? formatDate(reviewState.lastUpdatedAt) : "尚未保存"}</span>
                 </span>
                 <button
                   type="button"
@@ -579,14 +579,14 @@ export function ReviewPage({ serviceStatus, runtimeInfo }) {
                   disabled={reviewSaving || serviceUnavailable || !reviewStateSupported}
                   onClick={() => void saveReviewState()}
                 >
-                  {reviewSaving ? "Saving..." : "Save review state"}
+                  {reviewSaving ? "保存中..." : "保存复习状态"}
                 </button>
               </div>
 
               {reviewNotice ? <p className="success-text">{reviewNotice}</p> : null}
             </div>
           ) : (
-            <p className="muted">Select a problem before editing review state.</p>
+            <p className="muted">请先选择一道题目再编辑复习状态。</p>
           )}
         </div>
       </section>
