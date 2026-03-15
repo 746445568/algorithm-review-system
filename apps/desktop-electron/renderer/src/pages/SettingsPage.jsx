@@ -61,8 +61,14 @@ export function SettingsPage({ runtimeInfo, serviceStatus, themeMode, onThemeCha
         baseUrl: nextAISettings?.baseUrl ?? "",
         apiKey: nextAISettings?.apiKey ?? "",
       });
+      // Don't overwrite the current theme from the server response —
+      // localStorage (loaded by App.jsx) is the authoritative source.
+      // Only sync server → local if this is the very first load and
+      // localStorage has no saved preference yet.
       const resolvedTheme = nextTheme?.mode ?? "follow-system";
-      onThemeChange(resolvedTheme);
+      if (!localStorage.getItem("ojreview-theme")) {
+        onThemeChange(resolvedTheme);
+      }
     } catch (nextError) {
       if (requestId !== refreshSequenceRef.current) {
         return;
