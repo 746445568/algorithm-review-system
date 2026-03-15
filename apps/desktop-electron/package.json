@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "private": true,
   "type": "module",
+  "author": "OJ Review Team",
   "description": "Electron desktop shell for OJ Review",
   "main": "main/index.mjs",
   "build": {

@@ -2,6 +2,8 @@ node_modules/
 .next/
 dist/
 build/
+!apps/desktop-electron/build/
+!apps/desktop-electron/build/icon.ico
 *.db
 *.db-journal
 .env
