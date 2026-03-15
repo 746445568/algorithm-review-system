@@ -15,6 +15,7 @@
     "files": [
       "main/**/*",
       "preload/**/*",
+      "bootstrap/**/*",
       "renderer/dist/**/*",
       "bin/**/*",
       "package.json"
