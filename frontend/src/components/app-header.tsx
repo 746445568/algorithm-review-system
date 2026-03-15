@@ -2,6 +2,7 @@
 
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
+import { useState } from 'react';
 import { apiFetch } from '@/lib/api';
 import { useCurrentUser } from '@/lib/auth';
 
@@ -16,6 +17,7 @@ const navItems = [
 export function AppHeader() {
   const pathname = usePathname();
   const { user, codeforces, isLoading, mutate } = useCurrentUser();
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   async function handleLogout() {
     await apiFetch('/api/auth/logout', { method: 'POST' });
@@ -39,6 +41,7 @@ export function AppHeader() {
         <div className="flex items-center gap-3">
           {user ? (
             <>
+              {/* 桌面端导航 */}
               <nav className="hidden items-center gap-2 md:flex">
                 {navItems.map((item) => {
                   const active = pathname === item.href;
@@ -56,6 +59,7 @@ export function AppHeader() {
                 })}
               </nav>
 
+              {/* 桌面端用户信息 */}
               <div className="hidden items-center gap-3 rounded-2xl border border-slate-200 bg-white px-3 py-2 shadow-sm sm:flex">
                 <div className="text-right">
                   <div className="text-sm font-semibold text-slate-900">{user.handle}</div>
@@ -94,6 +98,23 @@ export function AppHeader() {
                   退出
                 </button>
               </div>
+
+              {/* 移动端汉堡菜单按钮 */}
+              <button
+                onClick={() => setMobileMenuOpen((v) => !v)}
+                className="flex h-10 w-10 items-center justify-center rounded-xl border border-slate-200 text-slate-600 transition hover:bg-slate-50 md:hidden"
+                aria-label="打开菜单"
+              >
+                {mobileMenuOpen ? (
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-5 w-5">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                ) : (
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2} className="h-5 w-5">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M4 6h16M4 12h16M4 18h16" />
+                  </svg>
+                )}
+              </button>
             </>
           ) : isLoading ? (
             <div className="text-sm text-slate-500">加载中...</div>
@@ -107,6 +128,47 @@ export function AppHeader() {
           )}
         </div>
       </div>
+
+      {/* 移动端下拉菜单 */}
+      {user && mobileMenuOpen && (
+        <div className="border-t border-slate-100 bg-white/95 px-4 pb-4 md:hidden">
+          <nav className="flex flex-col gap-1 pt-3">
+            {navItems.map((item) => {
+              const active = pathname === item.href;
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  onClick={() => setMobileMenuOpen(false)}
+                  className={`rounded-xl px-4 py-3 text-sm font-medium transition ${
+                    active ? 'bg-primary-50 text-primary-700' : 'text-slate-600 hover:bg-slate-50'
+                  }`}
+                >
+                  {item.label}
+                </Link>
+              );
+            })}
+          </nav>
+          <div className="mt-3 flex items-center justify-between rounded-xl border border-slate-100 bg-slate-50 px-4 py-3">
+            <div className="flex items-center gap-3">
+              {codeforces?.avatarUrl ? (
+                <img src={codeforces.avatarUrl} alt={user.handle} className="h-8 w-8 rounded-full border border-slate-200 object-cover" />
+              ) : (
+                <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary-100 text-sm font-semibold text-primary-700">
+                  {user.handle.slice(0, 1).toUpperCase()}
+                </div>
+              )}
+              <span className="text-sm font-semibold text-slate-900">{user.handle}</span>
+            </div>
+            <button
+              onClick={handleLogout}
+              className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-600 transition hover:bg-slate-50"
+            >
+              退出
+            </button>
+          </div>
+        </div>
+      )}
     </header>
   );
 }
