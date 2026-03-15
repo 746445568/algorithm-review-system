@@ -27,9 +27,26 @@ type CodeforcesStatus = {
   syncing?: boolean;
 };
 
+type AtCoderStatus = {
+  provider: 'ATCODER';
+  handle: string;
+  lastSyncedAt?: string | null;
+  lastSyncStatus?: 'idle' | 'syncing' | 'success' | 'failed' | string;
+  lastSyncAttemptAt?: string | null;
+  lastSuccessfulSyncAt?: string | null;
+  lastSyncError?: string | null;
+  lastImportedProblems?: number;
+  lastImportedSubmissions?: number;
+  lastSyncDurationMs?: number | null;
+  importedProblemCount?: number;
+  importedSubmissionCount?: number;
+  syncing?: boolean;
+};
+
 export type AuthMeResponse = {
   user: CurrentUser;
   codeforces: CodeforcesStatus | null;
+  atcoder: AtCoderStatus | null;
 };
 
 async function authFetcher(url: string): Promise<AuthMeResponse | null> {
@@ -60,6 +77,7 @@ export function useCurrentUser() {
   return {
     user: data?.user || null,
     codeforces: data?.codeforces || null,
+    atcoder: data?.atcoder || null,
     error,
     isLoading,
     mutate,

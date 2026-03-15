@@ -14,6 +14,7 @@ import {
   getCodeforcesSyncStatus,
   upsertCodeforcesUser,
 } from '../services/codeforces';
+import { getAtCoderSyncStatus } from '../services/atcoder';
 
 const router = Router();
 const authLimiter = createRateLimitMiddleware({
@@ -76,11 +77,15 @@ router.get('/me', async (req, res, next) => {
       return res.status(401).json({ error: '未登录' });
     }
 
-    const syncStatus = await getCodeforcesSyncStatus(req.user.id);
+    const [syncStatus, atcoderStatus] = await Promise.all([
+      getCodeforcesSyncStatus(req.user.id),
+      getAtCoderSyncStatus(req.user.id),
+    ]);
 
     res.json({
       user: req.user,
       codeforces: syncStatus,
+      atcoder: atcoderStatus,
     });
   } catch (error) {
     next(error);
