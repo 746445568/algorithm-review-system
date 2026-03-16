@@ -74,9 +74,15 @@ export function AccountsPage({ serviceStatus, runtimeInfo }) {
     setNotice("");
 
     try {
-      await api.createAccount(form.platform, form.handle.trim());
+      const account = await api.createAccount(form.platform, form.handle.trim());
       setForm((current) => ({ ...current, handle: "" }));
-      setNotice("账号已保存。");
+      // 自动触发同步，无需用户手动点击
+      try {
+        await api.syncAccount(account.platform, account.id);
+        setNotice("账号已绑定，正在后台同步数据...");
+      } catch {
+        setNotice("账号已保存。请点击「立即同步」开始同步。");
+      }
       await refresh();
     } catch (nextError) {
       setError(nextError.message);

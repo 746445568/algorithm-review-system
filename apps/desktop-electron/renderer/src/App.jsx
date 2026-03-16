@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { DashboardPage } from "./pages/DashboardPage.jsx";
 import { AccountsPage } from "./pages/AccountsPage.jsx";
 import { ReviewPage } from "./pages/ReviewPage.jsx";
@@ -139,6 +139,16 @@ export function App() {
     };
   }, [sync]);
 
+  // 首次运行自动跳转：服务就绪后若没有账号，自动导航到账号管理
+  const firstHealthyRef = useRef(false);
+  useEffect(() => {
+    if (serviceStatus.state !== "healthy" || firstHealthyRef.current) return;
+    firstHealthyRef.current = true;
+    api.getAccounts().then((accounts) => {
+      if (accounts.length === 0) setPage("accounts");
+    }).catch(() => {});
+  }, [serviceStatus.state]);
+
   const activeNav = useMemo(
     () => navItems.find((item) => item.id === page) ?? navItems[0],
     [page]
@@ -223,30 +233,55 @@ export function App() {
           </div>
         </header>
 
-        <section className="service-banner">
-          <div>
-            <strong>{serviceStatus.message}</strong>
-            <p>
-              来源: {serviceStatus.source}
-              {serviceStatus.pid ? ` / 进程 ${serviceStatus.pid}` : ""}
-              {` / 上次同步 ${lastSyncLabel}`}
-            </p>
-          </div>
-        </section>
+        {serviceStatus.state !== "healthy" && (
+          <section className="service-banner">
+            <div>
+              <strong>{serviceStatus.message}</strong>
+              <p>
+                来源: {serviceStatus.source}
+                {serviceStatus.pid ? ` / 进程 ${serviceStatus.pid}` : ""}
+                {` / 上次同步 ${lastSyncLabel}`}
+              </p>
+            </div>
+          </section>
+        )}
 
-        {page === "dashboard" ? (
+        {serviceStatus.state === "starting" && (
+          <div className="service-loading-screen">
+            <p className="section-label">正在启动</p>
+            <h2>正在连接本地服务...</h2>
+            <p className="muted">{serviceStatus.message}</p>
+          </div>
+        )}
+
+        {serviceStatus.state === "error" && (
+          <div className="service-loading-screen">
+            <p className="section-label">服务异常</p>
+            <h2>本地服务启动失败</h2>
+            <p className="error-text">{serviceStatus.message}</p>
+            <button
+              type="button"
+              className="primary-button"
+              onClick={() => window.desktopBridge?.restartService()}
+            >
+              重试
+            </button>
+          </div>
+        )}
+
+        {serviceStatus.state === "healthy" && page === "dashboard" ? (
           <DashboardPage serviceStatus={serviceStatus} runtimeInfo={runtimeInfo} />
         ) : null}
 
-        {page === "accounts" ? (
+        {serviceStatus.state === "healthy" && page === "accounts" ? (
           <AccountsPage serviceStatus={serviceStatus} runtimeInfo={runtimeInfo} />
         ) : null}
 
-        {page === "review" ? (
+        {serviceStatus.state === "healthy" && page === "review" ? (
           <ReviewPage serviceStatus={serviceStatus} runtimeInfo={runtimeInfo} />
         ) : null}
 
-        {page === "settings" ? (
+        {serviceStatus.state === "healthy" && page === "settings" ? (
           <SettingsPage
             runtimeInfo={runtimeInfo}
             serviceStatus={serviceStatus}

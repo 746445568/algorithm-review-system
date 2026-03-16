@@ -791,3 +791,26 @@ textarea {
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+/* Service loading / error screen */
+.service-loading-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  gap: 0.75rem;
+  padding: 3rem 2rem;
+  text-align: center;
+}
+
+.service-loading-screen h2 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--text-primary, #111827);
+  margin: 0;
+}
+
+.service-loading-screen .primary-button {
+  margin-top: 0.5rem;
+}
