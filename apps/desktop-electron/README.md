@@ -1,21 +1,21 @@
-# OJ Review Electron Desktop
+# OJ 复盘系统 Electron 桌面端
 
-## Current scope
+## 当前范围
 
-- Electron main process with local service lifecycle management
-- Preload bridge for runtime state and service restart
-- React renderer with `Dashboard`, `Accounts`, and `Review`
-- Real API reads against `http://127.0.0.1:38473`
-- `Review` state save requires an `ojreviewd.exe` built from the current `apps/server` source
+- Electron 主进程，含本地服务生命周期管理
+- Preload 桥接层，提供运行时状态与服务重启能力
+- React 渲染层，包含 `Dashboard`、`Accounts` 和 `Review` 页面
+- 通过 `http://127.0.0.1:38473` 进行真实 API 读取
+- `Review` 状态保存需要从当前 `apps/server` 源码构建的 `ojreviewd.exe`
 
-## Development
+## 开发
 
-Prerequisites:
+前置条件：
 
 - Node.js 20+
-- `ojreviewd` binary on disk, or Go installed so Electron can fall back to `go run ./cmd/ojreviewd`
+- 磁盘上有 `ojreviewd` 二进制文件，或已安装 Go 以便 Electron 回退到 `go run ./cmd/ojreviewd`
 
-Commands:
+命令：
 
 ```bash
 cd apps/desktop-electron
@@ -23,57 +23,54 @@ npm install
 npm run dev
 ```
 
-If the repo is being run from `\\wsl.localhost\...` or a mapped network drive and Vite file watching fails, use the static path instead:
+如果仓库运行在 `\\wsl.localhost\...` 或映射的网络驱动器上，且 Vite 文件监听失败，请改用静态路径方式：
 
 ```bash
 cd apps/desktop-electron
 npm run start:static
 ```
 
-`start:static` now runs an Electron bootstrap probe before opening the real window.
-If Electron cannot resolve its own main-process APIs on this machine, the command
-fails early with a detailed diagnostic instead of crashing later with `app is undefined`.
+`start:static` 现在会在打开真正窗口之前运行 Electron 引导探测。
+如果 Electron 在当前机器上无法解析自身的主进程 API，该命令会提前失败并输出详细的诊断信息，而不是稍后崩溃并报 `app is undefined` 错误。
 
-On Windows `cmd.exe`, you can also use the wrapper:
+在 Windows `cmd.exe` 下，也可以使用包装脚本：
 
 ```cmd
 apps\desktop-electron\run-static.cmd
 ```
 
-`run-static.cmd` is the preferred Windows entrypoint. It maps the UNC path with
-`pushd`, prepares `ojreviewd.exe`, then runs the same bootstrap-checked static start.
-It also strips inherited `ELECTRON_RUN_AS_NODE` before launching Electron.
+`run-static.cmd` 是推荐的 Windows 启动入口。它会用 `pushd` 映射 UNC 路径，准备好 `ojreviewd.exe`，然后运行相同的引导检查静态启动流程。
+它还会在启动 Electron 前清除继承的 `ELECTRON_RUN_AS_NODE` 环境变量。
 
-If `Dashboard` and `Accounts` load but `Review` shows a 404-style error for
-`/api/review/items/{problemId}`, the running `ojreviewd.exe` is older than the
-renderer. Replace it with a freshly built binary from `apps/server`, then rerun
-`apps\\desktop-electron\\run-static.cmd`.
+如果 `Dashboard` 和 `Accounts` 能加载但 `Review` 显示
+`/api/review/items/{problemId}` 的 404 错误，说明运行中的 `ojreviewd.exe` 版本比渲染层旧。请从 `apps/server` 重新构建二进制文件，然后重新运行
+`apps\\desktop-electron\\run-static.cmd`。
 
-PowerShell on a `\\wsl.localhost\...` path should avoid `npm.cmd` for runtime startup.
-After dependencies are installed, you can start Electron directly with:
+在 `\\wsl.localhost\...` 路径下使用 PowerShell 时，运行时启动应避免使用 `npm.cmd`。
+安装完依赖后，可以直接用以下命令启动 Electron：
 
 ```powershell
 node .\apps\desktop-electron\scripts\dev.mjs
 ```
 
-If you already have a built service binary, prepare it for Electron with:
+如果已经有构建好的服务二进制文件，可以用以下命令为 Electron 准备好：
 
 ```powershell
 .\apps\desktop-electron\prepare-service.ps1
 ```
 
-Or point to a custom binary:
+或指定自定义二进制文件路径：
 
 ```powershell
 $env:OJREVIEW_SERVICE_PATH = "C:\path\to\ojreviewd.exe"
 .\apps\desktop-electron\prepare-service.ps1
 ```
 
-## Build
+## 构建
 
 ```bash
 cd apps/desktop-electron
 npm run build
 ```
 
-Renderer output is written to `apps/desktop-electron/renderer/dist`.
+渲染层输出目录为 `apps/desktop-electron/renderer/dist`。
