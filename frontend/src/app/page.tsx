@@ -121,6 +121,14 @@ export default function Home() {
                 >
                   使用 Codeforces 登录
                 </a>
+                <form action="/api/auth/demo" method="POST">
+                  <button
+                    type="submit"
+                    className="rounded-xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+                  >
+                    演示体验（无需登录）
+                  </button>
+                </form>
               </div>
             </div>
 

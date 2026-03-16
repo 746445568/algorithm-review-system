@@ -8,13 +8,21 @@ export function AuthRequired() {
       <p className="mx-auto mt-2 max-w-xl text-sm leading-6 text-slate-500">
         当前版本使用 Codeforces 登录。登录后系统会自动同步你的最新错题提交，并将数据隔离到你的个人空间。
       </p>
-      <div className="mt-6">
+      <div className="mt-6 flex justify-center gap-3">
         <a
           href="/api/auth/codeforces/login"
           className="inline-flex rounded-2xl bg-primary-600 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-primary-200 transition hover:bg-primary-700"
         >
           使用 Codeforces 登录
         </a>
+        <form action="/api/auth/demo" method="POST">
+          <button
+            type="submit"
+            className="inline-flex rounded-2xl border border-slate-200 bg-white px-5 py-3 text-sm font-semibold text-slate-700 transition hover:bg-slate-50"
+          >
+            演示体验
+          </button>
+        </form>
       </div>
     </section>
   );
