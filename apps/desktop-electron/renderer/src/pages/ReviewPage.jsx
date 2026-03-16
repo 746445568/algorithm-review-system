@@ -251,7 +251,7 @@ export function ReviewPage({ serviceStatus, runtimeInfo }) {
   const reviewCounts = summary?.reviewStatusCounts ?? {};
   const serviceUnavailable = serviceStatus.state !== "healthy";
 
-  async function saveReviewState() {
+  const saveReviewState = useCallback(async () => {
     if (!selectedProblemId || !reviewStateSupported) {
       return;
     }
@@ -291,7 +291,21 @@ export function ReviewPage({ serviceStatus, runtimeInfo }) {
     } finally {
       setReviewSaving(false);
     }
-  }
+  }, [selectedProblemId, reviewStateSupported, reviewState, runtimeInfo.serviceUrl, serviceStatus.url]);
+
+  // Ctrl+S / Cmd+S 快捷键保存复习状态
+  useEffect(() => {
+    function handleKeyDown(event) {
+      if ((event.ctrlKey || event.metaKey) && event.key === "s") {
+        event.preventDefault();
+        if (selectedProblemId && reviewStateSupported && !reviewSaving) {
+          void saveReviewState();
+        }
+      }
+    }
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [selectedProblemId, reviewStateSupported, reviewSaving, saveReviewState]);
 
   return (
     <div className="review-layout">
@@ -314,10 +328,15 @@ export function ReviewPage({ serviceStatus, runtimeInfo }) {
         ) : null}
 
         <div className="mini-stats">
-          <article>
+          <button
+            type="button"
+            className={scheduleFilter === "DUE" ? "stat-chip active" : "stat-chip"}
+            onClick={() => setScheduleFilter((current) => (current === "DUE" ? "" : "DUE"))}
+            title="点击只看今日到期"
+          >
             <span>待复习</span>
             <strong>{summary?.dueReviewCount ?? 0}</strong>
-          </article>
+          </button>
           <article>
             <span>已排期</span>
             <strong>{summary?.scheduledReviewCount ?? 0}</strong>
@@ -551,6 +570,32 @@ export function ReviewPage({ serviceStatus, runtimeInfo }) {
                   }
                 />
               </label>
+              <div className="date-preset-row">
+                {[
+                  { label: "明天", days: 1 },
+                  { label: "3天后", days: 3 },
+                  { label: "1周后", days: 7 },
+                  { label: "2周后", days: 14 },
+                ].map(({ label, days }) => (
+                  <button
+                    key={days}
+                    type="button"
+                    className="ghost-button"
+                    disabled={!reviewStateSupported}
+                    onClick={() => {
+                      const d = new Date();
+                      d.setDate(d.getDate() + days);
+                      d.setHours(9, 0, 0, 0);
+                      setReviewState((current) => ({
+                        ...current,
+                        nextReviewAt: toDatetimeLocalValue(d.toISOString()),
+                      }));
+                    }}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
 
               <label>
                 <span>笔记</span>
