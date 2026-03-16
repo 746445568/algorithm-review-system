@@ -8,6 +8,8 @@
     "frontend"
   ],
   "scripts": {
+    "postinstall": "prisma generate",
+    "predev": "[ -f .env ] || cp .env.example .env",
     "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
     "dev:backend": "bash ./scripts/dev-backend.sh",
     "dev:frontend": "bash ./scripts/dev-frontend.sh",
@@ -21,10 +23,14 @@
     "build": "npm run build --workspace=backend && npm run build --workspace=frontend",
     "db:migrate": "npx prisma migrate dev",
     "db:generate": "npx prisma generate",
+    "db:seed": "npx tsx prisma/seed.ts",
     "db:studio": "npx prisma studio",
     "ops:backup": "bash ./scripts/backup-sqlite.sh",
     "ops:restore": "bash ./scripts/restore-sqlite.sh",
     "ops:smoke": "bash ./scripts/smoke-test.sh"
+  },
+  "prisma": {
+    "seed": "npx tsx prisma/seed.ts"
   },
   "devDependencies": {
     "concurrently": "^8.2.2",

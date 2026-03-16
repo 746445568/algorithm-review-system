@@ -791,3 +791,71 @@ textarea {
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+/* Service loading / error screen */
+.service-loading-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  gap: 0.75rem;
+  padding: 3rem 2rem;
+  text-align: center;
+}
+
+.service-loading-screen h2 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--text-primary, #111827);
+  margin: 0;
+}
+
+.service-loading-screen .primary-button {
+  margin-top: 0.5rem;
+}
+
+/* Quick date preset buttons */
+.date-preset-row {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.date-preset-row .ghost-button {
+  font-size: 0.75rem;
+  padding: 0.2rem 0.65rem;
+}
+
+/* Clickable stat chip (e.g. due review count toggle) */
+.stat-chip {
+  background: none;
+  border: 1px solid transparent;
+  border-radius: 0.5rem;
+  cursor: pointer;
+  padding: 0.5rem;
+  text-align: left;
+  transition: border-color 0.15s, background 0.15s;
+  font: inherit;
+}
+
+.stat-chip span {
+  display: block;
+  font-size: 0.75rem;
+  color: var(--muted);
+}
+
+.stat-chip strong {
+  display: block;
+  font-size: 1.25rem;
+  font-weight: 700;
+}
+
+.stat-chip:hover {
+  border-color: var(--border, #e5e7eb);
+}
+
+.stat-chip.active {
+  border-color: var(--accent, #2563eb);
+  background: color-mix(in srgb, var(--accent, #2563eb) 8%, transparent);
+}
