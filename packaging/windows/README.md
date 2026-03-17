@@ -1,36 +1,36 @@
-# Windows packaging
+# Windows 打包
 
-This directory is reserved for the Windows installer flow of OJ Review Desktop.
+本目录用于 OJ 复盘系统桌面版的 Windows 安装包构建流程。
 
-## Planned packaging responsibilities
+## 计划中的打包职责
 
-- ship the Electron desktop app
-- ship the `ojreviewd` local service binary
-- initialize first-run application directories
-- preserve SQLite data across upgrades
-- surface migration and rollback failures to the user
+- 打包 Electron 桌面应用
+- 打包 `ojreviewd` 本地服务二进制文件
+- 首次运行时初始化应用目录
+- 跨版本升级时保留 SQLite 数据
+- 向用户展示迁移和回滚失败信息
 
-## Packaging target
+## 打包目标
 
-- one-click Windows installer
-- data stored under the current user's local app data directory
+- 一键 Windows 安装包
+- 数据存储在当前用户的本地应用数据目录下
 
-## Current binary placement contract
+## 当前二进制文件查找规则
 
-The Electron app looks for the local service binary in these locations (in order):
+Electron 应用按以下顺序查找本地服务二进制文件：
 
-1. `process.resourcesPath/bin/ojreviewd.exe` (packaged)
-2. `app.getAppPath()/bin/ojreviewd.exe` (development)
-3. `apps/server/bin/ojreviewd.exe` (repo development)
-4. Dev fallback: `go run ./cmd/ojreviewd`
+1. `process.resourcesPath/bin/ojreviewd.exe`（已打包环境）
+2. `app.getAppPath()/bin/ojreviewd.exe`（开发环境）
+3. `apps/server/bin/ojreviewd.exe`（仓库开发环境）
+4. 开发回退：`go run ./cmd/ojreviewd`
 
-## Electron packaging
+## Electron 打包
 
-The app uses Electron's standard packaging flow:
+应用使用 Electron 标准打包流程：
 
 ```bash
 cd apps/desktop-electron
 npm run build
 ```
 
-Renderer output is written to `apps/desktop-electron/renderer/dist`.
+渲染层输出目录为 `apps/desktop-electron/renderer/dist`。
