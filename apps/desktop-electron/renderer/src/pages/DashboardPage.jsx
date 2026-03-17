@@ -141,12 +141,8 @@ export function DashboardPage({ serviceStatus, runtimeInfo }) {
         {loading ? <p className="muted">正在加载仪表盘数据...</p> : null}
         {error ? <p className="error-text">{error}</p> : null}
         <div className="stack-list">
-          {data.accounts.length === 0 && !loading ? (
-            <p className="muted">
-              尚未绑定账号。前往左侧「账号管理」，填入 Codeforces 或 AtCoder 用户名即可开始同步。无需登录，无需 OAuth。
-            </p>
-          ) : data.accounts.length === 0 ? (
-            <p className="muted">正在加载账号信息...</p>
+          {data.accounts.length === 0 ? (
+            <p className="muted">尚未绑定任何平台账号。</p>
           ) : (
             data.accounts.map((account) => (
               <article key={account.id} className="inline-card">
@@ -282,9 +278,7 @@ export function DashboardPage({ serviceStatus, runtimeInfo }) {
             ) : null}
           </div>
         ) : (
-          <p className="muted">
-            尚无同步任务。绑定账号后将自动开始第一次同步。
-          </p>
+          <p className="muted">尚无同步任务。</p>
         )}
       </section>
 

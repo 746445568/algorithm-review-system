@@ -1,4 +1,3 @@
-import crypto from 'crypto';
 import { Router } from 'express';
 import {
   clearOidcCookies,
@@ -8,7 +7,6 @@ import {
   setOidcCookies,
   setSessionCookie,
 } from '../lib/auth';
-import { prisma } from '../lib/prisma';
 import { createRateLimitMiddleware } from '../lib/rate-limit';
 import {
   createAuthRequest,
@@ -93,31 +91,6 @@ router.post('/logout', async (req, res, next) => {
   try {
     await destroySession(req, res);
     res.json({ message: '已退出登录' });
-  } catch (error) {
-    next(error);
-  }
-});
-
-// 演示登录：无需 Codeforces 账号，直接体验。设置 DEMO_MODE=false 可在生产环境关闭。
-router.post('/demo', authLimiter, async (_req, res, next) => {
-  try {
-    if (process.env.DEMO_MODE === 'false') {
-      return res.status(404).json({ error: '演示模式已关闭' });
-    }
-
-    const demoUser = await prisma.user.findFirst({ where: { handle: 'demo-user' } });
-    if (!demoUser) {
-      return res.status(503).json({ error: '演示数据尚未就绪，请稍等片刻后重试' });
-    }
-
-    const token = crypto.randomBytes(32).toString('hex');
-    const expiresAt = new Date(Date.now() + 2 * 60 * 60 * 1000); // 2 小时
-    const session = await prisma.session.create({
-      data: { token, userId: demoUser.id, expiresAt },
-    });
-
-    setSessionCookie(res, session.token, session.expiresAt);
-    res.redirect('/');
   } catch (error) {
     next(error);
   }
