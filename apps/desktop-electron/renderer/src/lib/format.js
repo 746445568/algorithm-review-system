@@ -82,6 +82,49 @@ export function verdictTone(verdict) {
   }
 }
 
+const TAG_ZH = {
+  "implementation": "模拟",
+  "math": "数学",
+  "greedy": "贪心",
+  "dp": "动态规划",
+  "data structures": "数据结构",
+  "brute force": "暴力枚举",
+  "constructive algorithms": "构造",
+  "graphs": "图论",
+  "sortings": "排序",
+  "binary search": "二分查找",
+  "dfs and similar": "深搜",
+  "trees": "树",
+  "strings": "字符串",
+  "number theory": "数论",
+  "combinatorics": "组合数学",
+  "geometry": "几何",
+  "bitmasks": "位运算",
+  "two pointers": "双指针",
+  "dsu": "并查集",
+  "shortest paths": "最短路",
+  "probabilities": "概率",
+  "divide and conquer": "分治",
+  "hashing": "哈希",
+  "games": "博弈论",
+  "flows": "网络流",
+  "interactive": "交互",
+  "matrices": "矩阵",
+  "fft": "快速傅里叶变换",
+  "ternary search": "三分查找",
+  "expression parsing": "表达式解析",
+  "meet-in-the-middle": "折半搜索",
+  "2-sat": "2-SAT",
+  "chinese remainder theorem": "中国剩余定理",
+  "schedules": "调度",
+  "string suffix structures": "后缀结构",
+};
+
+export function tagLabel(tag) {
+  if (!tag) return "未知";
+  return TAG_ZH[tag.toLowerCase()] || tag;
+}
+
 export function parseTags(rawTagsJson) {
   if (!rawTagsJson) {
     return [];

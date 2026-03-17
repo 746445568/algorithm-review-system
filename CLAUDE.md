@@ -151,6 +151,17 @@ renderer (React)
 
 `apps/desktop/` WinUI 目录仅作历史遗留参考，不再被 Electron 启动链路扫描或依赖。
 
+### 浏览器调试模式（无 Electron）
+- 当 `window.desktopBridge` 不存在时自动进入浏览器调试模式
+- 先尝试 Vite 代理 `/health`，失败后回退到直连 `http://127.0.0.1:38473`
+- Go 服务已内置 CORS 中间件（`corsMiddleware`），允许跨域请求
+- WSL 环境下 Vite 代理无法直连 Windows 上的 Go 服务（NAT 隔离），需依赖浏览器直连模式
+
+### Go 服务构建（WSL 环境）
+- WSL 中未安装 Go，需在 Windows 侧构建：先复制源码到 `C:\Users\ackun\AppData\Local\Temp\`，再用 `"C:\Program Files\Go\bin\go.exe"` 构建
+- 构建后手动复制回 `apps/desktop-electron/bin/ojreviewd.exe`
+- 启动时需用 `--addr 0.0.0.0:38473` 监听所有接口
+
 ### 离线缓存策略（Electron 渲染层）
 - `lib/db.js`：IndexedDB 封装，本地持久化
 - `lib/sync.js`：同步逻辑，后台 5 分钟轮询

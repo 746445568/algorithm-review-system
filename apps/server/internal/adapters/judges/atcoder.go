@@ -1,9 +1,11 @@
 package judges
 
 import (
+	"compress/gzip"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -38,7 +40,7 @@ type atCoderSubmission struct {
 	ContestID     string `json:"contest_id"`
 	UserID        string `json:"user_id"`
 	Language      string `json:"language"`
-	Point         int64  `json:"point"`
+	Point         float64 `json:"point"`
 	Length        int64  `json:"length"`
 	Result        string `json:"result"`
 	ExecutionTime int    `json:"execution_time"`
@@ -68,6 +70,7 @@ func (a *AtCoderAdapter) FetchContests() ([]models.Contest, error) {
 	if err != nil {
 		return nil, fmt.Errorf("create atcoder contests request: %w", err)
 	}
+	setAtCoderHeaders(req)
 
 	resp, err := a.client.Do(req)
 	if err != nil {
@@ -79,8 +82,14 @@ func (a *AtCoderAdapter) FetchContests() ([]models.Contest, error) {
 		return nil, fmt.Errorf("atcoder contests returned status %d", resp.StatusCode)
 	}
 
+	body, err := atCoderBody(resp)
+	if err != nil {
+		return nil, err
+	}
+	defer body.Close()
+
 	var rawContests []atCoderContest
-	if err := json.NewDecoder(resp.Body).Decode(&rawContests); err != nil {
+	if err := json.NewDecoder(body).Decode(&rawContests); err != nil {
 		return nil, fmt.Errorf("decode atcoder contests response: %w", err)
 	}
 
@@ -109,7 +118,7 @@ func (a *AtCoderAdapter) ValidateAccount(handle string) error {
 		return errors.New("handle is required")
 	}
 
-	_, err := a.fetchSubmissionsRaw(handle, time.Now().UTC().Unix())
+	_, err := a.fetchSubmissionsRaw(handle, 0)
 	if err != nil {
 		return fmt.Errorf("validate atcoder account: %w", err)
 	}
@@ -234,6 +243,7 @@ func (a *AtCoderAdapter) fetchSubmissionsRaw(handle string, fromSecond int64) ([
 	if err != nil {
 		return nil, fmt.Errorf("create atcoder results request: %w", err)
 	}
+	setAtCoderHeaders(req)
 
 	resp, err := a.client.Do(req)
 	if err != nil {
@@ -241,12 +251,22 @@ func (a *AtCoderAdapter) fetchSubmissionsRaw(handle string, fromSecond int64) ([
 	}
 	defer resp.Body.Close()
 
+	if resp.StatusCode == http.StatusNotFound {
+		// kenkoooo.com returns 404 for users with no submissions — treat as empty
+		return []atCoderSubmission{}, nil
+	}
 	if resp.StatusCode != http.StatusOK {
 		return nil, fmt.Errorf("atcoder results returned status %d", resp.StatusCode)
 	}
 
+	body, err := atCoderBody(resp)
+	if err != nil {
+		return nil, err
+	}
+	defer body.Close()
+
 	var submissions []atCoderSubmission
-	if err := json.NewDecoder(resp.Body).Decode(&submissions); err != nil {
+	if err := json.NewDecoder(body).Decode(&submissions); err != nil {
 		return nil, fmt.Errorf("decode atcoder results response: %w", err)
 	}
 
@@ -273,6 +293,7 @@ func (a *AtCoderAdapter) loadProblems() (map[string]atCoderProblem, error) {
 	if err != nil {
 		return nil, fmt.Errorf("create atcoder problems request: %w", err)
 	}
+	setAtCoderHeaders(req)
 
 	resp, err := a.client.Do(req)
 	if err != nil {
@@ -284,8 +305,14 @@ func (a *AtCoderAdapter) loadProblems() (map[string]atCoderProblem, error) {
 		return nil, fmt.Errorf("atcoder problems returned status %d", resp.StatusCode)
 	}
 
+	body, err := atCoderBody(resp)
+	if err != nil {
+		return nil, err
+	}
+	defer body.Close()
+
 	var problems []atCoderProblem
-	if err := json.NewDecoder(resp.Body).Decode(&problems); err != nil {
+	if err := json.NewDecoder(body).Decode(&problems); err != nil {
 		return nil, fmt.Errorf("decode atcoder problems response: %w", err)
 	}
 
@@ -395,6 +422,22 @@ func atCoderTaskURL(contestID string, problemID string) string {
 		return ""
 	}
 	return fmt.Sprintf("https://atcoder.jp/contests/%s/tasks/%s", contestID, problemID)
+}
+
+func setAtCoderHeaders(req *http.Request) {
+	req.Header.Set("Accept-Encoding", "gzip")
+	req.Header.Set("Accept", "application/json")
+}
+
+func atCoderBody(resp *http.Response) (io.ReadCloser, error) {
+	if resp.Header.Get("Content-Encoding") == "gzip" {
+		gr, err := gzip.NewReader(resp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("create gzip reader: %w", err)
+		}
+		return gr, nil
+	}
+	return resp.Body, nil
 }
 
 func normalizeAtCoderContestStatus(startTime time.Time) string {

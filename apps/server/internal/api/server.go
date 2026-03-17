@@ -43,7 +43,20 @@ func NewServer(cfg app.Config, db *storage.DB, queue *jobs.Queue) *Server {
 	return s
 }
 
-func (s *Server) Router() http.Handler { return s.mux }
+func (s *Server) Router() http.Handler { return corsMiddleware(s.mux) }
+
+func corsMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Access-Control-Allow-Origin", "*")
+		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+		if r.Method == http.MethodOptions {
+			w.WriteHeader(http.StatusNoContent)
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
 
 func (s *Server) Adapters() map[models.Platform]judges.Adapter { return s.adapters }
 
@@ -53,6 +66,7 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("GET /api/me", s.handleMe)
 	s.mux.HandleFunc("GET /api/accounts", s.handleAccounts)
 	s.mux.HandleFunc("PUT /api/accounts/{platform}", s.handleUpsertAccount)
+	s.mux.HandleFunc("DELETE /api/accounts/{id}", s.handleDeleteAccount)
 	s.mux.HandleFunc("POST /api/accounts/{platform}/sync", s.handleSyncAccount)
 	s.mux.HandleFunc("GET /api/sync-tasks", s.handleSyncTasks)
 	s.mux.HandleFunc("GET /api/submissions", s.handleSubmissions)
@@ -150,6 +164,19 @@ func (s *Server) handleUpsertAccount(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	writeJSON(w, http.StatusOK, account)
+}
+
+func (s *Server) handleDeleteAccount(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	if err != nil || id <= 0 {
+		writeError(w, http.StatusBadRequest, "invalid account id")
+		return
+	}
+	if err := s.db.DeleteAccount(id); err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]string{"status": "deleted"})
 }
 
 func (s *Server) handleSyncAccount(w http.ResponseWriter, r *http.Request) {

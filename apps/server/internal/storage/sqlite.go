@@ -254,6 +254,11 @@ FROM platform_accounts WHERE id = ?`, id)
 	return scanPlatformAccount(row)
 }
 
+func (db *DB) DeleteAccount(id int64) error {
+	_, err := db.conn.Exec(`DELETE FROM platform_accounts WHERE id = ?`, id)
+	return err
+}
+
 func (db *DB) UpsertAccount(platform models.Platform, handle string) (models.PlatformAccount, error) {
 	_, err := db.conn.Exec(`
 INSERT INTO platform_accounts(platform, external_handle, status)

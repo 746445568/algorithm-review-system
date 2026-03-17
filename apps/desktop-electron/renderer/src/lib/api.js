@@ -1,20 +1,87 @@
 import {
   addToSyncQueue,
-  getAccounts as getCachedAccounts,
-  getCollectionSyncMetadata,
   getProblems as getCachedProblems,
   getSubmissions as getCachedSubmissions,
-  markCollectionSyncAttempt,
-  markCollectionSynced,
-  saveAccounts as saveCachedAccounts,
   saveProblems as saveCachedProblems,
   saveReviewState as saveCachedReviewState,
   saveSubmissions as saveCachedSubmissions,
 } from "./db.js";
-import { DEFAULT_BASE_URL, buildUrl, isNetworkError, normalizeBaseUrl, requestJson } from "./http.js";
 import { isOnline as checkOnline, setSyncBaseUrl } from "./sync.js";
 
-let apiBase = DEFAULT_BASE_URL;
+const DEFAULT_API_BASE = "http://127.0.0.1:38473";
+const REQUEST_TIMEOUT_MS = 10000;
+let apiBase = DEFAULT_API_BASE;
+
+function normalizeApiBase(nextBase) {
+  if (nextBase === "" || nextBase === null || nextBase === undefined) {
+    return "";
+  }
+
+  return nextBase.endsWith("/") ? nextBase.slice(0, -1) : nextBase;
+}
+
+function withQuery(path, query = {}) {
+  const base = apiBase || window.location.origin;
+  const url = new URL(path, base);
+  for (const [key, value] of Object.entries(query)) {
+    if (value !== undefined && value !== null && value !== "") {
+      url.searchParams.set(key, String(value));
+    }
+  }
+  return url.toString();
+}
+
+async function request(pathOrUrl, options = {}) {
+  const url = pathOrUrl.startsWith("http") ? pathOrUrl : `${apiBase}${pathOrUrl}`;
+  const timeoutController = new AbortController();
+  const timeoutId = window.setTimeout(() => timeoutController.abort(), REQUEST_TIMEOUT_MS);
+  const signal = options.signal
+    ? AbortSignal.any([options.signal, timeoutController.signal])
+    : timeoutController.signal;
+
+  let response;
+  try {
+    response = await fetch(url, {
+      headers: {
+        "Content-Type": "application/json",
+        ...(options.headers ?? {}),
+      },
+      ...options,
+      signal,
+    });
+  } catch (error) {
+    if (timeoutController.signal.aborted && !options.signal?.aborted) {
+      throw new Error(`request timed out after ${REQUEST_TIMEOUT_MS}ms`);
+    }
+    throw error;
+  } finally {
+    window.clearTimeout(timeoutId);
+  }
+
+  if (!response.ok) {
+    let message = `${response.status} ${response.statusText}`;
+    try {
+      const body = await response.json();
+      message = body.error ?? message;
+    } catch {}
+    throw new Error(message);
+  }
+
+  if (response.status === 204) {
+    return null;
+  }
+
+  return response.json();
+}
+
+function isNetworkError(error) {
+  const message = String(error?.message || "");
+  return (
+    message.includes("Failed to fetch") ||
+    message.includes("NetworkError") ||
+    message.includes("request timed out")
+  );
+}
 
 function normalizeReviewPayload(payload) {
   return {
@@ -22,144 +89,6 @@ function normalizeReviewPayload(payload) {
     notes: payload?.notes || "",
     nextReviewAt: payload?.nextReviewAt || null,
   };
-}
-
-function getCacheAgeMs(lastSyncedAt) {
-  if (!lastSyncedAt) {
-    return Number.POSITIVE_INFINITY;
-  }
-
-  const syncedAt = new Date(lastSyncedAt).getTime();
-  if (Number.isNaN(syncedAt)) {
-    return Number.POSITIVE_INFINITY;
-  }
-
-  return Math.max(0, Date.now() - syncedAt);
-}
-
-function buildCacheState(entity, metadata, cachedCount) {
-  const ttlMs = CACHE_TTLS_MS[entity] ?? 5 * 60 * 1000;
-  const ageMs = getCacheAgeMs(metadata?.lastSyncedAt);
-  const hasCache = cachedCount > 0;
-  const isStale = !hasCache || ageMs > ttlMs || metadata?.stale === true;
-
-  return {
-    entity,
-    ttlMs,
-    ageMs,
-    hasCache,
-    isStale,
-    metadata,
-  };
-}
-
-async function fetchAndPersistCollection({
-  entity,
-  path,
-  query,
-  saveRows,
-  background = false,
-}) {
-  const attemptAt = new Date().toISOString();
-  await markCollectionSyncAttempt(entity, {
-    lastFetchAttemptAt: attemptAt,
-    source: background ? "background-refresh" : "remote-request",
-    stale: true,
-    lastError: null,
-  });
-
-  try {
-    const response = await request(withQuery(path, query));
-    const rows = Array.isArray(response) ? response : [];
-    await saveRows(rows);
-    await markCollectionSynced(entity, {
-      lastSyncedAt: new Date().toISOString(),
-      lastFetchAttemptAt: attemptAt,
-      source: background ? "background-refresh" : "remote",
-      stale: false,
-      lastError: null,
-    });
-    return rows;
-  } catch (error) {
-    await markCollectionSyncAttempt(entity, {
-      lastFetchAttemptAt: attemptAt,
-      source: background ? "background-refresh" : "remote-request",
-      stale: true,
-      lastError: error?.message || "请求失败",
-    });
-    throw error;
-  }
-}
-
-async function getCachedFirstCollection({
-  entity,
-  query,
-  getCachedRows,
-  path,
-  saveRows,
-}) {
-  const [cachedRows, metadata] = await Promise.all([
-    getCachedRows(query),
-    getCollectionSyncMetadata(entity),
-  ]);
-  const cacheState = buildCacheState(entity, metadata, cachedRows.length);
-
-  if (cacheState.hasCache) {
-    if (cacheState.isStale) {
-      const online = await checkOnline();
-      if (online) {
-        void fetchAndPersistCollection({
-          entity,
-          path,
-          query,
-          saveRows,
-          background: true,
-        }).catch((error) => {
-          console.warn(`[api] background refresh failed for ${entity}`, error);
-        });
-      }
-    }
-
-    return {
-      rows: cachedRows,
-      cache: {
-        ...cacheState,
-        source: "cache",
-        refreshStartedAt: cacheState.isStale ? new Date().toISOString() : null,
-      },
-    };
-  }
-
-  try {
-    const rows = await fetchAndPersistCollection({
-      entity,
-      path,
-      query,
-      saveRows,
-    });
-    const nextMetadata = await getCollectionSyncMetadata(entity);
-    return {
-      rows,
-      cache: {
-        ...buildCacheState(entity, nextMetadata, rows.length),
-        source: "remote",
-        refreshStartedAt: null,
-      },
-    };
-  } catch (error) {
-    if (isNetworkError(error)) {
-      return {
-        rows: cachedRows,
-        cache: {
-          ...cacheState,
-          source: cacheState.hasCache ? "cache-network-fallback" : "empty-network-fallback",
-          refreshStartedAt: null,
-          lastError: error.message,
-        },
-      };
-    }
-    throw error;
-  }
 }
 
 async function queueReviewStateSync(problemId, payload) {
@@ -171,60 +100,21 @@ async function queueReviewStateSync(problemId, payload) {
   });
 }
 
-function request(pathOrUrl, options = {}) {
-  return requestJson(apiBase, pathOrUrl, options);
-}
-
 export const api = {
   setBaseUrl: (nextBase) => {
-    apiBase = normalizeBaseUrl(nextBase);
+    apiBase = normalizeApiBase(nextBase);
     setSyncBaseUrl(apiBase);
   },
   getBaseUrl: () => apiBase,
   getOwner: () => request("/api/me"),
-  getAccounts: async () => {
-    const cached = await getCachedAccounts();
-    if (cached.length > 0) {
-      void (async () => {
-        try {
-          const online = await checkOnline();
-          if (!online) {
-            return;
-          }
-          await markCollectionSyncAttempt("accounts", {
-            source: "background-refresh",
-            stale: false,
-            lastError: null,
-          });
-          const remote = await request("/api/accounts");
-          const rows = Array.isArray(remote) ? remote : [];
-          await saveCachedAccounts(rows);
-          await markCollectionSynced("accounts", {
-            source: "background-refresh",
-            stale: false,
-          });
-        } catch (error) {
-          await markCollectionSyncAttempt("accounts", {
-            source: "background-refresh",
-            stale: true,
-            lastError: error?.message || "请求失败",
-          });
-        }
-      })();
-      return cached;
-    }
-
-    const accounts = await request("/api/accounts");
-    const rows = Array.isArray(accounts) ? accounts : [];
-    await saveCachedAccounts(rows);
-    await markCollectionSynced("accounts", { source: "remote", stale: false });
-    return rows;
-  },
+  getAccounts: () => request("/api/accounts"),
   createAccount: (platform, handle) =>
     request(`/api/accounts/${platform}`, {
       method: "PUT",
       body: JSON.stringify({ handle }),
     }),
+  deleteAccount: (accountId) =>
+    request(`/api/accounts/${accountId}`, { method: "DELETE" }),
   syncAccount: (platform, accountId) =>
     request(`/api/accounts/${platform}/sync`, {
       method: "POST",
@@ -259,45 +149,16 @@ export const api = {
         body: JSON.stringify(normalizedPayload),
       });
       await saveCachedReviewState(saved);
-      await markCollectionSynced("reviewStates", {
-        source: "remote",
-        stale: false,
-      });
       return saved;
     } catch (error) {
       if (isNetworkError(error)) {
         await queueReviewStateSync(normalizedProblemId, normalizedPayload);
-        await markCollectionSyncAttempt("reviewStates", {
-          source: "queue-fallback",
-          stale: true,
-          lastError: error.message,
-        });
         return localState;
       }
       throw error;
     }
   },
   getAISettings: () => request("/api/settings/ai"),
-  generateAnalysis: async (problemId) => {
-    const payload = {};
-    const normalizedProblemId = Number(problemId);
-    if (Number.isFinite(normalizedProblemId) && normalizedProblemId > 0) {
-      payload.problemId = normalizedProblemId;
-    }
-
-    const response = await request("/api/analysis/generate", {
-      method: "POST",
-      body: JSON.stringify(payload),
-    });
-    const task = response?.task ?? null;
-    const taskId = Number(task?.id ?? response?.taskId ?? 0);
-    return {
-      taskId: Number.isFinite(taskId) && taskId > 0 ? taskId : null,
-      task,
-      reused: Boolean(response?.reused),
-    };
-  },
-  getAnalysisTask: (taskId) => request(`/api/analysis/${taskId}`),
   saveAISettings: (payload) =>
     request("/api/settings/ai", {
       method: "PUT",
@@ -319,7 +180,6 @@ export const api = {
       method: "POST",
       body: JSON.stringify({}),
     }),
-  getServiceCapabilities: () => detectServiceCapabilities(),
   getProblems: async (query = {}) => {
     const cached = await getCachedProblems(query);
     if (cached.length > 0) {
@@ -327,7 +187,7 @@ export const api = {
     }
 
     try {
-      const problems = await request(buildUrl(apiBase, "/api/problems", query));
+      const problems = await request(withQuery("/api/problems", query));
       if (Array.isArray(problems) && problems.length > 0) {
         await saveCachedProblems(problems);
       }
@@ -346,7 +206,7 @@ export const api = {
     }
 
     try {
-      const submissions = await request(buildUrl(apiBase, "/api/submissions", query));
+      const submissions = await request(withQuery("/api/submissions", query));
       if (Array.isArray(submissions) && submissions.length > 0) {
         await saveCachedSubmissions(submissions);
       }
@@ -361,46 +221,3 @@ export const api = {
 };
 
 setSyncBaseUrl(apiBase);
-
-async function detectServiceCapabilities() {
-  try {
-    const payload = await request("/api/system/capabilities");
-    return normalizeServiceCapabilities(payload, "capabilities-endpoint");
-  } catch (error) {
-    if (!isNotFoundError(error)) {
-      throw error;
-    }
-  }
-
-  const checks = await Promise.allSettled([
-    request("/api/review/items/1"),
-    request("/api/settings/ai"),
-    request("/api/settings/data/export-diagnostics", {
-      method: "POST",
-      body: JSON.stringify({ dryRun: true }),
-    }),
-    request("/api/me"),
-  ]);
-
-  const [reviewStateResult, aiSettingsResult, diagnosticsResult, meResult] = checks;
-  const reviewStateSupported =
-    reviewStateResult.status === "fulfilled" || !isNotFoundError(reviewStateResult.reason);
-  const aiSettingsSupported =
-    aiSettingsResult.status === "fulfilled" || !isNotFoundError(aiSettingsResult.reason);
-  const diagnosticsExportSupported =
-    diagnosticsResult.status === "fulfilled" || !isNotFoundError(diagnosticsResult.reason);
-  const serviceVersion =
-    meResult.status === "fulfilled"
-      ? meResult.value?.app?.version || DEFAULT_SERVICE_CAPABILITIES.serviceVersion
-      : DEFAULT_SERVICE_CAPABILITIES.serviceVersion;
-
-  return normalizeServiceCapabilities(
-    {
-      reviewStateSupported,
-      aiSettingsSupported,
-      diagnosticsExportSupported,
-      serviceVersion,
-    },
-    "fallback-probe"
-  );
-}

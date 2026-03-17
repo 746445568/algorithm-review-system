@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "../lib/api.js";
-import { formatDate, platformLabel, statusLabel } from "../lib/format.js";
+import { formatDate, platformLabel, statusLabel, tagLabel } from "../lib/format.js";
 
 function getFreshnessLabel(meta) {
   if (!meta?.lastSyncedAt) {
@@ -80,17 +80,22 @@ export function DashboardPage({ serviceStatus, runtimeInfo, cacheStatus, connect
     <div className="page-grid">
       <section className="panel hero-panel">
         <div className="hero-copy">
-          <span className="section-label">运行状态</span>
+          <span className="section-label">
+            {serviceStatus.state === "healthy" ? "已连接" : "连接中"}
+          </span>
           <h3>
-            {data.owner?.app?.name ?? "OJ 错题复盘"}{" "}
-            {serviceStatus.state === "healthy" ? "已连接本地数据" : "正在启动"}
+            {serviceStatus.state === "healthy"
+              ? `欢迎回来，${data.accounts[0]?.externalHandle || "开发者"}`
+              : "OJ 错题复盘 正在启动"}
           </h3>
           <p>
-            仪表盘已接入本地 Go 服务的真实数据，实时追踪同步活动和每道题的复习状态。
+            {serviceStatus.state === "healthy"
+              ? `当前有 ${data.reviewSummary?.dueReviewCount ?? 0} 道题目等待复习，${data.reviewSummary?.totalSubmissions ?? 0} 次提交记录已同步。`
+              : "正在连接本地 Go 服务..."}
           </p>
         </div>
         <div className="hero-stats">
-          <div>
+          <div className={serviceStatus.state === "healthy" ? "stat-good" : ""}>
             <span>服务状态</span>
             <strong>{statusLabel(serviceStatus.state)}</strong>
           </div>
@@ -98,7 +103,7 @@ export function DashboardPage({ serviceStatus, runtimeInfo, cacheStatus, connect
             <span>网络判定</span>
             <strong>{connectivity === "service-unreachable" ? "服务不可达" : connectivity === "offline" ? "离线" : "在线"}</strong>
           </div>
-          <div>
+          <div className={data.reviewSummary?.dueReviewCount > 0 ? "stat-accent" : ""}>
             <span>待复习</span>
             <strong>{data.reviewSummary?.dueReviewCount ?? 0}</strong>
           </div>
@@ -238,7 +243,7 @@ export function DashboardPage({ serviceStatus, runtimeInfo, cacheStatus, connect
             weakTags.map((item) => (
               <article key={item.tag} className="inline-card">
                 <div>
-                  <strong>{item.tag}</strong>
+                  <strong>{tagLabel(item.tag)}</strong>
                   <p>{item.attempts} 次尝试</p>
                 </div>
                 <div className="meta-pill">

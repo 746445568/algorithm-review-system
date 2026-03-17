@@ -1,17 +1,14 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import { ReviewFilterBar } from "../components/ReviewFilterBar.jsx";
-import { ReviewStateEditor } from "../components/ReviewStateEditor.jsx";
-import { ProblemDetailPanel } from "../components/ProblemDetailPanel.jsx";
-import { useReviewFilters } from "../hooks/useReviewFilters.js";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../lib/api.js";
-import { formatDate, platformLabel, statusLabel, toDatetimeLocalValue, verdictTone } from "../lib/format.js";
-
-const DEFAULT_REVIEW_STATE = {
-  status: "TODO",
-  notes: "",
-  nextReviewAt: "",
-  lastUpdatedAt: "",
-};
+import {
+  formatDate,
+  parseTags,
+  platformLabel,
+  statusLabel,
+  tagLabel,
+  toDatetimeLocalValue,
+  verdictTone,
+} from "../lib/format.js";
 
 function formatRawJSON(rawJson) {
   try {
@@ -19,19 +16,6 @@ function formatRawJSON(rawJson) {
   } catch {
     return rawJson;
   }
-}
-
-function toTimestamp(value, fallback = 0) {
-  if (!value) {
-    return fallback;
-  }
-
-  const timestamp = new Date(value).getTime();
-  return Number.isNaN(timestamp) ? fallback : timestamp;
-}
-
-function isFailureVerdict(verdict) {
-  return Boolean(verdict) && String(verdict).toUpperCase() !== "AC";
 }
 
 function isMissingReviewStateRoute(error) {
@@ -43,18 +27,28 @@ function buildReviewStateRouteMessage(serviceUrl) {
 }
 
 function buildReviewStats(problemSummaries = []) {
-  const counts = { TODO: 0, REVIEWING: 0, SCHEDULED: 0, DONE: 0 };
+  const counts = {
+    TODO: 0,
+    REVIEWING: 0,
+    SCHEDULED: 0,
+    DONE: 0,
+  };
   let dueReviewCount = 0;
   let scheduledReviewCount = 0;
   const now = Date.now();
 
   for (const item of problemSummaries) {
     const status = (item.reviewStatus || "TODO").toUpperCase();
-    if (counts[status] !== undefined) counts[status] += 1;
+    if (counts[status] !== undefined) {
+      counts[status] += 1;
+    }
+
     if (item.nextReviewAt) {
       scheduledReviewCount += 1;
       const nextReviewTime = new Date(item.nextReviewAt).getTime();
-      if (!Number.isNaN(nextReviewTime) && nextReviewTime <= now) dueReviewCount += 1;
+      if (!Number.isNaN(nextReviewTime) && nextReviewTime <= now) {
+        dueReviewCount += 1;
+      }
     }
   }
 
@@ -62,10 +56,15 @@ function buildReviewStats(problemSummaries = []) {
 }
 
 function applyReviewState(summary, problemId, savedState) {
-  if (!summary?.problemSummaries?.length) return summary;
+  if (!summary?.problemSummaries?.length) {
+    return summary;
+  }
 
   const nextProblemSummaries = summary.problemSummaries.map((item) => {
-    if (item.problemId !== problemId) return item;
+    if (item.problemId !== problemId) {
+      return item;
+    }
+
     const nextReviewAt = savedState.nextReviewAt || null;
     const nextReviewTime = nextReviewAt ? new Date(nextReviewAt).getTime() : Number.NaN;
 
@@ -88,37 +87,31 @@ function applyReviewState(summary, problemId, savedState) {
   };
 }
 
-const ANALYSIS_POLL_INTERVAL_MS = 1800;
-
 export function ReviewPage({ serviceStatus, runtimeInfo }) {
   const [summary, setSummary] = useState(null);
   const [problems, setProblems] = useState([]);
   const [submissions, setSubmissions] = useState([]);
+  const [search, setSearch] = useState("");
+  const [platform, setPlatform] = useState("");
+  const [reviewStatusFilter, setReviewStatusFilter] = useState("");
+  const [scheduleFilter, setScheduleFilter] = useState("");
+  const [sortBy, setSortBy] = useState("lastSubmitted");
+  const [onlyUnsolved, setOnlyUnsolved] = useState(true);
   const [selectedProblemId, setSelectedProblemId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [reviewState, setReviewState] = useState(emptyReviewState);
+  const [reviewState, setReviewState] = useState({
+    status: "TODO",
+    notes: "",
+    nextReviewAt: "",
+    lastUpdatedAt: "",
+  });
   const [reviewSaving, setReviewSaving] = useState(false);
   const [reviewNotice, setReviewNotice] = useState("");
   const [reviewStateSupported, setReviewStateSupported] = useState(true);
   const [reviewStateSupportMessage, setReviewStateSupportMessage] = useState("");
-  const [analysisTaskId, setAnalysisTaskId] = useState(null);
-  const [analysisStatus, setAnalysisStatus] = useState("");
-  const [analysisError, setAnalysisError] = useState("");
-  const [analysisText, setAnalysisText] = useState("");
-  const [analysisJson, setAnalysisJson] = useState("");
-  const [analysisLoading, setAnalysisLoading] = useState(false);
   const refreshSequenceRef = useRef(0);
   const reviewStateSequenceRef = useRef(0);
-  const analysisSequenceRef = useRef(0);
-  const analysisTimerRef = useRef(null);
-
-  const clearAnalysisPolling = useCallback(() => {
-    if (analysisTimerRef.current) {
-      window.clearTimeout(analysisTimerRef.current);
-      analysisTimerRef.current = null;
-    }
-  }, []);
 
   const refresh = useCallback(async () => {
     const requestId = refreshSequenceRef.current + 1;
@@ -138,17 +131,23 @@ export function ReviewPage({ serviceStatus, runtimeInfo }) {
         api.getSubmissions({ limit: 300 }),
       ]);
 
-      if (requestId !== refreshSequenceRef.current) return;
+      if (requestId !== refreshSequenceRef.current) {
+        return;
+      }
 
       setSummary(reviewSummary);
       setProblems(problemItems);
       setSubmissions(submissionItems);
       setSelectedProblemId((current) => current ?? reviewSummary?.problemSummaries?.[0]?.problemId ?? null);
     } catch (nextError) {
-      if (requestId !== refreshSequenceRef.current) return;
+      if (requestId !== refreshSequenceRef.current) {
+        return;
+      }
       setError(nextError.message);
     } finally {
-      if (requestId === refreshSequenceRef.current) setLoading(false);
+      if (requestId === refreshSequenceRef.current) {
+        setLoading(false);
+      }
     }
   }, [serviceStatus.state]);
 
@@ -162,7 +161,12 @@ export function ReviewPage({ serviceStatus, runtimeInfo }) {
       reviewStateSequenceRef.current = requestId;
 
       if (serviceStatus.state !== "healthy" || !selectedProblemId) {
-        setReviewState(emptyReviewState);
+        setReviewState({
+          status: "TODO",
+          notes: "",
+          nextReviewAt: "",
+          lastUpdatedAt: "",
+        });
         setReviewStateSupported(true);
         setReviewStateSupportMessage("");
         return;
@@ -170,19 +174,27 @@ export function ReviewPage({ serviceStatus, runtimeInfo }) {
 
       try {
         const state = await api.getReviewState(selectedProblemId);
-        if (requestId !== reviewStateSequenceRef.current) return;
+        if (requestId !== reviewStateSequenceRef.current) {
+          return;
+        }
         setReviewState({
           status: state.status || "TODO",
           notes: state.notes || "",
           nextReviewAt: toDatetimeLocalValue(state.nextReviewAt),
           lastUpdatedAt: state.lastUpdatedAt || "",
         });
+        setReviewStateSupported(true);
+        setReviewStateSupportMessage("");
         setReviewNotice("");
       } catch (nextError) {
-        if (requestId !== reviewStateSequenceRef.current) return;
+        if (requestId !== reviewStateSequenceRef.current) {
+          return;
+        }
         if (isMissingReviewStateRoute(nextError)) {
           setReviewStateSupported(false);
-          setReviewStateSupportMessage(buildReviewStateRouteMessage(runtimeInfo.serviceUrl || serviceStatus.url));
+          setReviewStateSupportMessage(
+            buildReviewStateRouteMessage(runtimeInfo.serviceUrl || serviceStatus.url)
+          );
           setReviewNotice("");
           return;
         }
@@ -195,30 +207,11 @@ export function ReviewPage({ serviceStatus, runtimeInfo }) {
     void loadReviewState();
   }, [runtimeInfo.serviceUrl, selectedProblemId, serviceStatus.state, serviceStatus.url]);
 
-  useEffect(() => {
-    clearAnalysisPolling();
-    analysisSequenceRef.current += 1;
-    setAnalysisTaskId(null);
-    setAnalysisStatus("");
-    setAnalysisError("");
-    setAnalysisText("");
-    setAnalysisJson("");
-    setAnalysisLoading(false);
-  }, [clearAnalysisPolling, selectedProblemId]);
-
-  useEffect(
-    () => () => {
-      clearAnalysisPolling();
-      analysisSequenceRef.current += 1;
-    },
-    [clearAnalysisPolling]
-  );
-
   const filteredProblems = useMemo(() => {
     const items = summary?.problemSummaries ?? [];
     const searchNeedle = search.trim().toLowerCase();
 
-    return items.filter((item) => {
+    const filtered = items.filter((item) => {
       const title = (item.title || "").toLowerCase();
       const externalProblemId = (item.externalProblemId || "").toLowerCase();
       const matchSearch =
@@ -236,60 +229,48 @@ export function ReviewPage({ serviceStatus, runtimeInfo }) {
         matchSchedule = !item.nextReviewAt;
       }
 
-      nextMap.set(submission.problemId, current);
-    }
+      return matchSearch && matchPlatform && matchSolved && matchReviewStatus && matchSchedule;
+    });
 
-    return nextMap;
-  }, [submissions]);
+    filtered.sort((a, b) => {
+      if (sortBy === "nextReview") {
+        const aTime = a.nextReviewAt ? new Date(a.nextReviewAt).getTime() : Infinity;
+        const bTime = b.nextReviewAt ? new Date(b.nextReviewAt).getTime() : Infinity;
+        return aTime - bTime;
+      }
+      // default: lastSubmitted — newest first
+      const aTime = a.lastSubmittedAt ? new Date(a.lastSubmittedAt).getTime() : 0;
+      const bTime = b.lastSubmittedAt ? new Date(b.lastSubmittedAt).getTime() : 0;
+      return bTime - aTime;
+    });
+
+    return filtered;
+  }, [onlyUnsolved, platform, reviewStatusFilter, scheduleFilter, search, sortBy, summary]);
 
   useEffect(() => {
     setSelectedProblemId((current) => {
-      if (filteredProblems.some((item) => item.problemId === current)) return current;
+      if (filteredProblems.some((item) => item.problemId === current)) {
+        return current;
+      }
       return filteredProblems[0]?.problemId ?? null;
     });
   }, [filteredProblems]);
 
-  const selectedIndex = filteredProblems.findIndex((item) => item.problemId === selectedProblemId);
-  const selectedProblem = selectedIndex >= 0 ? filteredProblems[selectedIndex] : null;
-  const previousProblem = selectedIndex > 0 ? filteredProblems[selectedIndex - 1] : null;
-  const nextProblem = selectedIndex >= 0 ? filteredProblems[selectedIndex + 1] : null;
+  const selectedProblem = filteredProblems.find((item) => item.problemId === selectedProblemId);
   const selectedProblemRecord = problems.find((item) => item.id === selectedProblemId);
   const selectedSubmissions = submissions.filter((item) => item.problemId === selectedProblemId);
+  const selectedTags =
+    selectedProblem?.tags?.length > 0
+      ? selectedProblem.tags
+      : parseTags(selectedProblemRecord?.rawTagsJson);
   const representativeSubmission = selectedSubmissions[0];
-  const selectedSubmissionMeta = submissionMetaByProblemId.get(selectedProblemId) || {
-    latestSubmission: null,
-    failureCount: 0,
-    lastFailureAt: 0,
-    lastSubmissionAt: 0,
-  };
-  const selectedInsights = useMemo(() => {
-    const merged = {
-      reasons: [],
-      suggestions: [],
-      keyPoints: [],
-    };
-
-    for (const submission of selectedSubmissions) {
-      const next = collectInsightCandidates(submission);
-      merged.reasons.push(...next.reasons);
-      merged.suggestions.push(...next.suggestions);
-      merged.keyPoints.push(...next.keyPoints);
-    }
-
-    return {
-      reasons: [...new Set(merged.reasons)].slice(0, 6),
-      suggestions: [...new Set(merged.suggestions)].slice(0, 6),
-      keyPoints: [...new Set(merged.keyPoints)].slice(0, 6),
-    };
-  }, [selectedSubmissions]);
   const reviewCounts = summary?.reviewStatusCounts ?? {};
   const serviceUnavailable = serviceStatus.state !== "healthy";
-  const reviewEditorUnavailable = serviceUnavailable || !reviewStateSupported;
 
   async function saveReviewState() {
-    if (!selectedProblemId || !reviewStateSupported) return;
-
-    const shouldAutoAdvance = autoAdvance && reviewState.status === "DONE" && Boolean(nextProblem);
+    if (!selectedProblemId || !reviewStateSupported) {
+      return;
+    }
 
     setReviewSaving(true);
     setReviewNotice("");
@@ -299,7 +280,9 @@ export function ReviewPage({ serviceStatus, runtimeInfo }) {
       const saved = await api.saveReviewState(selectedProblemId, {
         status: reviewState.status,
         notes: reviewState.notes,
-        nextReviewAt: reviewState.nextReviewAt ? new Date(reviewState.nextReviewAt).toISOString() : null,
+        nextReviewAt: reviewState.nextReviewAt
+          ? new Date(reviewState.nextReviewAt).toISOString()
+          : null,
       });
       setReviewState({
         status: saved.status || "TODO",
@@ -307,121 +290,22 @@ export function ReviewPage({ serviceStatus, runtimeInfo }) {
         nextReviewAt: toDatetimeLocalValue(saved.nextReviewAt),
         lastUpdatedAt: saved.lastUpdatedAt || "",
       });
+      setReviewStateSupported(true);
+      setReviewStateSupportMessage("");
       setSummary((current) => applyReviewState(current, selectedProblemId, saved));
       setReviewNotice("复习状态已保存。");
     } catch (nextError) {
       if (isMissingReviewStateRoute(nextError)) {
         setReviewStateSupported(false);
-        setReviewStateSupportMessage(buildReviewStateRouteMessage(runtimeInfo.serviceUrl || serviceStatus.url));
+        setReviewStateSupportMessage(
+          buildReviewStateRouteMessage(runtimeInfo.serviceUrl || serviceStatus.url)
+        );
         setReviewNotice("");
         return;
       }
-    } catch (nextError) {
       setError(nextError.message);
     } finally {
       setReviewSaving(false);
-    }
-  }
-
-  const pollAnalysisTask = useCallback(
-    async (taskId, sequenceId) => {
-      try {
-        const task = await api.getAnalysisTask(taskId);
-        if (sequenceId !== analysisSequenceRef.current) {
-          return;
-        }
-
-        const nextStatus = String(task?.status || "").toUpperCase();
-        setAnalysisStatus(nextStatus);
-
-        if (nextStatus === "SUCCEEDED") {
-          clearAnalysisPolling();
-          setAnalysisLoading(false);
-          setAnalysisError("");
-          setAnalysisText(task?.resultText || task?.result_text || "");
-          setAnalysisJson(task?.resultJson || task?.result_json || "");
-          return;
-        }
-
-        if (nextStatus === "FAILED") {
-          clearAnalysisPolling();
-          setAnalysisLoading(false);
-          setAnalysisError(task?.errorMessage || task?.error_message || "AI 分析失败。");
-          setAnalysisText("");
-          setAnalysisJson(task?.resultJson || task?.result_json || "");
-          return;
-        }
-
-        analysisTimerRef.current = window.setTimeout(() => {
-          void pollAnalysisTask(taskId, sequenceId);
-        }, ANALYSIS_POLL_INTERVAL_MS);
-      } catch (nextError) {
-        if (sequenceId !== analysisSequenceRef.current) {
-          return;
-        }
-        clearAnalysisPolling();
-        setAnalysisLoading(false);
-        setAnalysisError(nextError.message || "获取 AI 分析任务状态失败。");
-      }
-    },
-    [clearAnalysisPolling]
-  );
-
-  async function startAnalysis() {
-    if (!selectedProblemId || serviceUnavailable) {
-      return;
-    }
-
-    clearAnalysisPolling();
-    const sequenceId = analysisSequenceRef.current + 1;
-    analysisSequenceRef.current = sequenceId;
-
-    setAnalysisTaskId(null);
-    setAnalysisStatus("QUEUED");
-    setAnalysisError("");
-    setAnalysisText("");
-    setAnalysisJson("");
-    setAnalysisLoading(true);
-
-    try {
-      const created = await api.generateAnalysis(selectedProblemId);
-      if (sequenceId !== analysisSequenceRef.current) {
-        return;
-      }
-
-      const taskId = created?.taskId;
-      if (!taskId) {
-        throw new Error("未返回有效 taskId。");
-      }
-
-      const initialTask = created?.task ?? null;
-      const initialStatus = String(initialTask?.status || "QUEUED").toUpperCase();
-      setAnalysisTaskId(taskId);
-      setAnalysisStatus(initialStatus);
-
-      if (initialStatus === "SUCCEEDED") {
-        setAnalysisLoading(false);
-        setAnalysisText(initialTask?.resultText || initialTask?.result_text || "");
-        setAnalysisJson(initialTask?.resultJson || initialTask?.result_json || "");
-        return;
-      }
-
-      if (initialStatus === "FAILED") {
-        setAnalysisLoading(false);
-        setAnalysisError(initialTask?.errorMessage || initialTask?.error_message || "AI 分析失败。");
-        return;
-      }
-
-      analysisTimerRef.current = window.setTimeout(() => {
-        void pollAnalysisTask(taskId, sequenceId);
-      }, ANALYSIS_POLL_INTERVAL_MS);
-    } catch (nextError) {
-      if (sequenceId !== analysisSequenceRef.current) {
-        return;
-      }
-      clearAnalysisPolling();
-      setAnalysisLoading(false);
-      setAnalysisError(nextError.message || "触发 AI 分析失败。");
     }
   }
 
@@ -430,21 +314,79 @@ export function ReviewPage({ serviceStatus, runtimeInfo }) {
       <section className="panel review-list-panel">
         <div className="panel-header">
           <h3>复习队列</h3>
-          <button type="button" className="ghost-button" disabled={serviceUnavailable} onClick={() => void refresh()}>
+          <button
+            type="button"
+            className="ghost-button"
+            disabled={serviceUnavailable}
+            onClick={() => void refresh()}
+          >
             刷新
           </button>
         </div>
         {serviceUnavailable ? (
-          <p className="muted">本地服务 {runtimeInfo.serviceUrl || serviceStatus.url} 未就绪，复习数据暂不可用。</p>
+          <p className="muted">
+            本地服务 {runtimeInfo.serviceUrl || serviceStatus.url} 未就绪，复习数据暂不可用。
+          </p>
         ) : null}
 
         <div className="mini-stats">
-          <article><span>待复习</span><strong>{summary?.dueReviewCount ?? 0}</strong></article>
-          <article><span>已排期</span><strong>{summary?.scheduledReviewCount ?? 0}</strong></article>
-          <article><span>复习中</span><strong>{reviewCounts.REVIEWING ?? 0}</strong></article>
+          <article>
+            <span>待复习</span>
+            <strong>{summary?.dueReviewCount ?? 0}</strong>
+          </article>
+          <article>
+            <span>已排期</span>
+            <strong>{summary?.scheduledReviewCount ?? 0}</strong>
+          </article>
+          <article>
+            <span>复习中</span>
+            <strong>{reviewCounts.REVIEWING ?? 0}</strong>
+          </article>
         </div>
 
-        <ReviewFilterBar filters={filters} actions={actions} />
+        <div className="filter-row">
+          <input
+            value={search}
+            placeholder="搜索题目名或题号"
+            onChange={(event) => setSearch(event.target.value)}
+          />
+          <select value={platform} onChange={(event) => setPlatform(event.target.value)}>
+            <option value="">全部平台</option>
+            <option value="CODEFORCES">Codeforces</option>
+            <option value="ATCODER">AtCoder</option>
+          </select>
+        </div>
+
+        <div className="filter-row">
+          <select
+            value={reviewStatusFilter}
+            onChange={(event) => setReviewStatusFilter(event.target.value)}
+          >
+            <option value="">全部状态</option>
+            <option value="TODO">待复习</option>
+            <option value="REVIEWING">复习中</option>
+            <option value="SCHEDULED">已排期</option>
+            <option value="DONE">已完成</option>
+          </select>
+          <select value={scheduleFilter} onChange={(event) => setScheduleFilter(event.target.value)}>
+            <option value="">全部排期</option>
+            <option value="DUE">已到期</option>
+            <option value="SCHEDULED">有排期</option>
+            <option value="UNSCHEDULED">无排期</option>
+          </select>
+          <select value={sortBy} onChange={(event) => setSortBy(event.target.value)}>
+            <option value="lastSubmitted">按最近提交</option>
+            <option value="nextReview">按复习时间</option>
+          </select>
+          <label className="checkbox-label">
+            <input
+              type="checkbox"
+              checked={onlyUnsolved}
+              onChange={(event) => setOnlyUnsolved(event.target.checked)}
+            />
+            仅显示未通过
+          </label>
+        </div>
 
         {loading ? <p className="muted">正在加载复习数据...</p> : null}
         {error ? <p className="error-text">{error}</p> : null}
@@ -457,7 +399,9 @@ export function ReviewPage({ serviceStatus, runtimeInfo }) {
               <button
                 key={item.problemId}
                 type="button"
-                className={item.problemId === selectedProblemId ? "review-card active" : "review-card"}
+                className={
+                  item.problemId === selectedProblemId ? "review-card active" : "review-card"
+                }
                 onClick={() => setSelectedProblemId(item.problemId)}
               >
                 <div className="review-card-copy">
@@ -465,11 +409,17 @@ export function ReviewPage({ serviceStatus, runtimeInfo }) {
                   <strong>{item.title}</strong>
                   <p>{item.externalProblemId}</p>
                   <span className="review-card-note">
-                    {item.reviewDue ? "已到期" : item.nextReviewAt ? `下次 ${formatDate(item.nextReviewAt)}` : "无排期"}
+                    {item.reviewDue
+                      ? "已到期"
+                      : item.nextReviewAt
+                        ? `下次 ${formatDate(item.nextReviewAt)}`
+                        : "无排期"}
                   </span>
                 </div>
                 <div className="review-meta">
-                  <span className={`status-chip ${verdictTone(item.latestVerdict)}`}>{item.latestVerdict}</span>
+                  <span className={`status-chip ${verdictTone(item.latestVerdict)}`}>
+                    {item.latestVerdict}
+                  </span>
                   <span className="meta-pill">
                     {statusLabel(item.reviewStatus)}
                     <span>{item.attemptCount} 次尝试</span>
@@ -482,60 +432,78 @@ export function ReviewPage({ serviceStatus, runtimeInfo }) {
       </section>
 
       <section className="review-detail">
-        <ProblemDetailPanel selectedProblem={selectedProblem} selectedProblemRecord={selectedProblemRecord} />
-
-        <div className="panel review-insight-panel">
-          <div className="panel-header">
-            <h3>复盘工作区</h3>
-            <span className="caption">把错因、建议、关键提醒集中在同一处，减少来回切换。</span>
-          </div>
-          {!reviewStateSupported && reviewStateSupportMessage ? (
-            <div className="inline-banner warning-banner">
-              <strong>复习状态能力不可用</strong>
-              <p>{reviewStateSupportMessage}</p>
-            </div>
-          ) : null}
+        <div className="panel review-summary-panel">
           {selectedProblem ? (
-            <div className="insight-grid">
-              <article className="insight-card">
-                <h4>为什么错</h4>
-                {selectedInsights.reasons.length === 0 ? (
-                  <p className="muted">暂无后端分析结果，可先在下方笔记记录本题的错误原因。</p>
+            <>
+              <div className="detail-header">
+                <div>
+                  <span className="section-label">{platformLabel(selectedProblem.platform)}</span>
+                  <h3>{selectedProblem.title}</h3>
+                  <p className="detail-subtitle">
+                    {selectedProblem.externalProblemId}
+                    {selectedProblem.contestId ? ` / 比赛 ${selectedProblem.contestId}` : ""}
+                  </p>
+                </div>
+                <div className="detail-actions">
+                  <span className={`status-chip ${selectedProblem.solvedLater ? "good" : "bad"}`}>
+                    {selectedProblem.solvedLater ? "已恢复" : "仍未通过"}
+                  </span>
+                  {selectedProblemRecord?.url ? (
+                    <button
+                      type="button"
+                      className="ghost-button"
+                      onClick={() => {
+                        if (window.desktopBridge?.openExternal) {
+                          window.desktopBridge.openExternal(selectedProblemRecord.url);
+                        } else {
+                          window.open(selectedProblemRecord.url, "_blank");
+                        }
+                      }}
+                    >
+                      打开题目页面 ↗
+                    </button>
+                  ) : null}
+                </div>
+              </div>
+
+              <div className="detail-metrics">
+                <article>
+                  <span>尝试次数</span>
+                  <strong>{selectedProblem.attemptCount}</strong>
+                </article>
+                <article>
+                  <span>复习状态</span>
+                  <strong>{statusLabel(selectedProblem.reviewStatus)}</strong>
+                </article>
+                <article>
+                  <span>下次复习</span>
+                  <strong>{selectedProblem.nextReviewAt ? formatDate(selectedProblem.nextReviewAt) : "未设置"}</strong>
+                </article>
+                <article>
+                  <span>最近判定</span>
+                  <strong>{selectedProblem.latestVerdict || "—"}</strong>
+                </article>
+              </div>
+
+              <div className="tag-row">
+                {selectedTags.length === 0 ? (
+                  <span className="muted">暂无标签</span>
                 ) : (
-                  <ul>
-                    {selectedInsights.reasons.map((item) => (
-                      <li key={item}>{item}</li>
-                    ))}
-                  </ul>
+                  selectedTags.map((tag) => (
+                    <span key={tag} className="tag-chip">
+                      {tagLabel(tag)}
+                    </span>
+                  ))
                 )}
-              </article>
-              <article className="insight-card">
-                <h4>下次注意什么</h4>
-                {selectedInsights.suggestions.length === 0 ? (
-                  <p className="muted">暂无建议字段，保存复习笔记后可把自己的行动项留在这里对应记录。</p>
-                ) : (
-                  <ul>
-                    {selectedInsights.suggestions.map((item) => (
-                      <li key={item}>{item}</li>
-                    ))}
-                  </ul>
-                )}
-              </article>
-              <article className="insight-card">
-                <h4>关键提醒</h4>
-                {selectedInsights.keyPoints.length === 0 ? (
-                  <p className="muted">当前没有额外诊断要点。</p>
-                ) : (
-                  <ul>
-                    {selectedInsights.keyPoints.map((item) => (
-                      <li key={item}>{item}</li>
-                    ))}
-                  </ul>
-                )}
-              </article>
-            </div>
+              </div>
+            </>
           ) : (
-            <p className="muted">选择题目后，可在这里统一查看诊断与行动建议。</p>
+            <div className="empty-state">
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ color: "var(--muted)", opacity: 0.5 }}>
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" />
+              </svg>
+              <p className="muted">从左侧列表选择一道题目查看详情</p>
+            </div>
           )}
         </div>
 
@@ -551,7 +519,9 @@ export function ReviewPage({ serviceStatus, runtimeInfo }) {
               selectedSubmissions.map((submission) => (
                 <article key={submission.id} className="submission-row">
                   <div>
-                    <span className={`status-chip ${verdictTone(submission.verdict)}`}>{submission.verdict}</span>
+                    <span className={`status-chip ${verdictTone(submission.verdict)}`}>
+                      {submission.verdict}
+                    </span>
                     <strong>{submission.language || "未知语言"}</strong>
                     <p>{formatDate(submission.submittedAt)}</p>
                   </div>
@@ -570,7 +540,11 @@ export function ReviewPage({ serviceStatus, runtimeInfo }) {
             <h3>原始数据</h3>
             <span className="caption">当前服务返回的是 raw_json 而非源码。</span>
           </div>
-          {representativeSubmission ? <pre>{formatRawJSON(representativeSubmission.rawJson)}</pre> : <p className="muted">该题无可用的原始数据。</p>}
+          {representativeSubmission ? (
+            <pre>{formatRawJSON(representativeSubmission.rawJson)}</pre>
+          ) : (
+            <p className="muted">该题无可用的原始数据。</p>
+          )}
         </div>
 
         <div className="panel review-editor-panel">
@@ -652,45 +626,6 @@ export function ReviewPage({ serviceStatus, runtimeInfo }) {
             </div>
           ) : (
             <p className="muted">请先选择一道题目再编辑复习状态。</p>
-          )}
-        </div>
-
-        <div className="panel">
-          <div className="panel-header">
-            <h3>AI 分析</h3>
-            <span className="caption">基于当前题目触发并轮询分析任务</span>
-          </div>
-          {selectedProblem ? (
-            <div className="form-stack">
-              <div className="editor-toolbar">
-                <button
-                  type="button"
-                  className="primary-button"
-                  disabled={analysisLoading || serviceUnavailable}
-                  onClick={() => void startAnalysis()}
-                >
-                  {analysisLoading ? "分析中..." : "开始 AI 分析"}
-                </button>
-                {analysisStatus ? <span className="meta-pill">状态：{analysisStatus}</span> : null}
-                {analysisTaskId ? <span className="meta-pill">任务 #{analysisTaskId}</span> : null}
-              </div>
-              {serviceUnavailable ? (
-                <p className="muted">本地服务未就绪，AI 分析当前不可用。</p>
-              ) : null}
-              {analysisError ? <p className="error-text">{analysisError}</p> : null}
-              {analysisText ? <pre>{analysisText}</pre> : null}
-              {analysisJson ? (
-                <details>
-                  <summary>查看 result_json（调试）</summary>
-                  <pre>{formatRawJSON(analysisJson)}</pre>
-                </details>
-              ) : null}
-              {!analysisText && !analysisError && !analysisLoading ? (
-                <p className="muted">点击“开始 AI 分析”后将在这里显示结果。</p>
-              ) : null}
-            </div>
-          ) : (
-            <p className="muted">请先选择一道题目再发起 AI 分析。</p>
           )}
         </div>
       </section>

@@ -85,6 +85,19 @@ export function AccountsPage({ serviceStatus, runtimeInfo }) {
     }
   }
 
+  async function deleteAccount(account) {
+    setError("");
+    setNotice("");
+
+    try {
+      await api.deleteAccount(account.id);
+      setNotice(`已删除 ${account.externalHandle}。`);
+      await refresh();
+    } catch (nextError) {
+      setError(nextError.message);
+    }
+  }
+
   async function triggerSync(account) {
     setError("");
     setNotice("");
@@ -129,7 +142,7 @@ export function AccountsPage({ serviceStatus, runtimeInfo }) {
             <span>用户名</span>
             <input
               value={form.handle}
-              placeholder="tourist / rng_58 / 你的 AtCoder ID"
+              placeholder="输入你的用户名"
               onChange={(event) =>
                 setForm((current) => ({
                   ...current,
@@ -222,6 +235,14 @@ export function AccountsPage({ serviceStatus, runtimeInfo }) {
                       onClick={() => void triggerSync(account)}
                     >
                       立即同步
+                    </button>
+                    <button
+                      type="button"
+                      className="ghost-button danger"
+                      disabled={serviceUnavailable}
+                      onClick={() => void deleteAccount(account)}
+                    >
+                      删除
                     </button>
                   </div>
                 </article>
