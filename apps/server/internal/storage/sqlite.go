@@ -255,8 +255,30 @@ FROM platform_accounts WHERE id = ?`, id)
 }
 
 func (db *DB) DeleteAccount(id int64) error {
-	_, err := db.conn.Exec(`DELETE FROM platform_accounts WHERE id = ?`, id)
-	return err
+	tx, err := db.conn.Begin()
+	if err != nil {
+		return err
+	}
+	defer tx.Rollback()
+
+	// 删除关联的提交记录
+	if _, err := tx.Exec(`DELETE FROM submissions WHERE platform_account_id = ?`, id); err != nil {
+		return err
+	}
+	// 删除关联的同步任务
+	if _, err := tx.Exec(`DELETE FROM sync_tasks WHERE platform_account_id = ?`, id); err != nil {
+		return err
+	}
+	// 删除孤立的题目（没有任何提交记录引用的题目）
+	if _, err := tx.Exec(`DELETE FROM problems WHERE id NOT IN (SELECT DISTINCT problem_id FROM submissions WHERE problem_id IS NOT NULL)`); err != nil {
+		return err
+	}
+	// 删除账号本身
+	if _, err := tx.Exec(`DELETE FROM platform_accounts WHERE id = ?`, id); err != nil {
+		return err
+	}
+
+	return tx.Commit()
 }
 
 func (db *DB) UpsertAccount(platform models.Platform, handle string) (models.PlatformAccount, error) {
