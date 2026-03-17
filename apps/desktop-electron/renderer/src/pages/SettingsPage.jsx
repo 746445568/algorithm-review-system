@@ -26,6 +26,7 @@ export function SettingsPage({ runtimeInfo, serviceStatus, themeMode, onThemeCha
   const [loading, setLoading] = useState(true);
   const [savingAI, setSavingAI] = useState(false);
   const [testingAI, setTestingAI] = useState(false);
+  const [savingTheme, setSavingTheme] = useState(false);
   const [diagExporting, setDiagExporting] = useState(false);
   const [diagPath, setDiagPath] = useState("");
   const [testResult, setTestResult] = useState(null);
@@ -119,12 +120,21 @@ export function SettingsPage({ runtimeInfo, serviceStatus, themeMode, onThemeCha
     }
   }
 
-  async function handleThemeSelect(mode) {
-    onThemeChange(mode);
-    if (serviceStatus.state === "healthy") {
-      try {
-        await api.saveThemeSettings(mode);
-      } catch {}
+  async function saveThemeSettings() {
+    setSavingTheme(true);
+    setError("");
+    setNotice("");
+
+    try {
+      onThemeChange(themeMode);
+      if (serviceStatus.state === "healthy") {
+        await api.saveThemeSettings(themeMode);
+      }
+      setNotice("主题偏好已保存。");
+    } catch (nextError) {
+      setError(nextError.message);
+    } finally {
+      setSavingTheme(false);
     }
   }
 
@@ -347,10 +357,7 @@ export function SettingsPage({ runtimeInfo, serviceStatus, themeMode, onThemeCha
         <div className="form-stack">
           <label>
             <span>主题模式</span>
-            <select
-              value={themeMode}
-              onChange={(event) => void handleThemeSelect(event.target.value)}
-            >
+            <select value={themeMode} onChange={(event) => onThemeChange(event.target.value)}>
               {themeOptions.map((option) => (
                 <option key={option.value} value={option.value}>
                   {option.label}
@@ -361,10 +368,17 @@ export function SettingsPage({ runtimeInfo, serviceStatus, themeMode, onThemeCha
 
           <div className="editor-toolbar">
             <span className="meta-pill review-state-pill">
-              当前主题
+              主题
               <span>{themeMode}</span>
             </span>
-            <span className="muted" style={{ fontSize: "0.75rem" }}>选择后自动保存</span>
+            <button
+              type="button"
+              className="primary-button"
+              disabled={savingTheme}
+              onClick={() => void saveThemeSettings()}
+            >
+              {savingTheme ? "保存中..." : "保存主题偏好"}
+            </button>
           </div>
         </div>
       </section>

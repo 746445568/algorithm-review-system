@@ -1,7 +1,5 @@
-import { execSync } from 'child_process';
 import cors from 'cors';
 import express from 'express';
-import path from 'path';
 import { attachCurrentUser, requireAuth } from './lib/auth';
 import { prisma } from './lib/prisma';
 import { createRateLimitMiddleware } from './lib/rate-limit';
@@ -73,37 +71,7 @@ app.use((err: any, _req: express.Request, res: express.Response, _next: express.
 });
 
 async function main() {
-  const rootDir = path.join(__dirname, '../../');
-
-  // 自动执行数据库迁移（幂等，生产安全）
-  try {
-    execSync('npx prisma migrate deploy', {
-      cwd: rootDir,
-      stdio: ['ignore', 'inherit', 'inherit'],
-      env: { ...process.env },
-    });
-  } catch {
-    console.warn('[setup] 数据库迁移跳过（可能已是最新或迁移文件不存在）');
-  }
-
   await prisma.$connect();
-
-  // 首次运行时自动写入演示数据
-  const userCount = await prisma.user.count();
-  if (userCount === 0) {
-    console.log('[setup] 检测到空数据库，正在写入演示数据...');
-    try {
-      execSync('npx tsx prisma/seed.ts', {
-        cwd: rootDir,
-        stdio: 'inherit',
-        env: { ...process.env },
-      });
-      console.log('[setup] 演示数据写入完成');
-    } catch (e) {
-      console.warn('[setup] 演示数据写入失败，继续启动：', e);
-    }
-  }
-
   await prisma.session.deleteMany({
     where: {
       expiresAt: {
