@@ -564,6 +564,83 @@ textarea {
   font-size: 12px;
 }
 
+
+.review-card-header-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.review-card-summary-grid {
+  display: grid;
+  gap: 4px;
+  margin-top: 8px;
+}
+
+.review-card-note.emphasis {
+  color: var(--bad);
+  font-weight: 700;
+}
+
+.review-flow-header {
+  align-items: flex-start;
+}
+
+.review-nav-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.review-insight-panel {
+  display: grid;
+  gap: 14px;
+}
+
+.inline-banner {
+  border-radius: 16px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  background: rgba(69, 58, 45, 0.04);
+}
+
+.inline-banner p,
+.inline-banner strong {
+  margin: 0;
+}
+
+.warning-banner {
+  border-color: rgba(180, 78, 40, 0.3);
+  background: rgba(180, 78, 40, 0.08);
+}
+
+.compact-banner {
+  margin-bottom: 14px;
+}
+
+.insight-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+}
+
+.insight-card {
+  border: 1px solid var(--line);
+  border-radius: 18px;
+  padding: 16px;
+  background: rgba(255, 255, 255, 0.55);
+}
+
+.insight-card h4 {
+  margin: 0 0 10px;
+}
+
+.insight-card ul {
+  margin: 0;
+  padding-left: 18px;
+  display: grid;
+  gap: 8px;
+}
 .review-card.active {
   border-color: rgba(180, 78, 40, 0.34);
   background: rgba(180, 78, 40, 0.08);
