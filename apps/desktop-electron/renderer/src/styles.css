@@ -328,6 +328,19 @@ button {
   background: rgba(30, 35, 32, 0.72);
 }
 
+.service-warning-banner {
+  margin-bottom: 20px;
+  padding: 16px 18px;
+  border: 1px solid rgba(180, 78, 40, 0.3);
+  border-radius: 22px;
+  background: rgba(180, 78, 40, 0.08);
+}
+
+[data-theme="dark"] .service-warning-banner {
+  background: rgba(180, 78, 40, 0.14);
+  border-color: rgba(180, 78, 40, 0.45);
+}
+
 .page-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));

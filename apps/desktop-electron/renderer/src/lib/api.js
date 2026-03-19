@@ -12,6 +12,32 @@ const DEFAULT_API_BASE = "http://127.0.0.1:38473";
 const REQUEST_TIMEOUT_MS = 10000;
 let apiBase = DEFAULT_API_BASE;
 
+const DEFAULT_SERVICE_CAPABILITIES = {
+  reviewStateSupported: false,
+  aiSettingsSupported: false,
+  diagnosticsExportSupported: false,
+  serviceVersion: "unknown",
+  detectionSource: "unknown",
+};
+
+function isNotFoundError(error) {
+  return /(^|\b)404(\b|\s)/.test(String(error?.message || ""));
+}
+
+function normalizeServiceCapabilities(payload, detectionSource = "api") {
+  return {
+    ...DEFAULT_SERVICE_CAPABILITIES,
+    reviewStateSupported: Boolean(payload?.reviewStateSupported),
+    aiSettingsSupported: Boolean(payload?.aiSettingsSupported),
+    diagnosticsExportSupported: Boolean(payload?.diagnosticsExportSupported),
+    serviceVersion:
+      typeof payload?.serviceVersion === "string" && payload.serviceVersion.trim()
+        ? payload.serviceVersion.trim()
+        : DEFAULT_SERVICE_CAPABILITIES.serviceVersion,
+    detectionSource,
+  };
+}
+
 function normalizeApiBase(nextBase) {
   if (!nextBase) {
     return DEFAULT_API_BASE;
@@ -177,6 +203,7 @@ export const api = {
       method: "POST",
       body: JSON.stringify({}),
     }),
+  getServiceCapabilities: () => detectServiceCapabilities(),
   getProblems: async (query = {}) => {
     const cached = await getCachedProblems(query);
     if (cached.length > 0) {
@@ -218,3 +245,46 @@ export const api = {
 };
 
 setSyncBaseUrl(apiBase);
+
+async function detectServiceCapabilities() {
+  try {
+    const payload = await request("/api/system/capabilities");
+    return normalizeServiceCapabilities(payload, "capabilities-endpoint");
+  } catch (error) {
+    if (!isNotFoundError(error)) {
+      throw error;
+    }
+  }
+
+  const checks = await Promise.allSettled([
+    request("/api/review/items/1"),
+    request("/api/settings/ai"),
+    request("/api/settings/data/export-diagnostics", {
+      method: "POST",
+      body: JSON.stringify({ dryRun: true }),
+    }),
+    request("/api/me"),
+  ]);
+
+  const [reviewStateResult, aiSettingsResult, diagnosticsResult, meResult] = checks;
+  const reviewStateSupported =
+    reviewStateResult.status === "fulfilled" || !isNotFoundError(reviewStateResult.reason);
+  const aiSettingsSupported =
+    aiSettingsResult.status === "fulfilled" || !isNotFoundError(aiSettingsResult.reason);
+  const diagnosticsExportSupported =
+    diagnosticsResult.status === "fulfilled" || !isNotFoundError(diagnosticsResult.reason);
+  const serviceVersion =
+    meResult.status === "fulfilled"
+      ? meResult.value?.app?.version || DEFAULT_SERVICE_CAPABILITIES.serviceVersion
+      : DEFAULT_SERVICE_CAPABILITIES.serviceVersion;
+
+  return normalizeServiceCapabilities(
+    {
+      reviewStateSupported,
+      aiSettingsSupported,
+      diagnosticsExportSupported,
+      serviceVersion,
+    },
+    "fallback-probe"
+  );
+}
