@@ -1,6 +1,6 @@
 # OJ Review Desktop
 
-This repository is being rewritten from an online prototype into a **Windows desktop product** for competitive programming review.
+This repository is being rewritten from an online prototype into an **Electron desktop product** for competitive programming review.
 
 ## Current tracks
 
@@ -39,7 +39,8 @@ See `QUICKSTART.md` for detailed instructions.
 ## Current implementation status
 
 - Electron shell builds and launches with React renderer.
-- The shell manages `ojreviewd` Go service lifecycle.
+- The shell starts `ojreviewd` only from `OJREVIEW_SERVICE_PATH`, packaged/app-local binaries, or the dev fallback `go run ./cmd/ojreviewd`.
+- The old `apps/desktop/` WinUI project remains as historical reference only and is no longer part of the runtime launch chain.
 - The Go local service owns schema bootstrap, task persistence, AI settings storage, and diagnostics export.
 
 ## Legacy prototype
