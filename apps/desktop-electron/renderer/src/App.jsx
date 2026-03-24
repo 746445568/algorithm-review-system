@@ -31,6 +31,17 @@ const navItems = [
   { id: "settings", label: "设置", kicker: "配置" },
 ];
 
+const unsupportedServiceMessage =
+  "当前服务版本过旧，请重新构建 apps/server，以启用桌面端所需的新接口。";
+
+const initialServiceCapabilities = {
+  reviewStateSupported: false,
+  aiSettingsSupported: false,
+  diagnosticsExportSupported: false,
+  serviceVersion: "unknown",
+  detectionSource: "unknown",
+};
+
 const initialStatus = {
   state: "starting",
   url: "http://127.0.0.1:38473",
@@ -49,16 +60,8 @@ export function App() {
     appPath: "",
     isPackaged: false,
   });
-  const {
-    isOnline,
-    isSyncing,
-    lastSyncAt,
-    connectivity,
-    statusMessage,
-    cacheStatus,
-    syncQueue,
-    sync,
-  } = useOfflineData();
+  const [serviceCapabilities, setServiceCapabilities] = useState(initialServiceCapabilities);
+  const { isOnline, isSyncing, lastSyncAt, sync } = useOfflineData();
   const [themeMode, setThemeMode] = useState(
     () => localStorage.getItem("ojreview-theme") ?? "follow-system"
   );
@@ -143,6 +146,56 @@ export function App() {
       window.clearInterval(intervalId);
     };
   }, [sync]);
+
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadServiceCapabilities() {
+      if (serviceStatus.state !== "healthy") {
+        if (!cancelled) {
+          setServiceCapabilities(initialServiceCapabilities);
+        }
+        return;
+      }
+
+      try {
+        const nextCapabilities = await api.getServiceCapabilities();
+        if (!cancelled) {
+          setServiceCapabilities(nextCapabilities);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setServiceCapabilities({
+            ...initialServiceCapabilities,
+            detectionSource: "unavailable",
+          });
+          setServiceStatus((current) => ({
+            ...current,
+            message: `${current.message}; capability check failed: ${error.message}`,
+          }));
+        }
+      }
+    }
+
+    void loadServiceCapabilities();
+    return () => {
+      cancelled = true;
+    };
+  }, [serviceStatus.state, serviceStatus.url]);
+
+  const hasLegacyServiceMismatch =
+    serviceStatus.state === "healthy" &&
+    (!serviceCapabilities.reviewStateSupported ||
+      !serviceCapabilities.aiSettingsSupported ||
+      !serviceCapabilities.diagnosticsExportSupported);
+
+  const unsupportedFeatures = [
+    !serviceCapabilities.reviewStateSupported ? "复习状态" : null,
+    !serviceCapabilities.aiSettingsSupported ? "AI 设置" : null,
+    !serviceCapabilities.diagnosticsExportSupported ? "诊断导出" : null,
+  ].filter(Boolean);
+  const serviceVersionLabel = serviceCapabilities.serviceVersion || "unknown";
 
   const activeNav = useMemo(
     () => navItems.find((item) => item.id === page) ?? navItems[0],
@@ -251,6 +304,21 @@ export function App() {
           </div>
         </section>
 
+        {hasLegacyServiceMismatch ? (
+          <section className="service-warning-banner" role="alert">
+            <div>
+              <strong>{unsupportedServiceMessage}</strong>
+              <p>
+                当前服务版本: {serviceVersionLabel}
+                {unsupportedFeatures.length > 0 ? ` / 缺失能力: ${unsupportedFeatures.join("、")}` : ""}
+                {serviceCapabilities.detectionSource !== "unknown"
+                  ? ` / 检测方式: ${serviceCapabilities.detectionSource}`
+                  : ""}
+              </p>
+            </div>
+          </section>
+        ) : null}
+
         {page === "dashboard" ? (
           <DashboardPage
             serviceStatus={serviceStatus}
@@ -266,13 +334,18 @@ export function App() {
         ) : null}
 
         {page === "review" ? (
-          <ReviewPage serviceStatus={serviceStatus} runtimeInfo={runtimeInfo} />
+          <ReviewPage
+            serviceStatus={serviceStatus}
+            runtimeInfo={runtimeInfo}
+            serviceCapabilities={serviceCapabilities}
+          />
         ) : null}
 
         {page === "settings" ? (
           <SettingsPage
             runtimeInfo={runtimeInfo}
             serviceStatus={serviceStatus}
+            serviceCapabilities={serviceCapabilities}
             themeMode={themeMode}
             onThemeChange={handleThemeChange}
           />

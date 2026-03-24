@@ -17,14 +17,6 @@ function formatRawJSON(rawJson) {
   }
 }
 
-function isMissingReviewStateRoute(error) {
-  return /\b404\b/.test(error?.message || "");
-}
-
-function buildReviewStateRouteMessage(serviceUrl) {
-  return `当前运行的 ojreviewd (${serviceUrl}) 版本过旧，不支持复习状态读写。请从 apps/server 源码重新构建。`;
-}
-
 function buildReviewStats(problemSummaries = []) {
   const counts = {
     TODO: 0,
@@ -86,7 +78,14 @@ function applyReviewState(summary, problemId, savedState) {
   };
 }
 
-export function ReviewPage({ serviceStatus, runtimeInfo }) {
+const defaultReviewState = {
+  status: "TODO",
+  notes: "",
+  nextReviewAt: "",
+  lastUpdatedAt: "",
+};
+
+export function ReviewPage({ serviceStatus, runtimeInfo, serviceCapabilities }) {
   const [summary, setSummary] = useState(null);
   const [problems, setProblems] = useState([]);
   const [submissions, setSubmissions] = useState([]);
@@ -98,18 +97,12 @@ export function ReviewPage({ serviceStatus, runtimeInfo }) {
   const [selectedProblemId, setSelectedProblemId] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
-  const [reviewState, setReviewState] = useState({
-    status: "TODO",
-    notes: "",
-    nextReviewAt: "",
-    lastUpdatedAt: "",
-  });
+  const [reviewState, setReviewState] = useState(defaultReviewState);
   const [reviewSaving, setReviewSaving] = useState(false);
   const [reviewNotice, setReviewNotice] = useState("");
-  const [reviewStateSupported, setReviewStateSupported] = useState(true);
-  const [reviewStateSupportMessage, setReviewStateSupportMessage] = useState("");
   const refreshSequenceRef = useRef(0);
   const reviewStateSequenceRef = useRef(0);
+  const reviewStateSupported = serviceCapabilities?.reviewStateSupported ?? false;
 
   const refresh = useCallback(async () => {
     const requestId = refreshSequenceRef.current + 1;
@@ -158,15 +151,8 @@ export function ReviewPage({ serviceStatus, runtimeInfo }) {
       const requestId = reviewStateSequenceRef.current + 1;
       reviewStateSequenceRef.current = requestId;
 
-      if (serviceStatus.state !== "healthy" || !selectedProblemId) {
-        setReviewState({
-          status: "TODO",
-          notes: "",
-          nextReviewAt: "",
-          lastUpdatedAt: "",
-        });
-        setReviewStateSupported(true);
-        setReviewStateSupportMessage("");
+      if (serviceStatus.state !== "healthy" || !selectedProblemId || !reviewStateSupported) {
+        setReviewState(defaultReviewState);
         return;
       }
 
@@ -181,29 +167,17 @@ export function ReviewPage({ serviceStatus, runtimeInfo }) {
           nextReviewAt: toDatetimeLocalValue(state.nextReviewAt),
           lastUpdatedAt: state.lastUpdatedAt || "",
         });
-        setReviewStateSupported(true);
-        setReviewStateSupportMessage("");
         setReviewNotice("");
       } catch (nextError) {
         if (requestId !== reviewStateSequenceRef.current) {
           return;
         }
-        if (isMissingReviewStateRoute(nextError)) {
-          setReviewStateSupported(false);
-          setReviewStateSupportMessage(
-            buildReviewStateRouteMessage(runtimeInfo.serviceUrl || serviceStatus.url)
-          );
-          setReviewNotice("");
-          return;
-        }
-        setReviewStateSupported(true);
-        setReviewStateSupportMessage("");
         setError(nextError.message);
       }
     }
 
     void loadReviewState();
-  }, [runtimeInfo.serviceUrl, selectedProblemId, serviceStatus.state, serviceStatus.url]);
+  }, [reviewStateSupported, selectedProblemId, serviceStatus.state]);
 
   const filteredProblems = useMemo(() => {
     const items = summary?.problemSummaries ?? [];
@@ -250,6 +224,7 @@ export function ReviewPage({ serviceStatus, runtimeInfo }) {
   const representativeSubmission = selectedSubmissions[0];
   const reviewCounts = summary?.reviewStatusCounts ?? {};
   const serviceUnavailable = serviceStatus.state !== "healthy";
+  const reviewEditorUnavailable = serviceUnavailable || !reviewStateSupported;
 
   async function saveReviewState() {
     if (!selectedProblemId || !reviewStateSupported) {
@@ -274,19 +249,9 @@ export function ReviewPage({ serviceStatus, runtimeInfo }) {
         nextReviewAt: toDatetimeLocalValue(saved.nextReviewAt),
         lastUpdatedAt: saved.lastUpdatedAt || "",
       });
-      setReviewStateSupported(true);
-      setReviewStateSupportMessage("");
       setSummary((current) => applyReviewState(current, selectedProblemId, saved));
       setReviewNotice("复习状态已保存。");
     } catch (nextError) {
-      if (isMissingReviewStateRoute(nextError)) {
-        setReviewStateSupported(false);
-        setReviewStateSupportMessage(
-          buildReviewStateRouteMessage(runtimeInfo.serviceUrl || serviceStatus.url)
-        );
-        setReviewNotice("");
-        return;
-      }
       setError(nextError.message);
     } finally {
       setReviewSaving(false);
@@ -516,13 +481,13 @@ export function ReviewPage({ serviceStatus, runtimeInfo }) {
           {selectedProblem ? (
             <div className="form-stack">
               {!reviewStateSupported ? (
-                <p className="error-text">{reviewStateSupportMessage}</p>
+                <p className="muted">当前服务未提供复习状态接口，编辑器已禁用。</p>
               ) : null}
               <label>
                 <span>状态</span>
                 <select
                   value={reviewState.status}
-                  disabled={!reviewStateSupported}
+                  disabled={reviewEditorUnavailable}
                   onChange={(event) =>
                     setReviewState((current) => ({
                       ...current,
@@ -542,7 +507,7 @@ export function ReviewPage({ serviceStatus, runtimeInfo }) {
                 <input
                   type="datetime-local"
                   value={reviewState.nextReviewAt}
-                  disabled={!reviewStateSupported}
+                  disabled={reviewEditorUnavailable}
                   onChange={(event) =>
                     setReviewState((current) => ({
                       ...current,
@@ -557,7 +522,7 @@ export function ReviewPage({ serviceStatus, runtimeInfo }) {
                 <textarea
                   rows="8"
                   value={reviewState.notes}
-                  disabled={!reviewStateSupported}
+                  disabled={reviewEditorUnavailable}
                   placeholder="记录错误原因、正确思路和下次注意事项。"
                   onChange={(event) =>
                     setReviewState((current) => ({
