@@ -86,6 +86,8 @@ function applyReviewState(summary, problemId, savedState) {
   };
 }
 
+const ANALYSIS_POLL_INTERVAL_MS = 1800;
+
 export function ReviewPage({ serviceStatus, runtimeInfo }) {
   const [summary, setSummary] = useState(null);
   const [problems, setProblems] = useState([]);
@@ -108,8 +110,23 @@ export function ReviewPage({ serviceStatus, runtimeInfo }) {
   const [reviewNotice, setReviewNotice] = useState("");
   const [reviewStateSupported, setReviewStateSupported] = useState(true);
   const [reviewStateSupportMessage, setReviewStateSupportMessage] = useState("");
+  const [analysisTaskId, setAnalysisTaskId] = useState(null);
+  const [analysisStatus, setAnalysisStatus] = useState("");
+  const [analysisError, setAnalysisError] = useState("");
+  const [analysisText, setAnalysisText] = useState("");
+  const [analysisJson, setAnalysisJson] = useState("");
+  const [analysisLoading, setAnalysisLoading] = useState(false);
   const refreshSequenceRef = useRef(0);
   const reviewStateSequenceRef = useRef(0);
+  const analysisSequenceRef = useRef(0);
+  const analysisTimerRef = useRef(null);
+
+  const clearAnalysisPolling = useCallback(() => {
+    if (analysisTimerRef.current) {
+      window.clearTimeout(analysisTimerRef.current);
+      analysisTimerRef.current = null;
+    }
+  }, []);
 
   const refresh = useCallback(async () => {
     const requestId = refreshSequenceRef.current + 1;
@@ -205,6 +222,25 @@ export function ReviewPage({ serviceStatus, runtimeInfo }) {
     void loadReviewState();
   }, [runtimeInfo.serviceUrl, selectedProblemId, serviceStatus.state, serviceStatus.url]);
 
+  useEffect(() => {
+    clearAnalysisPolling();
+    analysisSequenceRef.current += 1;
+    setAnalysisTaskId(null);
+    setAnalysisStatus("");
+    setAnalysisError("");
+    setAnalysisText("");
+    setAnalysisJson("");
+    setAnalysisLoading(false);
+  }, [clearAnalysisPolling, selectedProblemId]);
+
+  useEffect(
+    () => () => {
+      clearAnalysisPolling();
+      analysisSequenceRef.current += 1;
+    },
+    [clearAnalysisPolling]
+  );
+
   const filteredProblems = useMemo(() => {
     const items = summary?.problemSummaries ?? [];
     const searchNeedle = search.trim().toLowerCase();
@@ -290,6 +326,108 @@ export function ReviewPage({ serviceStatus, runtimeInfo }) {
       setError(nextError.message);
     } finally {
       setReviewSaving(false);
+    }
+  }
+
+  const pollAnalysisTask = useCallback(
+    async (taskId, sequenceId) => {
+      try {
+        const task = await api.getAnalysisTask(taskId);
+        if (sequenceId !== analysisSequenceRef.current) {
+          return;
+        }
+
+        const nextStatus = String(task?.status || "").toUpperCase();
+        setAnalysisStatus(nextStatus);
+
+        if (nextStatus === "SUCCEEDED") {
+          clearAnalysisPolling();
+          setAnalysisLoading(false);
+          setAnalysisError("");
+          setAnalysisText(task?.resultText || task?.result_text || "");
+          setAnalysisJson(task?.resultJson || task?.result_json || "");
+          return;
+        }
+
+        if (nextStatus === "FAILED") {
+          clearAnalysisPolling();
+          setAnalysisLoading(false);
+          setAnalysisError(task?.errorMessage || task?.error_message || "AI 分析失败。");
+          setAnalysisText("");
+          setAnalysisJson(task?.resultJson || task?.result_json || "");
+          return;
+        }
+
+        analysisTimerRef.current = window.setTimeout(() => {
+          void pollAnalysisTask(taskId, sequenceId);
+        }, ANALYSIS_POLL_INTERVAL_MS);
+      } catch (nextError) {
+        if (sequenceId !== analysisSequenceRef.current) {
+          return;
+        }
+        clearAnalysisPolling();
+        setAnalysisLoading(false);
+        setAnalysisError(nextError.message || "获取 AI 分析任务状态失败。");
+      }
+    },
+    [clearAnalysisPolling]
+  );
+
+  async function startAnalysis() {
+    if (!selectedProblemId || serviceUnavailable) {
+      return;
+    }
+
+    clearAnalysisPolling();
+    const sequenceId = analysisSequenceRef.current + 1;
+    analysisSequenceRef.current = sequenceId;
+
+    setAnalysisTaskId(null);
+    setAnalysisStatus("QUEUED");
+    setAnalysisError("");
+    setAnalysisText("");
+    setAnalysisJson("");
+    setAnalysisLoading(true);
+
+    try {
+      const created = await api.generateAnalysis(selectedProblemId);
+      if (sequenceId !== analysisSequenceRef.current) {
+        return;
+      }
+
+      const taskId = created?.taskId;
+      if (!taskId) {
+        throw new Error("未返回有效 taskId。");
+      }
+
+      const initialTask = created?.task ?? null;
+      const initialStatus = String(initialTask?.status || "QUEUED").toUpperCase();
+      setAnalysisTaskId(taskId);
+      setAnalysisStatus(initialStatus);
+
+      if (initialStatus === "SUCCEEDED") {
+        setAnalysisLoading(false);
+        setAnalysisText(initialTask?.resultText || initialTask?.result_text || "");
+        setAnalysisJson(initialTask?.resultJson || initialTask?.result_json || "");
+        return;
+      }
+
+      if (initialStatus === "FAILED") {
+        setAnalysisLoading(false);
+        setAnalysisError(initialTask?.errorMessage || initialTask?.error_message || "AI 分析失败。");
+        return;
+      }
+
+      analysisTimerRef.current = window.setTimeout(() => {
+        void pollAnalysisTask(taskId, sequenceId);
+      }, ANALYSIS_POLL_INTERVAL_MS);
+    } catch (nextError) {
+      if (sequenceId !== analysisSequenceRef.current) {
+        return;
+      }
+      clearAnalysisPolling();
+      setAnalysisLoading(false);
+      setAnalysisError(nextError.message || "触发 AI 分析失败。");
     }
   }
 
@@ -587,6 +725,45 @@ export function ReviewPage({ serviceStatus, runtimeInfo }) {
             </div>
           ) : (
             <p className="muted">请先选择一道题目再编辑复习状态。</p>
+          )}
+        </div>
+
+        <div className="panel">
+          <div className="panel-header">
+            <h3>AI 分析</h3>
+            <span className="caption">基于当前题目触发并轮询分析任务</span>
+          </div>
+          {selectedProblem ? (
+            <div className="form-stack">
+              <div className="editor-toolbar">
+                <button
+                  type="button"
+                  className="primary-button"
+                  disabled={analysisLoading || serviceUnavailable}
+                  onClick={() => void startAnalysis()}
+                >
+                  {analysisLoading ? "分析中..." : "开始 AI 分析"}
+                </button>
+                {analysisStatus ? <span className="meta-pill">状态：{analysisStatus}</span> : null}
+                {analysisTaskId ? <span className="meta-pill">任务 #{analysisTaskId}</span> : null}
+              </div>
+              {serviceUnavailable ? (
+                <p className="muted">本地服务未就绪，AI 分析当前不可用。</p>
+              ) : null}
+              {analysisError ? <p className="error-text">{analysisError}</p> : null}
+              {analysisText ? <pre>{analysisText}</pre> : null}
+              {analysisJson ? (
+                <details>
+                  <summary>查看 result_json（调试）</summary>
+                  <pre>{formatRawJSON(analysisJson)}</pre>
+                </details>
+              ) : null}
+              {!analysisText && !analysisError && !analysisLoading ? (
+                <p className="muted">点击“开始 AI 分析”后将在这里显示结果。</p>
+              ) : null}
+            </div>
+          ) : (
+            <p className="muted">请先选择一道题目再发起 AI 分析。</p>
           )}
         </div>
       </section>
