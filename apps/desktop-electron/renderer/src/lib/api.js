@@ -11,88 +11,10 @@ import {
   saveReviewState as saveCachedReviewState,
   saveSubmissions as saveCachedSubmissions,
 } from "./db.js";
-import { checkOnline, setSyncBaseUrl } from "./sync.js";
+import { DEFAULT_BASE_URL, buildUrl, isNetworkError, normalizeBaseUrl, requestJson } from "./http.js";
+import { isOnline as checkOnline, setSyncBaseUrl } from "./sync.js";
 
-const DEFAULT_API_BASE = "http://127.0.0.1:38473";
-const REQUEST_TIMEOUT_MS = 10000;
-const CACHE_TTLS_MS = {
-  problems: 5 * 60 * 1000,
-  submissions: 2 * 60 * 1000,
-  accounts: 10 * 60 * 1000,
-  reviewStates: 3 * 60 * 1000,
-};
-
-let apiBase = DEFAULT_API_BASE;
-
-function normalizeApiBase(nextBase) {
-  if (!nextBase) {
-    return DEFAULT_API_BASE;
-  }
-
-  return nextBase.endsWith("/") ? nextBase.slice(0, -1) : nextBase;
-}
-
-function withQuery(path, query = {}) {
-  const url = new URL(path, apiBase);
-  for (const [key, value] of Object.entries(query)) {
-    if (value !== undefined && value !== null && value !== "") {
-      url.searchParams.set(key, String(value));
-    }
-  }
-  return url.toString();
-}
-
-async function request(pathOrUrl, options = {}) {
-  const url = pathOrUrl.startsWith("http") ? pathOrUrl : `${apiBase}${pathOrUrl}`;
-  const timeoutController = new AbortController();
-  const timeoutId = window.setTimeout(() => timeoutController.abort(), REQUEST_TIMEOUT_MS);
-  const signal = options.signal
-    ? AbortSignal.any([options.signal, timeoutController.signal])
-    : timeoutController.signal;
-
-  let response;
-  try {
-    response = await fetch(url, {
-      headers: {
-        "Content-Type": "application/json",
-        ...(options.headers ?? {}),
-      },
-      ...options,
-      signal,
-    });
-  } catch (error) {
-    if (timeoutController.signal.aborted && !options.signal?.aborted) {
-      throw new Error(`request timed out after ${REQUEST_TIMEOUT_MS}ms`);
-    }
-    throw error;
-  } finally {
-    window.clearTimeout(timeoutId);
-  }
-
-  if (!response.ok) {
-    let message = `${response.status} ${response.statusText}`;
-    try {
-      const body = await response.json();
-      message = body.error ?? message;
-    } catch {}
-    throw new Error(message);
-  }
-
-  if (response.status === 204) {
-    return null;
-  }
-
-  return response.json();
-}
-
-function isNetworkError(error) {
-  const message = String(error?.message || "");
-  return (
-    message.includes("Failed to fetch") ||
-    message.includes("NetworkError") ||
-    message.includes("request timed out")
-  );
-}
+let apiBase = DEFAULT_BASE_URL;
 
 function normalizeReviewPayload(payload) {
   return {
@@ -249,9 +171,13 @@ async function queueReviewStateSync(problemId, payload) {
   });
 }
 
+function request(pathOrUrl, options = {}) {
+  return requestJson(apiBase, pathOrUrl, options);
+}
+
 export const api = {
   setBaseUrl: (nextBase) => {
-    apiBase = normalizeApiBase(nextBase);
+    apiBase = normalizeBaseUrl(nextBase);
     setSyncBaseUrl(apiBase);
   },
   getBaseUrl: () => apiBase,
@@ -393,26 +319,88 @@ export const api = {
       method: "POST",
       body: JSON.stringify({}),
     }),
-  getProblems: async (query = {}, options = {}) => {
-    const result = await getCachedFirstCollection({
-      entity: "problems",
-      query,
-      getCachedRows: getCachedProblems,
-      path: "/api/problems",
-      saveRows: saveCachedProblems,
-    });
-    return options.includeCacheInfo ? result : result.rows;
+  getServiceCapabilities: () => detectServiceCapabilities(),
+  getProblems: async (query = {}) => {
+    const cached = await getCachedProblems(query);
+    if (cached.length > 0) {
+      return cached;
+    }
+
+    try {
+      const problems = await request(buildUrl(apiBase, "/api/problems", query));
+      if (Array.isArray(problems) && problems.length > 0) {
+        await saveCachedProblems(problems);
+      }
+      return Array.isArray(problems) ? problems : [];
+    } catch (error) {
+      if (isNetworkError(error)) {
+        return cached;
+      }
+      throw error;
+    }
   },
-  getSubmissions: async (query = {}, options = {}) => {
-    const result = await getCachedFirstCollection({
-      entity: "submissions",
-      query,
-      getCachedRows: getCachedSubmissions,
-      path: "/api/submissions",
-      saveRows: saveCachedSubmissions,
-    });
-    return options.includeCacheInfo ? result : result.rows;
+  getSubmissions: async (query = {}) => {
+    const cached = await getCachedSubmissions(query);
+    if (cached.length > 0) {
+      return cached;
+    }
+
+    try {
+      const submissions = await request(buildUrl(apiBase, "/api/submissions", query));
+      if (Array.isArray(submissions) && submissions.length > 0) {
+        await saveCachedSubmissions(submissions);
+      }
+      return Array.isArray(submissions) ? submissions : [];
+    } catch (error) {
+      if (isNetworkError(error)) {
+        return cached;
+      }
+      throw error;
+    }
   },
 };
 
 setSyncBaseUrl(apiBase);
+
+async function detectServiceCapabilities() {
+  try {
+    const payload = await request("/api/system/capabilities");
+    return normalizeServiceCapabilities(payload, "capabilities-endpoint");
+  } catch (error) {
+    if (!isNotFoundError(error)) {
+      throw error;
+    }
+  }
+
+  const checks = await Promise.allSettled([
+    request("/api/review/items/1"),
+    request("/api/settings/ai"),
+    request("/api/settings/data/export-diagnostics", {
+      method: "POST",
+      body: JSON.stringify({ dryRun: true }),
+    }),
+    request("/api/me"),
+  ]);
+
+  const [reviewStateResult, aiSettingsResult, diagnosticsResult, meResult] = checks;
+  const reviewStateSupported =
+    reviewStateResult.status === "fulfilled" || !isNotFoundError(reviewStateResult.reason);
+  const aiSettingsSupported =
+    aiSettingsResult.status === "fulfilled" || !isNotFoundError(aiSettingsResult.reason);
+  const diagnosticsExportSupported =
+    diagnosticsResult.status === "fulfilled" || !isNotFoundError(diagnosticsResult.reason);
+  const serviceVersion =
+    meResult.status === "fulfilled"
+      ? meResult.value?.app?.version || DEFAULT_SERVICE_CAPABILITIES.serviceVersion
+      : DEFAULT_SERVICE_CAPABILITIES.serviceVersion;
+
+  return normalizeServiceCapabilities(
+    {
+      reviewStateSupported,
+      aiSettingsSupported,
+      diagnosticsExportSupported,
+      serviceVersion,
+    },
+    "fallback-probe"
+  );
+}

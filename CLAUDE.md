@@ -50,9 +50,9 @@ algorithm-review-system/
 │   │   │   ├── hooks/        # useOfflineData.js（IndexedDB 缓存 + 同步）
 │   │   │   └── lib/          # api.js, format.js, db.js, sync.js
 │   │   ├── scripts/          # dev.mjs, build.mjs, start-static.mjs
-│   │   └── bin/ojreviewd.exe # 预编译 Go 服务二进制
+│   │   └── bin/ojreviewd.exe # Electron 开发/打包使用的 Go 服务二进制
 │   ├── server/               # Go 后端服务源码（ojreviewd）
-│   └── desktop/              # WinUI C# 遗留版（已弃用）
+│   └── desktop/              # WinUI C# 历史遗留目录（不参与运行链路）
 ├── prisma/
 │   ├── schema.prisma         # 数据模型
 │   └── migrations/           # SQLite 迁移记录
@@ -112,7 +112,7 @@ npm run dist              # 生成 Windows 安装包（NSIS）
 ```bash
 cd apps/server
 go run ./cmd/ojreviewd    # 本地运行（开发时 Electron 会自动回退到此命令）
-go build -o bin/ojreviewd.exe ./cmd/ojreviewd  # 构建二进制
+go build -o bin/ojreviewd.exe ./cmd/ojreviewd  # 构建 Electron 可复用的二进制
 ```
 
 ---
@@ -143,6 +143,13 @@ renderer (React)
             └─ ServiceManager      ← 管理 ojreviewd Go 进程
                  └─ http://127.0.0.1:38473  ← Go 服务 REST API
 ```
+
+启动来源仅保留三类：
+1. `OJREVIEW_SERVICE_PATH` 显式指定的二进制
+2. Electron 打包资源目录或 `apps/server/bin/ojreviewd(.exe)`
+3. 开发态回退 `go run ./cmd/ojreviewd`
+
+`apps/desktop/` WinUI 目录仅作历史遗留参考，不再被 Electron 启动链路扫描或依赖。
 
 ### 离线缓存策略（Electron 渲染层）
 - `lib/db.js`：IndexedDB 封装，本地持久化
