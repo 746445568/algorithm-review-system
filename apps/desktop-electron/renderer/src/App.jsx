@@ -31,11 +31,64 @@ export function App() {
     return () => window.clearInterval(intervalId);
   }, [sync]);
 
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadServiceCapabilities() {
+      if (serviceStatus.state !== "healthy") {
+        if (!cancelled) {
+          setServiceCapabilities(initialServiceCapabilities);
+        }
+        return;
+      }
+
+      try {
+        const nextCapabilities = await api.getServiceCapabilities();
+        if (!cancelled) {
+          setServiceCapabilities(nextCapabilities);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setServiceCapabilities({
+            ...initialServiceCapabilities,
+            detectionSource: "unavailable",
+          });
+          setServiceStatus((current) => ({
+            ...current,
+            message: `${current.message}; capability check failed: ${error.message}`,
+          }));
+        }
+      }
+    }
+
+    void loadServiceCapabilities();
+    return () => {
+      cancelled = true;
+    };
+  }, [serviceStatus.state, serviceStatus.url]);
+
+  const hasLegacyServiceMismatch =
+    serviceStatus.state === "healthy" &&
+    (!serviceCapabilities.reviewStateSupported ||
+      !serviceCapabilities.aiSettingsSupported ||
+      !serviceCapabilities.diagnosticsExportSupported);
+
+  const unsupportedFeatures = [
+    !serviceCapabilities.reviewStateSupported ? "复习状态" : null,
+    !serviceCapabilities.aiSettingsSupported ? "AI 设置" : null,
+    !serviceCapabilities.diagnosticsExportSupported ? "诊断导出" : null,
+  ].filter(Boolean);
+  const serviceVersionLabel = serviceCapabilities.serviceVersion || "unknown";
+
   const activeNav = useMemo(
     () => navItems.find((item) => item.id === page) ?? navItems[0],
     [page]
   );
   const lastSyncLabel = lastSyncAt ? formatDate(lastSyncAt.toISOString()) : "尚未同步";
+  const staleCollections = Object.entries(cacheStatus)
+    .filter(([, value]) => value?.stale)
+    .map(([key]) => key);
 
   return (
     <div className="app-shell">
@@ -89,7 +142,18 @@ export function App() {
               来源: {serviceStatus.source}
               {serviceStatus.pid ? ` / 进程 ${serviceStatus.pid}` : ""}
               {` / 上次同步 ${lastSyncLabel}`}
+              {staleCollections.length > 0 ? ` / 陈旧缓存 ${staleCollections.join("、")}` : " / 缓存新鲜"}
             </p>
+            <p>{statusMessage}</p>
+          </div>
+          <div className="banner-meta">
+            <span className="meta-pill">待同步操作 {syncQueue.length}</span>
+            <span className="meta-pill">
+              题库 {cacheStatus.problems?.lastSyncedAt ? formatDate(cacheStatus.problems.lastSyncedAt) : "未同步"}
+            </span>
+            <span className="meta-pill">
+              提交 {cacheStatus.submissions?.lastSyncedAt ? formatDate(cacheStatus.submissions.lastSyncedAt) : "未同步"}
+            </span>
           </div>
         </section>
 
@@ -100,6 +164,7 @@ export function App() {
           <SettingsPage
             runtimeInfo={runtimeInfo}
             serviceStatus={serviceStatus}
+            serviceCapabilities={serviceCapabilities}
             themeMode={themeMode}
             onThemeChange={onThemeChange}
           />

@@ -1,7 +1,9 @@
 import { openDB as openIDB } from "idb";
 
 const DATABASE_NAME = "OJReviewDB";
-const DATABASE_VERSION = 1;
+const DATABASE_VERSION = 2;
+const CACHE_COLLECTIONS = ["problems", "submissions", "accounts", "reviewStates"];
+const SYNC_META_KEY = "syncMetadata";
 
 let databasePromise = null;
 let hasLoggedDatabaseWarning = false;
@@ -80,6 +82,39 @@ function buildDefaultReviewState(problemId) {
   };
 }
 
+function buildDefaultSyncMetadata() {
+  return CACHE_COLLECTIONS.reduce((accumulator, entity) => {
+    accumulator[entity] = {
+      entity,
+      lastSyncedAt: null,
+      lastFetchAttemptAt: null,
+      stale: true,
+      source: "empty-cache",
+      lastError: "尚未同步",
+    };
+    return accumulator;
+  }, {});
+}
+
+function normalizeMetadataEntry(entity, entry = {}) {
+  return {
+    entity,
+    lastSyncedAt: entry.lastSyncedAt || null,
+    lastFetchAttemptAt: entry.lastFetchAttemptAt || null,
+    stale: Boolean(entry.stale ?? !entry.lastSyncedAt),
+    source: entry.source || (entry.lastSyncedAt ? "cache" : "empty-cache"),
+    lastError: entry.lastError || null,
+  };
+}
+
+function mergeSyncMetadata(metadata = {}) {
+  const base = buildDefaultSyncMetadata();
+  for (const entity of CACHE_COLLECTIONS) {
+    base[entity] = normalizeMetadataEntry(entity, metadata?.[entity]);
+  }
+  return base;
+}
+
 /**
  * Opens the IndexedDB database used by the renderer.
  *
@@ -93,7 +128,7 @@ export async function openDB() {
 
   if (!databasePromise) {
     databasePromise = openIDB(DATABASE_NAME, DATABASE_VERSION, {
-      upgrade(database) {
+      upgrade(database, oldVersion, _newVersion, transaction) {
         if (!database.objectStoreNames.contains("problems")) {
           const store = database.createObjectStore("problems", { keyPath: "id" });
           store.createIndex("platform", "platform", { unique: false });
@@ -126,6 +161,13 @@ export async function openDB() {
             autoIncrement: true,
           });
         }
+
+        if (oldVersion < 2 && database.objectStoreNames.contains("syncQueue")) {
+          const store = transaction.objectStore("syncQueue");
+          if (store && !store.indexNames.contains("retryCount")) {
+            store.createIndex("retryCount", "retryCount", { unique: false });
+          }
+        }
       },
     });
   }
@@ -155,6 +197,61 @@ async function withStore(storeName, mode, action, fallbackValue) {
     logDatabaseWarning(error);
     return fallbackValue;
   }
+}
+
+async function saveCollectionSyncMetadata(entity, updates = {}) {
+  const metadata = await getSyncMetadata();
+  const nextMetadata = {
+    ...metadata,
+    [entity]: normalizeMetadataEntry(entity, {
+      ...metadata?.[entity],
+      ...updates,
+    }),
+  };
+  await saveSettings(SYNC_META_KEY, nextMetadata);
+  return nextMetadata[entity];
+}
+
+export async function getSyncMetadata() {
+  const metadata = await getSettings(SYNC_META_KEY);
+  return mergeSyncMetadata(metadata);
+}
+
+export async function getCollectionSyncMetadata(entity) {
+  if (!CACHE_COLLECTIONS.includes(entity)) {
+    return null;
+  }
+
+  const metadata = await getSyncMetadata();
+  return metadata[entity] || null;
+}
+
+export async function markCollectionSyncAttempt(entity, updates = {}) {
+  if (!CACHE_COLLECTIONS.includes(entity)) {
+    return null;
+  }
+
+  return saveCollectionSyncMetadata(entity, {
+    lastFetchAttemptAt: updates.lastFetchAttemptAt || new Date().toISOString(),
+    source: updates.source,
+    stale: updates.stale,
+    lastError: updates.lastError,
+  });
+}
+
+export async function markCollectionSynced(entity, updates = {}) {
+  if (!CACHE_COLLECTIONS.includes(entity)) {
+    return null;
+  }
+
+  const syncedAt = updates.lastSyncedAt || new Date().toISOString();
+  return saveCollectionSyncMetadata(entity, {
+    lastSyncedAt: syncedAt,
+    lastFetchAttemptAt: updates.lastFetchAttemptAt || syncedAt,
+    source: updates.source || "remote",
+    stale: Boolean(updates.stale),
+    lastError: updates.lastError || null,
+  });
 }
 
 /**
@@ -481,6 +578,9 @@ export async function getSettings(key) {
  */
 export async function addToSyncQueue(operation) {
   const payload = {
+    retryCount: toNumber(operation?.retryCount, 0),
+    lastError: operation?.lastError || null,
+    lastTriedAt: operation?.lastTriedAt || null,
     ...operation,
     createdAt: operation?.createdAt || new Date().toISOString(),
   };
@@ -506,6 +606,30 @@ export async function getSyncQueue() {
       return items.sort((left, right) => toNumber(left.id) - toNumber(right.id));
     },
     []
+  );
+}
+
+export async function updateSyncQueueOperation(id, updates = {}) {
+  if (!id) {
+    return null;
+  }
+
+  return withStore(
+    "syncQueue",
+    "readwrite",
+    async (store) => {
+      const current = await store.get(id);
+      if (!current) {
+        return null;
+      }
+      const nextValue = {
+        ...current,
+        ...updates,
+      };
+      await store.put(nextValue);
+      return nextValue;
+    },
+    null
   );
 }
 

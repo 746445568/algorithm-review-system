@@ -22,7 +22,13 @@ const themeOptions = [
   { value: "dark", label: "深色" },
 ];
 
-export function SettingsPage({ runtimeInfo, serviceStatus, themeMode, onThemeChange }) {
+export function SettingsPage({
+  runtimeInfo,
+  serviceStatus,
+  serviceCapabilities,
+  themeMode,
+  onThemeChange,
+}) {
   const [aiSettings, setAISettings] = useState(defaultAISettings);
   const [loading, setLoading] = useState(true);
   const [savingAI, setSavingAI] = useState(false);
@@ -34,12 +40,15 @@ export function SettingsPage({ runtimeInfo, serviceStatus, themeMode, onThemeCha
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const refreshSequenceRef = useRef(0);
+  const serviceUnavailable = serviceStatus.state !== "healthy";
+  const aiSettingsSupported = serviceCapabilities?.aiSettingsSupported ?? false;
+  const diagnosticsExportSupported = serviceCapabilities?.diagnosticsExportSupported ?? false;
 
   const refresh = useCallback(async () => {
     const requestId = refreshSequenceRef.current + 1;
     refreshSequenceRef.current = requestId;
 
-    if (serviceStatus.state !== "healthy") {
+    if (serviceStatus.state !== "healthy" || !aiSettingsSupported) {
       setLoading(false);
       return;
     }
@@ -80,13 +89,11 @@ export function SettingsPage({ runtimeInfo, serviceStatus, themeMode, onThemeCha
         setLoading(false);
       }
     }
-  }, [serviceStatus.state]);
+  }, [aiSettingsSupported, onThemeChange, serviceStatus.state]);
 
   useEffect(() => {
     void refresh();
   }, [refresh]);
-
-  const serviceUnavailable = serviceStatus.state !== "healthy";
 
   async function saveAISettings() {
     setSavingAI(true);
@@ -222,10 +229,13 @@ export function SettingsPage({ runtimeInfo, serviceStatus, themeMode, onThemeCha
               本地服务 {runtimeInfo.serviceUrl || serviceStatus.url} 未就绪，设置暂不可用。
             </p>
           ) : null}
+          {!serviceUnavailable && !diagnosticsExportSupported ? (
+            <p className="muted">当前服务未提供诊断导出接口。</p>
+          ) : null}
           <button
             type="button"
             className="primary-button"
-            disabled={diagExporting || serviceUnavailable}
+            disabled={diagExporting || serviceUnavailable || !diagnosticsExportSupported}
             onClick={() => void exportDiagnostics()}
           >
             {diagExporting ? "导出中..." : "导出诊断信息"}
@@ -257,10 +267,14 @@ export function SettingsPage({ runtimeInfo, serviceStatus, themeMode, onThemeCha
           <span className="caption">通过 /api/settings/ai 接口配置</span>
         </div>
         <div className="form-stack">
+          {!serviceUnavailable && !aiSettingsSupported ? (
+            <p className="muted">当前服务未提供 AI 设置接口。</p>
+          ) : null}
           <label>
             <span>服务商</span>
             <select
               value={aiSettings.provider}
+              disabled={serviceUnavailable || savingAI || testingAI || !aiSettingsSupported}
               onChange={(event) =>
                 setAISettings((current) => ({
                   ...current,
@@ -282,6 +296,7 @@ export function SettingsPage({ runtimeInfo, serviceStatus, themeMode, onThemeCha
             <input
               value={aiSettings.model}
               placeholder="gpt-4.1 / deepseek-chat / llama3.1"
+              disabled={serviceUnavailable || savingAI || testingAI || !aiSettingsSupported}
               onChange={(event) =>
                 setAISettings((current) => ({
                   ...current,
@@ -296,6 +311,7 @@ export function SettingsPage({ runtimeInfo, serviceStatus, themeMode, onThemeCha
             <input
               value={aiSettings.baseUrl}
               placeholder="可选，用于自定义 OpenAI 兼容接口"
+              disabled={serviceUnavailable || savingAI || testingAI || !aiSettingsSupported}
               onChange={(event) =>
                 setAISettings((current) => ({
                   ...current,
@@ -311,6 +327,7 @@ export function SettingsPage({ runtimeInfo, serviceStatus, themeMode, onThemeCha
               type="password"
               value={aiSettings.apiKey}
               placeholder="本地加密存储"
+              disabled={serviceUnavailable || savingAI || testingAI || !aiSettingsSupported}
               onChange={(event) =>
                 setAISettings((current) => ({
                   ...current,
@@ -324,7 +341,7 @@ export function SettingsPage({ runtimeInfo, serviceStatus, themeMode, onThemeCha
             <button
               type="button"
               className="ghost-button"
-              disabled={testingAI || serviceUnavailable}
+              disabled={testingAI || serviceUnavailable || !aiSettingsSupported}
               onClick={() => void testAISettings()}
             >
               {testingAI ? "测试中..." : "测试配置"}
@@ -332,7 +349,7 @@ export function SettingsPage({ runtimeInfo, serviceStatus, themeMode, onThemeCha
             <button
               type="button"
               className="primary-button"
-              disabled={savingAI || serviceUnavailable}
+              disabled={savingAI || serviceUnavailable || !aiSettingsSupported}
               onClick={() => void saveAISettings()}
             >
               {savingAI ? "保存中..." : "保存 AI 设置"}

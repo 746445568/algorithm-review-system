@@ -225,16 +225,6 @@ class ServiceManager {
       path.join(process.resourcesPath, "bin", SERVICE_NAME),
       path.join(app.getAppPath(), "bin", SERVICE_NAME),
       path.join(serverDir, "bin", SERVICE_NAME),
-      path.join(
-        repoRoot,
-        "apps",
-        "desktop",
-        "OJReviewDesktop",
-        "bin",
-        "Debug",
-        "net9.0-windows10.0.19041.0",
-        SERVICE_NAME
-      ),
     ];
 
     for (const candidate of candidates) {

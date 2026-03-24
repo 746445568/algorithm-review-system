@@ -6,12 +6,32 @@ import { useReviewFilters } from "../hooks/useReviewFilters.js";
 import { api } from "../lib/api.js";
 import { formatDate, platformLabel, statusLabel, toDatetimeLocalValue, verdictTone } from "../lib/format.js";
 
+const DEFAULT_REVIEW_STATE = {
+  status: "TODO",
+  notes: "",
+  nextReviewAt: "",
+  lastUpdatedAt: "",
+};
+
 function formatRawJSON(rawJson) {
   try {
     return JSON.stringify(JSON.parse(rawJson), null, 2);
   } catch {
     return rawJson;
   }
+}
+
+function toTimestamp(value, fallback = 0) {
+  if (!value) {
+    return fallback;
+  }
+
+  const timestamp = new Date(value).getTime();
+  return Number.isNaN(timestamp) ? fallback : timestamp;
+}
+
+function isFailureVerdict(verdict) {
+  return Boolean(verdict) && String(verdict).toUpperCase() !== "AC";
 }
 
 function isMissingReviewStateRoute(error) {
@@ -85,8 +105,6 @@ export function ReviewPage({ serviceStatus, runtimeInfo }) {
   const [reviewState, setReviewState] = useState(emptyReviewState);
   const [reviewSaving, setReviewSaving] = useState(false);
   const [reviewNotice, setReviewNotice] = useState("");
-  const [reviewStateSupported, setReviewStateSupported] = useState(true);
-  const [reviewStateSupportMessage, setReviewStateSupportMessage] = useState("");
   const refreshSequenceRef = useRef(0);
   const reviewStateSequenceRef = useRef(0);
   const { filters, actions, filteredProblems } = useReviewFilters(summary);
@@ -148,8 +166,6 @@ export function ReviewPage({ serviceStatus, runtimeInfo }) {
           nextReviewAt: toDatetimeLocalValue(state.nextReviewAt),
           lastUpdatedAt: state.lastUpdatedAt || "",
         });
-        setReviewStateSupported(true);
-        setReviewStateSupportMessage("");
         setReviewNotice("");
       } catch (nextError) {
         if (requestId !== reviewStateSequenceRef.current) return;
@@ -166,7 +182,35 @@ export function ReviewPage({ serviceStatus, runtimeInfo }) {
     }
 
     void loadReviewState();
-  }, [runtimeInfo.serviceUrl, selectedProblemId, serviceStatus.state, serviceStatus.url]);
+  }, [reviewStateSupported, selectedProblemId, serviceStatus.state]);
+
+  const submissionMetaByProblemId = useMemo(() => {
+    const nextMap = new Map();
+
+    for (const submission of submissions) {
+      const current = nextMap.get(submission.problemId) || {
+        latestSubmission: null,
+        lastSubmissionAt: 0,
+        lastFailureAt: 0,
+        failureCount: 0,
+      };
+      const submittedAt = toTimestamp(submission.submittedAt);
+      const failed = isFailureVerdict(submission.verdict);
+
+      if (submittedAt >= current.lastSubmissionAt) {
+        current.latestSubmission = submission;
+        current.lastSubmissionAt = submittedAt;
+      }
+      if (failed) {
+        current.failureCount += 1;
+        current.lastFailureAt = Math.max(current.lastFailureAt, submittedAt);
+      }
+
+      nextMap.set(submission.problemId, current);
+    }
+
+    return nextMap;
+  }, [submissions]);
 
   useEffect(() => {
     setSelectedProblemId((current) => {
@@ -175,15 +219,47 @@ export function ReviewPage({ serviceStatus, runtimeInfo }) {
     });
   }, [filteredProblems]);
 
-  const selectedProblem = filteredProblems.find((item) => item.problemId === selectedProblemId);
+  const selectedIndex = filteredProblems.findIndex((item) => item.problemId === selectedProblemId);
+  const selectedProblem = selectedIndex >= 0 ? filteredProblems[selectedIndex] : null;
+  const previousProblem = selectedIndex > 0 ? filteredProblems[selectedIndex - 1] : null;
+  const nextProblem = selectedIndex >= 0 ? filteredProblems[selectedIndex + 1] : null;
   const selectedProblemRecord = problems.find((item) => item.id === selectedProblemId);
   const selectedSubmissions = submissions.filter((item) => item.problemId === selectedProblemId);
   const representativeSubmission = selectedSubmissions[0];
+  const selectedSubmissionMeta = submissionMetaByProblemId.get(selectedProblemId) || {
+    latestSubmission: null,
+    failureCount: 0,
+    lastFailureAt: 0,
+    lastSubmissionAt: 0,
+  };
+  const selectedInsights = useMemo(() => {
+    const merged = {
+      reasons: [],
+      suggestions: [],
+      keyPoints: [],
+    };
+
+    for (const submission of selectedSubmissions) {
+      const next = collectInsightCandidates(submission);
+      merged.reasons.push(...next.reasons);
+      merged.suggestions.push(...next.suggestions);
+      merged.keyPoints.push(...next.keyPoints);
+    }
+
+    return {
+      reasons: [...new Set(merged.reasons)].slice(0, 6),
+      suggestions: [...new Set(merged.suggestions)].slice(0, 6),
+      keyPoints: [...new Set(merged.keyPoints)].slice(0, 6),
+    };
+  }, [selectedSubmissions]);
   const reviewCounts = summary?.reviewStatusCounts ?? {};
   const serviceUnavailable = serviceStatus.state !== "healthy";
+  const reviewEditorUnavailable = serviceUnavailable || !reviewStateSupported;
 
   async function saveReviewState() {
     if (!selectedProblemId || !reviewStateSupported) return;
+
+    const shouldAutoAdvance = autoAdvance && reviewState.status === "DONE" && Boolean(nextProblem);
 
     setReviewSaving(true);
     setReviewNotice("");
@@ -201,8 +277,6 @@ export function ReviewPage({ serviceStatus, runtimeInfo }) {
         nextReviewAt: toDatetimeLocalValue(saved.nextReviewAt),
         lastUpdatedAt: saved.lastUpdatedAt || "",
       });
-      setReviewStateSupported(true);
-      setReviewStateSupportMessage("");
       setSummary((current) => applyReviewState(current, selectedProblemId, saved));
       setReviewNotice("复习状态已保存。");
     } catch (nextError) {
@@ -212,6 +286,7 @@ export function ReviewPage({ serviceStatus, runtimeInfo }) {
         setReviewNotice("");
         return;
       }
+    } catch (nextError) {
       setError(nextError.message);
     } finally {
       setReviewSaving(false);
@@ -276,6 +351,61 @@ export function ReviewPage({ serviceStatus, runtimeInfo }) {
 
       <section className="review-detail">
         <ProblemDetailPanel selectedProblem={selectedProblem} selectedProblemRecord={selectedProblemRecord} />
+
+        <div className="panel review-insight-panel">
+          <div className="panel-header">
+            <h3>复盘工作区</h3>
+            <span className="caption">把错因、建议、关键提醒集中在同一处，减少来回切换。</span>
+          </div>
+          {!reviewStateSupported && reviewStateSupportMessage ? (
+            <div className="inline-banner warning-banner">
+              <strong>复习状态能力不可用</strong>
+              <p>{reviewStateSupportMessage}</p>
+            </div>
+          ) : null}
+          {selectedProblem ? (
+            <div className="insight-grid">
+              <article className="insight-card">
+                <h4>为什么错</h4>
+                {selectedInsights.reasons.length === 0 ? (
+                  <p className="muted">暂无后端分析结果，可先在下方笔记记录本题的错误原因。</p>
+                ) : (
+                  <ul>
+                    {selectedInsights.reasons.map((item) => (
+                      <li key={item}>{item}</li>
+                    ))}
+                  </ul>
+                )}
+              </article>
+              <article className="insight-card">
+                <h4>下次注意什么</h4>
+                {selectedInsights.suggestions.length === 0 ? (
+                  <p className="muted">暂无建议字段，保存复习笔记后可把自己的行动项留在这里对应记录。</p>
+                ) : (
+                  <ul>
+                    {selectedInsights.suggestions.map((item) => (
+                      <li key={item}>{item}</li>
+                    ))}
+                  </ul>
+                )}
+              </article>
+              <article className="insight-card">
+                <h4>关键提醒</h4>
+                {selectedInsights.keyPoints.length === 0 ? (
+                  <p className="muted">当前没有额外诊断要点。</p>
+                ) : (
+                  <ul>
+                    {selectedInsights.keyPoints.map((item) => (
+                      <li key={item}>{item}</li>
+                    ))}
+                  </ul>
+                )}
+              </article>
+            </div>
+          ) : (
+            <p className="muted">选择题目后，可在这里统一查看诊断与行动建议。</p>
+          )}
+        </div>
 
         <div className="panel submission-panel">
           <div className="panel-header">
