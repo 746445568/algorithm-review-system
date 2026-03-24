@@ -1,5 +1,8 @@
 ﻿# 部署说明
 
+> [!WARNING]
+> 本文档描述的是 **legacy web 原型（`frontend/` + `backend/`）部署方式**，**不是桌面端（Windows-first）发版流程**。桌面端发布请使用 `apps/desktop-electron/README.md` 与 `docs/RELEASE_CHECKLIST_DESKTOP.md`。
+
 当前版本面向少量朋友公开访问，推荐单机部署：
 
 - 一台低配 Linux VPS

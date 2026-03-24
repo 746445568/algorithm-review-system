@@ -1,5 +1,7 @@
 # OJ Review Desktop
 
+> **v1 首发形态为桌面端（Windows-first）**，请统一从 `apps/desktop-electron/README.md` 作为开发与发布唯一入口。
+
 This repository is being rewritten from an online prototype into an **Electron desktop product** for competitive programming review.
 
 ## Current tracks
