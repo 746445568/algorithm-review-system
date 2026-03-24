@@ -278,6 +278,26 @@ export const api = {
     }
   },
   getAISettings: () => request("/api/settings/ai"),
+  generateAnalysis: async (problemId) => {
+    const payload = {};
+    const normalizedProblemId = Number(problemId);
+    if (Number.isFinite(normalizedProblemId) && normalizedProblemId > 0) {
+      payload.problemId = normalizedProblemId;
+    }
+
+    const response = await request("/api/analysis/generate", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+    const task = response?.task ?? null;
+    const taskId = Number(task?.id ?? response?.taskId ?? 0);
+    return {
+      taskId: Number.isFinite(taskId) && taskId > 0 ? taskId : null,
+      task,
+      reused: Boolean(response?.reused),
+    };
+  },
+  getAnalysisTask: (taskId) => request(`/api/analysis/${taskId}`),
   saveAISettings: (payload) =>
     request("/api/settings/ai", {
       method: "PUT",
