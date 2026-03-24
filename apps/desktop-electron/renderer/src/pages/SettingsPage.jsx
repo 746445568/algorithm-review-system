@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "../lib/api.js";
+import { desktopBridge } from "../lib/desktopBridge.js";
 import { statusLabel } from "../lib/format.js";
 
 const defaultAISettings = {
@@ -187,7 +188,7 @@ export function SettingsPage({ runtimeInfo, serviceStatus, themeMode, onThemeCha
               type="button"
               className="ghost-button"
               disabled={!runtimeInfo.runtimeDir}
-              onClick={() => window.desktopBridge?.openPath(runtimeInfo.runtimeDir)}
+              onClick={() => desktopBridge.openPath(runtimeInfo.runtimeDir)}
             >
               打开文件夹
             </button>
@@ -202,7 +203,7 @@ export function SettingsPage({ runtimeInfo, serviceStatus, themeMode, onThemeCha
               type="button"
               className="ghost-button"
               disabled={!runtimeInfo.appPath}
-              onClick={() => window.desktopBridge?.openPath(runtimeInfo.appPath)}
+              onClick={() => desktopBridge.openPath(runtimeInfo.appPath)}
             >
               打开路径
             </button>
@@ -239,7 +240,7 @@ export function SettingsPage({ runtimeInfo, serviceStatus, themeMode, onThemeCha
               <button
                 type="button"
                 className="ghost-button"
-                onClick={() => window.desktopBridge?.openPath(diagPath)}
+                onClick={() => desktopBridge.openPath(diagPath)}
               >
                 打开文件
               </button>
