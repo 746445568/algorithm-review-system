@@ -10,7 +10,6 @@ import { useOfflineData } from "./hooks/useOfflineData.js";
 function resolveEffectiveTheme(mode) {
   if (mode === "dark") return "dark";
   if (mode === "light") return "light";
-  // follow-system
   return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
 }
 
@@ -23,7 +22,6 @@ function applyThemeToDOM(mode) {
   }
 }
 
-// Apply immediately at module load to prevent flash
 applyThemeToDOM(localStorage.getItem("ojreview-theme") ?? "follow-system");
 
 const navItems = [
@@ -74,12 +72,10 @@ export function App() {
     applyThemeToDOM(mode);
   }, []);
 
-  // Re-apply theme on every render cycle to guard against external resets
   useEffect(() => {
     applyThemeToDOM(themeMode);
   }, [themeMode]);
 
-  // Listen for system theme changes when in follow-system mode
   useEffect(() => {
     if (themeMode !== "follow-system") return;
     const mql = window.matchMedia("(prefers-color-scheme: dark)");
@@ -206,6 +202,9 @@ export function App() {
     [page]
   );
   const lastSyncLabel = lastSyncAt ? formatDate(lastSyncAt.toISOString()) : "尚未同步";
+  const staleCollections = Object.entries(cacheStatus)
+    .filter(([, value]) => value?.stale)
+    .map(([key]) => key);
 
   return (
     <div className="app-shell">
@@ -262,7 +261,7 @@ export function App() {
 
           <div className="header-actions">
             <span className={`service-pill ${isOnline ? "healthy" : "error"}`}>
-              {isOnline ? "在线" : "离线"}
+              {connectivity === "service-unreachable" ? "服务不可达" : isOnline ? "在线" : "离线"}
             </span>
             <button
               type="button"
@@ -272,9 +271,7 @@ export function App() {
             >
               {isSyncing ? "同步中..." : "立即同步"}
             </button>
-            <span className={`service-pill ${serviceStatus.state}`}>
-              {serviceStatus.state}
-            </span>
+            <span className={`service-pill ${serviceStatus.state}`}>{serviceStatus.state}</span>
             <button
               type="button"
               className="ghost-button"
@@ -292,7 +289,18 @@ export function App() {
               来源: {serviceStatus.source}
               {serviceStatus.pid ? ` / 进程 ${serviceStatus.pid}` : ""}
               {` / 上次同步 ${lastSyncLabel}`}
+              {staleCollections.length > 0 ? ` / 陈旧缓存 ${staleCollections.join("、")}` : " / 缓存新鲜"}
             </p>
+            <p>{statusMessage}</p>
+          </div>
+          <div className="banner-meta">
+            <span className="meta-pill">待同步操作 {syncQueue.length}</span>
+            <span className="meta-pill">
+              题库 {cacheStatus.problems?.lastSyncedAt ? formatDate(cacheStatus.problems.lastSyncedAt) : "未同步"}
+            </span>
+            <span className="meta-pill">
+              提交 {cacheStatus.submissions?.lastSyncedAt ? formatDate(cacheStatus.submissions.lastSyncedAt) : "未同步"}
+            </span>
           </div>
         </section>
 
@@ -312,7 +320,13 @@ export function App() {
         ) : null}
 
         {page === "dashboard" ? (
-          <DashboardPage serviceStatus={serviceStatus} runtimeInfo={runtimeInfo} />
+          <DashboardPage
+            serviceStatus={serviceStatus}
+            runtimeInfo={runtimeInfo}
+            cacheStatus={cacheStatus}
+            connectivity={connectivity}
+            syncQueue={syncQueue}
+          />
         ) : null}
 
         {page === "accounts" ? (
