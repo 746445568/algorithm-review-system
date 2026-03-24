@@ -14,6 +14,7 @@ import (
 	"ojreviewdesktop/internal/adapters/ai"
 	"ojreviewdesktop/internal/adapters/judges"
 	"ojreviewdesktop/internal/app"
+	"ojreviewdesktop/internal/buildinfo"
 	"ojreviewdesktop/internal/jobs"
 	"ojreviewdesktop/internal/models"
 	"ojreviewdesktop/internal/storage"
@@ -75,6 +76,8 @@ func (s *Server) handleHealth(w http.ResponseWriter, _ *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{
 		"status":    "ok",
 		"timestamp": time.Now().UTC().Format(time.RFC3339),
+		"version":   buildinfo.Version,
+		"commit":    buildinfo.Commit,
 	})
 }
 
@@ -83,7 +86,8 @@ func (s *Server) handleCapabilities(w http.ResponseWriter, _ *http.Request) {
 		"reviewStateSupported":       true,
 		"aiSettingsSupported":        true,
 		"diagnosticsExportSupported": true,
-		"serviceVersion":             "0.1.0",
+		"serviceVersion":             buildinfo.Version,
+		"serviceCommit":              buildinfo.Commit,
 	})
 }
 
@@ -100,7 +104,8 @@ func (s *Server) handleMe(w http.ResponseWriter, _ *http.Request) {
 			"dataDir":    s.cfg.DataDir,
 			"logDir":     s.cfg.LogDir,
 			"secureDir":  s.cfg.SecureDir,
-			"version":    "0.1.0",
+			"version":    buildinfo.Version,
+			"commit":     buildinfo.Commit,
 			"singleUser": true,
 		},
 	})

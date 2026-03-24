@@ -18,3 +18,26 @@
 3. 从适配器写入标准化的题目/提交数据
 4. 按题目聚合复习记录
 5. 将 `ojreviewd.exe` 打包集成到 Electron 应用中
+
+
+## 构建与版本注入
+
+请使用以下脚本构建 `ojreviewd`，它会通过 `-ldflags` 注入版本号与 commit：
+
+```bash
+./apps/server/scripts/build-service.sh
+```
+
+Windows PowerShell：
+
+```powershell
+pwsh ./apps/server/scripts/build-service.ps1
+```
+
+也可通过环境变量/参数覆盖：
+
+- `VERSION` / `-Version`
+- `COMMIT` / `-Commit`
+
+构建后可用 `apps/server/bin/ojreviewd(.exe) --version-json` 验证注入结果。
+
