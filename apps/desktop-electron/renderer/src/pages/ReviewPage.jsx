@@ -199,10 +199,9 @@ export function ReviewPage({ serviceStatus, runtimeInfo }) {
   const [reviewState, setReviewState] = useState(DEFAULT_REVIEW_STATE);
   const [reviewSaving, setReviewSaving] = useState(false);
   const [reviewNotice, setReviewNotice] = useState("");
-  const [reviewStateSupported, setReviewStateSupported] = useState(true);
-  const [reviewStateSupportMessage, setReviewStateSupportMessage] = useState("");
   const refreshSequenceRef = useRef(0);
   const reviewStateSequenceRef = useRef(0);
+  const reviewStateSupported = serviceCapabilities?.reviewStateSupported ?? false;
 
   const refresh = useCallback(async () => {
     const requestId = refreshSequenceRef.current + 1;
@@ -269,29 +268,17 @@ export function ReviewPage({ serviceStatus, runtimeInfo }) {
           nextReviewAt: toDatetimeLocalValue(state.nextReviewAt),
           lastUpdatedAt: state.lastUpdatedAt || "",
         });
-        setReviewStateSupported(true);
-        setReviewStateSupportMessage("");
         setReviewNotice("");
       } catch (nextError) {
         if (requestId !== reviewStateSequenceRef.current) {
           return;
         }
-        if (isMissingReviewStateRoute(nextError)) {
-          setReviewStateSupported(false);
-          setReviewStateSupportMessage(
-            buildReviewStateRouteMessage(runtimeInfo.serviceUrl || serviceStatus.url)
-          );
-          setReviewNotice("");
-          return;
-        }
-        setReviewStateSupported(true);
-        setReviewStateSupportMessage("");
         setError(nextError.message);
       }
     }
 
     void loadReviewState();
-  }, [runtimeInfo.serviceUrl, selectedProblemId, serviceStatus.state, serviceStatus.url]);
+  }, [reviewStateSupported, selectedProblemId, serviceStatus.state]);
 
   const submissionMetaByProblemId = useMemo(() => {
     const nextMap = new Map();
@@ -417,6 +404,7 @@ export function ReviewPage({ serviceStatus, runtimeInfo }) {
   }, [selectedSubmissions]);
   const reviewCounts = summary?.reviewStatusCounts ?? {};
   const serviceUnavailable = serviceStatus.state !== "healthy";
+  const reviewEditorUnavailable = serviceUnavailable || !reviewStateSupported;
 
   async function saveReviewState() {
     if (!selectedProblemId || !reviewStateSupported) {
@@ -443,22 +431,12 @@ export function ReviewPage({ serviceStatus, runtimeInfo }) {
         nextReviewAt: toDatetimeLocalValue(saved.nextReviewAt),
         lastUpdatedAt: saved.lastUpdatedAt || "",
       });
-      setReviewStateSupported(true);
-      setReviewStateSupportMessage("");
       setSummary((current) => applyReviewState(current, selectedProblemId, saved));
       setReviewNotice(shouldAutoAdvance ? "已保存，自动切换到下一题。" : "复习状态已保存。");
       if (shouldAutoAdvance) {
         setSelectedProblemId(nextProblem.problemId);
       }
     } catch (nextError) {
-      if (isMissingReviewStateRoute(nextError)) {
-        setReviewStateSupported(false);
-        setReviewStateSupportMessage(
-          buildReviewStateRouteMessage(runtimeInfo.serviceUrl || serviceStatus.url)
-        );
-        setReviewNotice("");
-        return;
-      }
       setError(nextError.message);
     } finally {
       setReviewSaving(false);
@@ -819,7 +797,7 @@ export function ReviewPage({ serviceStatus, runtimeInfo }) {
                 <span>状态</span>
                 <select
                   value={reviewState.status}
-                  disabled={!reviewStateSupported}
+                  disabled={reviewEditorUnavailable}
                   onChange={(event) =>
                     setReviewState((current) => ({
                       ...current,
@@ -839,7 +817,7 @@ export function ReviewPage({ serviceStatus, runtimeInfo }) {
                 <input
                   type="datetime-local"
                   value={reviewState.nextReviewAt}
-                  disabled={!reviewStateSupported}
+                  disabled={reviewEditorUnavailable}
                   onChange={(event) =>
                     setReviewState((current) => ({
                       ...current,
@@ -854,7 +832,7 @@ export function ReviewPage({ serviceStatus, runtimeInfo }) {
                 <textarea
                   rows="8"
                   value={reviewState.notes}
-                  disabled={!reviewStateSupported}
+                  disabled={reviewEditorUnavailable}
                   placeholder="记录错误原因、正确思路和下次注意事项。"
                   onChange={(event) =>
                     setReviewState((current) => ({

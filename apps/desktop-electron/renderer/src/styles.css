@@ -256,6 +256,13 @@ button {
   align-items: center;
 }
 
+.banner-meta {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
 .service-pill,
 .meta-pill,
 .status-chip,
@@ -326,6 +333,19 @@ button {
 
 [data-theme="dark"] .service-banner {
   background: rgba(30, 35, 32, 0.72);
+}
+
+.service-warning-banner {
+  margin-bottom: 20px;
+  padding: 16px 18px;
+  border: 1px solid rgba(180, 78, 40, 0.3);
+  border-radius: 22px;
+  background: rgba(180, 78, 40, 0.08);
+}
+
+[data-theme="dark"] .service-warning-banner {
+  background: rgba(180, 78, 40, 0.14);
+  border-color: rgba(180, 78, 40, 0.45);
 }
 
 .page-grid {
@@ -749,6 +769,16 @@ textarea {
   font-weight: 500;
 }
 
+
+.stats-strip article {
+  display: grid;
+  gap: 4px;
+}
+
+.stats-strip article small {
+  color: var(--muted);
+  font-size: 12px;
+}
 @media (max-width: 1180px) {
   .app-shell {
     grid-template-columns: 1fr;

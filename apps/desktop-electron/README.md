@@ -6,14 +6,14 @@
 - Preload 桥接层，提供运行时状态与服务重启能力
 - React 渲染层，包含 `Dashboard`、`Accounts` 和 `Review` 页面
 - 通过 `http://127.0.0.1:38473` 进行真实 API 读取
-- `Review` 状态保存需要从当前 `apps/server` 源码构建的 `ojreviewd.exe`
+- `Review` 状态保存依赖 `ojreviewd` 服务，来源仅支持显式环境变量、Electron 资源目录 / `apps/server/bin`，或开发态 `go run` 回退
 
 ## 开发
 
 前置条件：
 
 - Node.js 20+
-- 磁盘上有 `ojreviewd` 二进制文件，或已安装 Go 以便 Electron 回退到 `go run ./cmd/ojreviewd`
+- 优先准备 `OJREVIEW_SERVICE_PATH` 指向的 `ojreviewd`，或 `apps/server/bin/ojreviewd(.exe)`；若未提供二进制，则安装 Go 供开发态回退到 `go run ./cmd/ojreviewd`
 
 命令：
 
@@ -39,11 +39,11 @@ npm run start:static
 apps\desktop-electron\run-static.cmd
 ```
 
-`run-static.cmd` 是推荐的 Windows 启动入口。它会用 `pushd` 映射 UNC 路径，准备好 `ojreviewd.exe`，然后运行相同的引导检查静态启动流程。
+`run-static.cmd` 是推荐的 Windows 启动入口。它会用 `pushd` 映射 UNC 路径，优先复用 `OJREVIEW_SERVICE_PATH` 或 `apps/server/bin/ojreviewd.exe`，然后运行相同的引导检查静态启动流程。
 它还会在启动 Electron 前清除继承的 `ELECTRON_RUN_AS_NODE` 环境变量。
 
 如果 `Dashboard` 和 `Accounts` 能加载但 `Review` 显示
-`/api/review/items/{problemId}` 的 404 错误，说明运行中的 `ojreviewd.exe` 版本比渲染层旧。请从 `apps/server` 重新构建二进制文件，然后重新运行
+`/api/review/items/{problemId}` 的 404 错误，说明运行中的 `ojreviewd` 版本比渲染层旧。请从 `apps/server` 重新构建 `apps/server/bin/ojreviewd(.exe)`，或更新 `OJREVIEW_SERVICE_PATH` 指向的新二进制后，再重新运行
 `apps\\desktop-electron\\run-static.cmd`。
 
 在 `\\wsl.localhost\...` 路径下使用 PowerShell 时，运行时启动应避免使用 `npm.cmd`。
@@ -53,7 +53,7 @@ apps\desktop-electron\run-static.cmd
 node .\apps\desktop-electron\scripts\dev.mjs
 ```
 
-如果已经有构建好的服务二进制文件，可以用以下命令为 Electron 准备好：
+如果已经有构建好的服务二进制文件（推荐来自 `apps/server/bin` 或 `OJREVIEW_SERVICE_PATH`），可以用以下命令为 Electron 准备好：
 
 ```powershell
 .\apps\desktop-electron\prepare-service.ps1

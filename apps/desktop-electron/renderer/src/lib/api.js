@@ -1,16 +1,54 @@
 import {
   addToSyncQueue,
+  getAccounts as getCachedAccounts,
+  getCollectionSyncMetadata,
   getProblems as getCachedProblems,
   getSubmissions as getCachedSubmissions,
+  markCollectionSyncAttempt,
+  markCollectionSynced,
+  saveAccounts as saveCachedAccounts,
   saveProblems as saveCachedProblems,
   saveReviewState as saveCachedReviewState,
   saveSubmissions as saveCachedSubmissions,
 } from "./db.js";
-import { isOnline as checkOnline, setSyncBaseUrl } from "./sync.js";
+import { checkOnline, setSyncBaseUrl } from "./sync.js";
 
 const DEFAULT_API_BASE = "http://127.0.0.1:38473";
 const REQUEST_TIMEOUT_MS = 10000;
+const CACHE_TTLS_MS = {
+  problems: 5 * 60 * 1000,
+  submissions: 2 * 60 * 1000,
+  accounts: 10 * 60 * 1000,
+  reviewStates: 3 * 60 * 1000,
+};
+
 let apiBase = DEFAULT_API_BASE;
+
+const DEFAULT_SERVICE_CAPABILITIES = {
+  reviewStateSupported: false,
+  aiSettingsSupported: false,
+  diagnosticsExportSupported: false,
+  serviceVersion: "unknown",
+  detectionSource: "unknown",
+};
+
+function isNotFoundError(error) {
+  return /(^|\b)404(\b|\s)/.test(String(error?.message || ""));
+}
+
+function normalizeServiceCapabilities(payload, detectionSource = "api") {
+  return {
+    ...DEFAULT_SERVICE_CAPABILITIES,
+    reviewStateSupported: Boolean(payload?.reviewStateSupported),
+    aiSettingsSupported: Boolean(payload?.aiSettingsSupported),
+    diagnosticsExportSupported: Boolean(payload?.diagnosticsExportSupported),
+    serviceVersion:
+      typeof payload?.serviceVersion === "string" && payload.serviceVersion.trim()
+        ? payload.serviceVersion.trim()
+        : DEFAULT_SERVICE_CAPABILITIES.serviceVersion,
+    detectionSource,
+  };
+}
 
 function normalizeApiBase(nextBase) {
   if (!nextBase) {
@@ -90,6 +128,144 @@ function normalizeReviewPayload(payload) {
   };
 }
 
+function getCacheAgeMs(lastSyncedAt) {
+  if (!lastSyncedAt) {
+    return Number.POSITIVE_INFINITY;
+  }
+
+  const syncedAt = new Date(lastSyncedAt).getTime();
+  if (Number.isNaN(syncedAt)) {
+    return Number.POSITIVE_INFINITY;
+  }
+
+  return Math.max(0, Date.now() - syncedAt);
+}
+
+function buildCacheState(entity, metadata, cachedCount) {
+  const ttlMs = CACHE_TTLS_MS[entity] ?? 5 * 60 * 1000;
+  const ageMs = getCacheAgeMs(metadata?.lastSyncedAt);
+  const hasCache = cachedCount > 0;
+  const isStale = !hasCache || ageMs > ttlMs || metadata?.stale === true;
+
+  return {
+    entity,
+    ttlMs,
+    ageMs,
+    hasCache,
+    isStale,
+    metadata,
+  };
+}
+
+async function fetchAndPersistCollection({
+  entity,
+  path,
+  query,
+  saveRows,
+  background = false,
+}) {
+  const attemptAt = new Date().toISOString();
+  await markCollectionSyncAttempt(entity, {
+    lastFetchAttemptAt: attemptAt,
+    source: background ? "background-refresh" : "remote-request",
+    stale: true,
+    lastError: null,
+  });
+
+  try {
+    const response = await request(withQuery(path, query));
+    const rows = Array.isArray(response) ? response : [];
+    await saveRows(rows);
+    await markCollectionSynced(entity, {
+      lastSyncedAt: new Date().toISOString(),
+      lastFetchAttemptAt: attemptAt,
+      source: background ? "background-refresh" : "remote",
+      stale: false,
+      lastError: null,
+    });
+    return rows;
+  } catch (error) {
+    await markCollectionSyncAttempt(entity, {
+      lastFetchAttemptAt: attemptAt,
+      source: background ? "background-refresh" : "remote-request",
+      stale: true,
+      lastError: error?.message || "请求失败",
+    });
+    throw error;
+  }
+}
+
+async function getCachedFirstCollection({
+  entity,
+  query,
+  getCachedRows,
+  path,
+  saveRows,
+}) {
+  const [cachedRows, metadata] = await Promise.all([
+    getCachedRows(query),
+    getCollectionSyncMetadata(entity),
+  ]);
+  const cacheState = buildCacheState(entity, metadata, cachedRows.length);
+
+  if (cacheState.hasCache) {
+    if (cacheState.isStale) {
+      const online = await checkOnline();
+      if (online) {
+        void fetchAndPersistCollection({
+          entity,
+          path,
+          query,
+          saveRows,
+          background: true,
+        }).catch((error) => {
+          console.warn(`[api] background refresh failed for ${entity}`, error);
+        });
+      }
+    }
+
+    return {
+      rows: cachedRows,
+      cache: {
+        ...cacheState,
+        source: "cache",
+        refreshStartedAt: cacheState.isStale ? new Date().toISOString() : null,
+      },
+    };
+  }
+
+  try {
+    const rows = await fetchAndPersistCollection({
+      entity,
+      path,
+      query,
+      saveRows,
+    });
+    const nextMetadata = await getCollectionSyncMetadata(entity);
+    return {
+      rows,
+      cache: {
+        ...buildCacheState(entity, nextMetadata, rows.length),
+        source: "remote",
+        refreshStartedAt: null,
+      },
+    };
+  } catch (error) {
+    if (isNetworkError(error)) {
+      return {
+        rows: cachedRows,
+        cache: {
+          ...cacheState,
+          source: cacheState.hasCache ? "cache-network-fallback" : "empty-network-fallback",
+          refreshStartedAt: null,
+          lastError: error.message,
+        },
+      };
+    }
+    throw error;
+  }
+}
+
 async function queueReviewStateSync(problemId, payload) {
   await addToSyncQueue({
     type: "saveReviewState",
@@ -106,7 +282,44 @@ export const api = {
   },
   getBaseUrl: () => apiBase,
   getOwner: () => request("/api/me"),
-  getAccounts: () => request("/api/accounts"),
+  getAccounts: async () => {
+    const cached = await getCachedAccounts();
+    if (cached.length > 0) {
+      void (async () => {
+        try {
+          const online = await checkOnline();
+          if (!online) {
+            return;
+          }
+          await markCollectionSyncAttempt("accounts", {
+            source: "background-refresh",
+            stale: false,
+            lastError: null,
+          });
+          const remote = await request("/api/accounts");
+          const rows = Array.isArray(remote) ? remote : [];
+          await saveCachedAccounts(rows);
+          await markCollectionSynced("accounts", {
+            source: "background-refresh",
+            stale: false,
+          });
+        } catch (error) {
+          await markCollectionSyncAttempt("accounts", {
+            source: "background-refresh",
+            stale: true,
+            lastError: error?.message || "请求失败",
+          });
+        }
+      })();
+      return cached;
+    }
+
+    const accounts = await request("/api/accounts");
+    const rows = Array.isArray(accounts) ? accounts : [];
+    await saveCachedAccounts(rows);
+    await markCollectionSynced("accounts", { source: "remote", stale: false });
+    return rows;
+  },
   createAccount: (platform, handle) =>
     request(`/api/accounts/${platform}`, {
       method: "PUT",
@@ -146,10 +359,19 @@ export const api = {
         body: JSON.stringify(normalizedPayload),
       });
       await saveCachedReviewState(saved);
+      await markCollectionSynced("reviewStates", {
+        source: "remote",
+        stale: false,
+      });
       return saved;
     } catch (error) {
       if (isNetworkError(error)) {
         await queueReviewStateSync(normalizedProblemId, normalizedPayload);
+        await markCollectionSyncAttempt("reviewStates", {
+          source: "queue-fallback",
+          stale: true,
+          lastError: error.message,
+        });
         return localState;
       }
       throw error;
@@ -177,6 +399,7 @@ export const api = {
       method: "POST",
       body: JSON.stringify({}),
     }),
+  getServiceCapabilities: () => detectServiceCapabilities(),
   getProblems: async (query = {}) => {
     const cached = await getCachedProblems(query);
     if (cached.length > 0) {
@@ -196,25 +419,59 @@ export const api = {
       throw error;
     }
   },
-  getSubmissions: async (query = {}) => {
-    const cached = await getCachedSubmissions(query);
-    if (cached.length > 0) {
-      return cached;
-    }
-
-    try {
-      const submissions = await request(withQuery("/api/submissions", query));
-      if (Array.isArray(submissions) && submissions.length > 0) {
-        await saveCachedSubmissions(submissions);
-      }
-      return Array.isArray(submissions) ? submissions : [];
-    } catch (error) {
-      if (isNetworkError(error)) {
-        return cached;
-      }
-      throw error;
-    }
+  getSubmissions: async (query = {}, options = {}) => {
+    const result = await getCachedFirstCollection({
+      entity: "submissions",
+      query,
+      getCachedRows: getCachedSubmissions,
+      path: "/api/submissions",
+      saveRows: saveCachedSubmissions,
+    });
+    return options.includeCacheInfo ? result : result.rows;
   },
 };
 
 setSyncBaseUrl(apiBase);
+
+async function detectServiceCapabilities() {
+  try {
+    const payload = await request("/api/system/capabilities");
+    return normalizeServiceCapabilities(payload, "capabilities-endpoint");
+  } catch (error) {
+    if (!isNotFoundError(error)) {
+      throw error;
+    }
+  }
+
+  const checks = await Promise.allSettled([
+    request("/api/review/items/1"),
+    request("/api/settings/ai"),
+    request("/api/settings/data/export-diagnostics", {
+      method: "POST",
+      body: JSON.stringify({ dryRun: true }),
+    }),
+    request("/api/me"),
+  ]);
+
+  const [reviewStateResult, aiSettingsResult, diagnosticsResult, meResult] = checks;
+  const reviewStateSupported =
+    reviewStateResult.status === "fulfilled" || !isNotFoundError(reviewStateResult.reason);
+  const aiSettingsSupported =
+    aiSettingsResult.status === "fulfilled" || !isNotFoundError(aiSettingsResult.reason);
+  const diagnosticsExportSupported =
+    diagnosticsResult.status === "fulfilled" || !isNotFoundError(diagnosticsResult.reason);
+  const serviceVersion =
+    meResult.status === "fulfilled"
+      ? meResult.value?.app?.version || DEFAULT_SERVICE_CAPABILITIES.serviceVersion
+      : DEFAULT_SERVICE_CAPABILITIES.serviceVersion;
+
+  return normalizeServiceCapabilities(
+    {
+      reviewStateSupported,
+      aiSettingsSupported,
+      diagnosticsExportSupported,
+      serviceVersion,
+    },
+    "fallback-probe"
+  );
+}

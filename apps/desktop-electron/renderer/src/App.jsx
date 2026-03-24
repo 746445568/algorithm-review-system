@@ -10,7 +10,6 @@ import { useOfflineData } from "./hooks/useOfflineData.js";
 function resolveEffectiveTheme(mode) {
   if (mode === "dark") return "dark";
   if (mode === "light") return "light";
-  // follow-system
   return window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
 }
 
@@ -23,7 +22,6 @@ function applyThemeToDOM(mode) {
   }
 }
 
-// Apply immediately at module load to prevent flash
 applyThemeToDOM(localStorage.getItem("ojreview-theme") ?? "follow-system");
 
 const navItems = [
@@ -32,6 +30,17 @@ const navItems = [
   { id: "review", label: "错题复习", kicker: "工作流" },
   { id: "settings", label: "设置", kicker: "配置" },
 ];
+
+const unsupportedServiceMessage =
+  "当前服务版本过旧，请重新构建 apps/server，以启用桌面端所需的新接口。";
+
+const initialServiceCapabilities = {
+  reviewStateSupported: false,
+  aiSettingsSupported: false,
+  diagnosticsExportSupported: false,
+  serviceVersion: "unknown",
+  detectionSource: "unknown",
+};
 
 const initialStatus = {
   state: "starting",
@@ -51,6 +60,7 @@ export function App() {
     appPath: "",
     isPackaged: false,
   });
+  const [serviceCapabilities, setServiceCapabilities] = useState(initialServiceCapabilities);
   const { isOnline, isSyncing, lastSyncAt, sync } = useOfflineData();
   const [themeMode, setThemeMode] = useState(
     () => localStorage.getItem("ojreview-theme") ?? "follow-system"
@@ -62,12 +72,10 @@ export function App() {
     applyThemeToDOM(mode);
   }, []);
 
-  // Re-apply theme on every render cycle to guard against external resets
   useEffect(() => {
     applyThemeToDOM(themeMode);
   }, [themeMode]);
 
-  // Listen for system theme changes when in follow-system mode
   useEffect(() => {
     if (themeMode !== "follow-system") return;
     const mql = window.matchMedia("(prefers-color-scheme: dark)");
@@ -139,11 +147,64 @@ export function App() {
     };
   }, [sync]);
 
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadServiceCapabilities() {
+      if (serviceStatus.state !== "healthy") {
+        if (!cancelled) {
+          setServiceCapabilities(initialServiceCapabilities);
+        }
+        return;
+      }
+
+      try {
+        const nextCapabilities = await api.getServiceCapabilities();
+        if (!cancelled) {
+          setServiceCapabilities(nextCapabilities);
+        }
+      } catch (error) {
+        if (!cancelled) {
+          setServiceCapabilities({
+            ...initialServiceCapabilities,
+            detectionSource: "unavailable",
+          });
+          setServiceStatus((current) => ({
+            ...current,
+            message: `${current.message}; capability check failed: ${error.message}`,
+          }));
+        }
+      }
+    }
+
+    void loadServiceCapabilities();
+    return () => {
+      cancelled = true;
+    };
+  }, [serviceStatus.state, serviceStatus.url]);
+
+  const hasLegacyServiceMismatch =
+    serviceStatus.state === "healthy" &&
+    (!serviceCapabilities.reviewStateSupported ||
+      !serviceCapabilities.aiSettingsSupported ||
+      !serviceCapabilities.diagnosticsExportSupported);
+
+  const unsupportedFeatures = [
+    !serviceCapabilities.reviewStateSupported ? "复习状态" : null,
+    !serviceCapabilities.aiSettingsSupported ? "AI 设置" : null,
+    !serviceCapabilities.diagnosticsExportSupported ? "诊断导出" : null,
+  ].filter(Boolean);
+  const serviceVersionLabel = serviceCapabilities.serviceVersion || "unknown";
+
   const activeNav = useMemo(
     () => navItems.find((item) => item.id === page) ?? navItems[0],
     [page]
   );
   const lastSyncLabel = lastSyncAt ? formatDate(lastSyncAt.toISOString()) : "尚未同步";
+  const staleCollections = Object.entries(cacheStatus)
+    .filter(([, value]) => value?.stale)
+    .map(([key]) => key);
 
   return (
     <div className="app-shell">
@@ -200,7 +261,7 @@ export function App() {
 
           <div className="header-actions">
             <span className={`service-pill ${isOnline ? "healthy" : "error"}`}>
-              {isOnline ? "在线" : "离线"}
+              {connectivity === "service-unreachable" ? "服务不可达" : isOnline ? "在线" : "离线"}
             </span>
             <button
               type="button"
@@ -210,9 +271,7 @@ export function App() {
             >
               {isSyncing ? "同步中..." : "立即同步"}
             </button>
-            <span className={`service-pill ${serviceStatus.state}`}>
-              {serviceStatus.state}
-            </span>
+            <span className={`service-pill ${serviceStatus.state}`}>{serviceStatus.state}</span>
             <button
               type="button"
               className="ghost-button"
@@ -230,12 +289,44 @@ export function App() {
               来源: {serviceStatus.source}
               {serviceStatus.pid ? ` / 进程 ${serviceStatus.pid}` : ""}
               {` / 上次同步 ${lastSyncLabel}`}
+              {staleCollections.length > 0 ? ` / 陈旧缓存 ${staleCollections.join("、")}` : " / 缓存新鲜"}
             </p>
+            <p>{statusMessage}</p>
+          </div>
+          <div className="banner-meta">
+            <span className="meta-pill">待同步操作 {syncQueue.length}</span>
+            <span className="meta-pill">
+              题库 {cacheStatus.problems?.lastSyncedAt ? formatDate(cacheStatus.problems.lastSyncedAt) : "未同步"}
+            </span>
+            <span className="meta-pill">
+              提交 {cacheStatus.submissions?.lastSyncedAt ? formatDate(cacheStatus.submissions.lastSyncedAt) : "未同步"}
+            </span>
           </div>
         </section>
 
+        {hasLegacyServiceMismatch ? (
+          <section className="service-warning-banner" role="alert">
+            <div>
+              <strong>{unsupportedServiceMessage}</strong>
+              <p>
+                当前服务版本: {serviceVersionLabel}
+                {unsupportedFeatures.length > 0 ? ` / 缺失能力: ${unsupportedFeatures.join("、")}` : ""}
+                {serviceCapabilities.detectionSource !== "unknown"
+                  ? ` / 检测方式: ${serviceCapabilities.detectionSource}`
+                  : ""}
+              </p>
+            </div>
+          </section>
+        ) : null}
+
         {page === "dashboard" ? (
-          <DashboardPage serviceStatus={serviceStatus} runtimeInfo={runtimeInfo} />
+          <DashboardPage
+            serviceStatus={serviceStatus}
+            runtimeInfo={runtimeInfo}
+            cacheStatus={cacheStatus}
+            connectivity={connectivity}
+            syncQueue={syncQueue}
+          />
         ) : null}
 
         {page === "accounts" ? (
@@ -243,13 +334,18 @@ export function App() {
         ) : null}
 
         {page === "review" ? (
-          <ReviewPage serviceStatus={serviceStatus} runtimeInfo={runtimeInfo} />
+          <ReviewPage
+            serviceStatus={serviceStatus}
+            runtimeInfo={runtimeInfo}
+            serviceCapabilities={serviceCapabilities}
+          />
         ) : null}
 
         {page === "settings" ? (
           <SettingsPage
             runtimeInfo={runtimeInfo}
             serviceStatus={serviceStatus}
+            serviceCapabilities={serviceCapabilities}
             themeMode={themeMode}
             onThemeChange={handleThemeChange}
           />

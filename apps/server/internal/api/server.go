@@ -48,6 +48,7 @@ func (s *Server) Adapters() map[models.Platform]judges.Adapter { return s.adapte
 
 func (s *Server) routes() {
 	s.mux.HandleFunc("GET /health", s.handleHealth)
+	s.mux.HandleFunc("GET /api/system/capabilities", s.handleCapabilities)
 	s.mux.HandleFunc("GET /api/me", s.handleMe)
 	s.mux.HandleFunc("GET /api/accounts", s.handleAccounts)
 	s.mux.HandleFunc("PUT /api/accounts/{platform}", s.handleUpsertAccount)
@@ -74,6 +75,15 @@ func (s *Server) handleHealth(w http.ResponseWriter, _ *http.Request) {
 	writeJSON(w, http.StatusOK, map[string]any{
 		"status":    "ok",
 		"timestamp": time.Now().UTC().Format(time.RFC3339),
+	})
+}
+
+func (s *Server) handleCapabilities(w http.ResponseWriter, _ *http.Request) {
+	writeJSON(w, http.StatusOK, map[string]any{
+		"reviewStateSupported":       true,
+		"aiSettingsSupported":        true,
+		"diagnosticsExportSupported": true,
+		"serviceVersion":             "0.1.0",
 	})
 }
 
