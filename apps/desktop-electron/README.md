@@ -74,3 +74,16 @@ npm run build
 ```
 
 渲染层输出目录为 `apps/desktop-electron/renderer/dist`。
+
+## 发布要求（必须）
+
+每次发版前必须重新构建最新 `ojreviewd`，并替换 `apps/desktop-electron/bin/ojreviewd(.exe)`；严禁复用旧二进制。
+
+推荐流程：
+
+```powershell
+pwsh ./apps/server/scripts/build-service.ps1
+.\apps\desktop-electron\prepare-service.ps1 -SourcePath .\apps\server\bin\ojreviewd.exe
+```
+
+`prepare-service.ps1` 会校验服务版本与桌面端主版本是否一致，不一致会直接失败并给出修复提示。

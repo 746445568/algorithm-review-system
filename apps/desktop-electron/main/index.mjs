@@ -1,4 +1,4 @@
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
 import { accessSync, constants } from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -29,6 +29,24 @@ app.commandLine.appendSwitch("disable-gpu-sandbox");
 app.setName("OJReviewDesktop");
 app.disableHardwareAcceleration();
 
+function parseMajorVersion(versionText) {
+  if (!versionText || typeof versionText !== "string") {
+    return null;
+  }
+  const normalized = versionText.trim().replace(/^v/i, "");
+  const majorPart = normalized.split(".")[0];
+  const major = Number.parseInt(majorPart, 10);
+  return Number.isNaN(major) ? null : major;
+}
+
+function formatVersionMismatchHint(expectedMajor, actualVersion, source) {
+  return [
+    `service version check failed before startup (${source})`,
+    `desktop requires service major version ${expectedMajor}, but got ${actualVersion ?? "unknown"}`,
+    "Please rebuild apps/server/bin/ojreviewd with build metadata and refresh apps/desktop-electron/bin/ojreviewd(.exe).",
+  ].join("; ");
+}
+
 class ServiceManager {
   constructor() {
     this.child = null;
@@ -46,6 +64,14 @@ class ServiceManager {
     return process.env.OJREVIEW_APP_DIR ?? path.join(app.getPath("appData"), "OJReviewDesktop");
   }
 
+  getExpectedServiceMajor() {
+    const envMajor = parseMajorVersion(process.env.OJREVIEW_SERVICE_MAJOR ?? "");
+    if (envMajor !== null) {
+      return envMajor;
+    }
+    return parseMajorVersion(app.getVersion());
+  }
+
   getStatus() {
     return { ...this.status };
   }
@@ -58,7 +84,19 @@ class ServiceManager {
       message: "starting local service",
     });
 
-    if (await this.isHealthy()) {
+    const existingHealth = await this.fetchHealthPayload();
+    if (existingHealth?.status === "ok") {
+      const mismatchMessage = this.checkVersionCompatibility(existingHealth.version, "external-running-service");
+      if (mismatchMessage) {
+        this.updateStatus({
+          state: "error",
+          runtimeDir,
+          source: "external",
+          message: mismatchMessage,
+        });
+        return this.getStatus();
+      }
+
       this.updateStatus({
         state: "healthy",
         runtimeDir,
@@ -75,6 +113,17 @@ class ServiceManager {
         runtimeDir,
         source: "missing",
         message: "could not find ojreviewd binary or a Go dev fallback",
+      });
+      return this.getStatus();
+    }
+
+    const preflightError = this.preflightVersionCheck(launch);
+    if (preflightError) {
+      this.updateStatus({
+        state: "error",
+        runtimeDir,
+        source: launch.source,
+        message: preflightError,
       });
       return this.getStatus();
     }
@@ -120,14 +169,26 @@ class ServiceManager {
       });
     });
 
-    const healthy = await this.waitForHealth(15000);
-    if (!healthy) {
+    const healthPayload = await this.waitForHealth(15000);
+    if (!healthPayload) {
       await this.stop();
       this.updateStatus({
         state: "error",
         runtimeDir,
         source: launch.source,
         message: "local service did not become healthy within 15 seconds",
+      });
+      return this.getStatus();
+    }
+
+    const mismatchMessage = this.checkVersionCompatibility(healthPayload.version, launch.source);
+    if (mismatchMessage) {
+      await this.stop();
+      this.updateStatus({
+        state: "error",
+        runtimeDir,
+        source: launch.source,
+        message: mismatchMessage,
       });
       return this.getStatus();
     }
@@ -216,6 +277,11 @@ class ServiceManager {
         args: [],
         cwd: path.dirname(explicitPath),
         source: "env",
+        versionProbe: {
+          command: explicitPath,
+          args: ["--version-json"],
+          cwd: path.dirname(explicitPath),
+        },
       };
     }
 
@@ -235,6 +301,11 @@ class ServiceManager {
           args: [],
           cwd: path.dirname(candidate),
           source: "binary",
+          versionProbe: {
+            command: candidate,
+            args: ["--version-json"],
+            cwd: path.dirname(candidate),
+          },
         };
       } catch {
         // Keep scanning candidates.
@@ -247,34 +318,85 @@ class ServiceManager {
         args: ["run", "./cmd/ojreviewd"],
         cwd: serverDir,
         source: "go-run",
+        versionProbe: {
+          command: "go",
+          args: ["run", "./cmd/ojreviewd", "--version-json"],
+          cwd: serverDir,
+        },
       };
     }
 
     return null;
   }
 
-  async isHealthy() {
+  preflightVersionCheck(launch) {
+    if (!launch?.versionProbe) {
+      return null;
+    }
+
+    const probe = spawnSync(launch.versionProbe.command, launch.versionProbe.args, {
+      cwd: launch.versionProbe.cwd,
+      encoding: "utf-8",
+      timeout: 10000,
+      windowsHide: true,
+      env: process.env,
+    });
+
+    if (probe.error || probe.status !== 0) {
+      const reason = probe.error ? String(probe.error) : (probe.stderr || "unknown error").trim();
+      return `failed to read service version before startup (${launch.source}): ${reason}`;
+    }
+
+    let payload;
+    try {
+      payload = JSON.parse((probe.stdout || "").trim());
+    } catch {
+      return `failed to parse service version output before startup (${launch.source})`;
+    }
+
+    return this.checkVersionCompatibility(payload?.version, launch.source);
+  }
+
+  checkVersionCompatibility(serviceVersion, source) {
+    const expectedMajor = this.getExpectedServiceMajor();
+    if (expectedMajor === null) {
+      return null;
+    }
+    const serviceMajor = parseMajorVersion(serviceVersion);
+    if (serviceMajor === null || serviceMajor !== expectedMajor) {
+      return formatVersionMismatchHint(expectedMajor, serviceVersion, source);
+    }
+    return null;
+  }
+
+  async fetchHealthPayload() {
     try {
       const response = await fetch(`${SERVICE_URL}/health`);
       if (!response.ok) {
-        return false;
+        return null;
       }
       const payload = await response.json();
-      return payload?.status === "ok";
+      return payload ?? null;
     } catch {
-      return false;
+      return null;
     }
+  }
+
+  async isHealthy() {
+    const payload = await this.fetchHealthPayload();
+    return payload?.status === "ok";
   }
 
   async waitForHealth(timeoutMs) {
     const startedAt = Date.now();
     while (Date.now() - startedAt < timeoutMs) {
-      if (await this.isHealthy()) {
-        return true;
+      const payload = await this.fetchHealthPayload();
+      if (payload?.status === "ok") {
+        return payload;
       }
       await new Promise((resolve) => setTimeout(resolve, 300));
     }
-    return false;
+    return null;
   }
 
   updateStatus(nextPartial) {
