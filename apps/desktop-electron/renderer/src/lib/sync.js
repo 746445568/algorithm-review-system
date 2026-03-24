@@ -10,72 +10,15 @@ import {
   updateSyncQueueOperation,
 } from "./db.js";
 
-const DEFAULT_API_BASE = "http://127.0.0.1:38473";
-const REQUEST_TIMEOUT_MS = 10000;
+import { DEFAULT_BASE_URL, buildUrl, normalizeBaseUrl, requestJson } from "./http.js";
+
 const DEFAULT_PAGE_SIZE = 200;
 
-let apiBase = DEFAULT_API_BASE;
+let apiBase = DEFAULT_BASE_URL;
 let autoSyncTimerId = null;
 
-function normalizeApiBase(nextBase) {
-  if (!nextBase) {
-    return DEFAULT_API_BASE;
-  }
-
-  return nextBase.endsWith("/") ? nextBase.slice(0, -1) : nextBase;
-}
-
-function buildUrl(path, query = {}) {
-  const url = new URL(path, apiBase);
-  for (const [key, value] of Object.entries(query)) {
-    if (value !== undefined && value !== null && value !== "") {
-      url.searchParams.set(key, String(value));
-    }
-  }
-  return url.toString();
-}
-
-async function request(pathOrUrl, options = {}) {
-  const url = pathOrUrl.startsWith("http") ? pathOrUrl : `${apiBase}${pathOrUrl}`;
-  const timeoutController = new AbortController();
-  const timeoutId = window.setTimeout(() => timeoutController.abort(), REQUEST_TIMEOUT_MS);
-  const signal = options.signal
-    ? AbortSignal.any([options.signal, timeoutController.signal])
-    : timeoutController.signal;
-
-  let response;
-  try {
-    response = await fetch(url, {
-      headers: {
-        "Content-Type": "application/json",
-        ...(options.headers ?? {}),
-      },
-      ...options,
-      signal,
-    });
-  } catch (error) {
-    if (timeoutController.signal.aborted && !options.signal?.aborted) {
-      throw new Error(`request timed out after ${REQUEST_TIMEOUT_MS}ms`);
-    }
-    throw error;
-  } finally {
-    window.clearTimeout(timeoutId);
-  }
-
-  if (!response.ok) {
-    let message = `${response.status} ${response.statusText}`;
-    try {
-      const body = await response.json();
-      message = body.error ?? message;
-    } catch {}
-    throw new Error(message);
-  }
-
-  if (response.status === 204) {
-    return null;
-  }
-
-  return response.json();
+function request(pathOrUrl, options = {}) {
+  return requestJson(apiBase, pathOrUrl, options);
 }
 
 async function fetchPagedCollection(path, pageSize = DEFAULT_PAGE_SIZE) {
@@ -83,7 +26,7 @@ async function fetchPagedCollection(path, pageSize = DEFAULT_PAGE_SIZE) {
   let offset = 0;
 
   while (true) {
-    const page = await request(buildUrl(path, { limit: pageSize, offset }));
+    const page = await request(buildUrl(apiBase, path, { limit: pageSize, offset }));
     if (!Array.isArray(page) || page.length === 0) {
       break;
     }
@@ -136,7 +79,7 @@ async function syncCollection(entity, fetcher, saver) {
  * @param {string} nextBase
  */
 export function setSyncBaseUrl(nextBase) {
-  apiBase = normalizeApiBase(nextBase);
+  apiBase = normalizeBaseUrl(nextBase);
 }
 
 /**

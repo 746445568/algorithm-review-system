@@ -11,114 +11,10 @@ import {
   saveReviewState as saveCachedReviewState,
   saveSubmissions as saveCachedSubmissions,
 } from "./db.js";
-import { checkOnline, setSyncBaseUrl } from "./sync.js";
+import { DEFAULT_BASE_URL, buildUrl, isNetworkError, normalizeBaseUrl, requestJson } from "./http.js";
+import { isOnline as checkOnline, setSyncBaseUrl } from "./sync.js";
 
-const DEFAULT_API_BASE = "http://127.0.0.1:38473";
-const REQUEST_TIMEOUT_MS = 10000;
-const CACHE_TTLS_MS = {
-  problems: 5 * 60 * 1000,
-  submissions: 2 * 60 * 1000,
-  accounts: 10 * 60 * 1000,
-  reviewStates: 3 * 60 * 1000,
-};
-
-let apiBase = DEFAULT_API_BASE;
-
-const DEFAULT_SERVICE_CAPABILITIES = {
-  reviewStateSupported: false,
-  aiSettingsSupported: false,
-  diagnosticsExportSupported: false,
-  serviceVersion: "unknown",
-  detectionSource: "unknown",
-};
-
-function isNotFoundError(error) {
-  return /(^|\b)404(\b|\s)/.test(String(error?.message || ""));
-}
-
-function normalizeServiceCapabilities(payload, detectionSource = "api") {
-  return {
-    ...DEFAULT_SERVICE_CAPABILITIES,
-    reviewStateSupported: Boolean(payload?.reviewStateSupported),
-    aiSettingsSupported: Boolean(payload?.aiSettingsSupported),
-    diagnosticsExportSupported: Boolean(payload?.diagnosticsExportSupported),
-    serviceVersion:
-      typeof payload?.serviceVersion === "string" && payload.serviceVersion.trim()
-        ? payload.serviceVersion.trim()
-        : DEFAULT_SERVICE_CAPABILITIES.serviceVersion,
-    detectionSource,
-  };
-}
-
-function normalizeApiBase(nextBase) {
-  if (!nextBase) {
-    return DEFAULT_API_BASE;
-  }
-
-  return nextBase.endsWith("/") ? nextBase.slice(0, -1) : nextBase;
-}
-
-function withQuery(path, query = {}) {
-  const url = new URL(path, apiBase);
-  for (const [key, value] of Object.entries(query)) {
-    if (value !== undefined && value !== null && value !== "") {
-      url.searchParams.set(key, String(value));
-    }
-  }
-  return url.toString();
-}
-
-async function request(pathOrUrl, options = {}) {
-  const url = pathOrUrl.startsWith("http") ? pathOrUrl : `${apiBase}${pathOrUrl}`;
-  const timeoutController = new AbortController();
-  const timeoutId = window.setTimeout(() => timeoutController.abort(), REQUEST_TIMEOUT_MS);
-  const signal = options.signal
-    ? AbortSignal.any([options.signal, timeoutController.signal])
-    : timeoutController.signal;
-
-  let response;
-  try {
-    response = await fetch(url, {
-      headers: {
-        "Content-Type": "application/json",
-        ...(options.headers ?? {}),
-      },
-      ...options,
-      signal,
-    });
-  } catch (error) {
-    if (timeoutController.signal.aborted && !options.signal?.aborted) {
-      throw new Error(`request timed out after ${REQUEST_TIMEOUT_MS}ms`);
-    }
-    throw error;
-  } finally {
-    window.clearTimeout(timeoutId);
-  }
-
-  if (!response.ok) {
-    let message = `${response.status} ${response.statusText}`;
-    try {
-      const body = await response.json();
-      message = body.error ?? message;
-    } catch {}
-    throw new Error(message);
-  }
-
-  if (response.status === 204) {
-    return null;
-  }
-
-  return response.json();
-}
-
-function isNetworkError(error) {
-  const message = String(error?.message || "");
-  return (
-    message.includes("Failed to fetch") ||
-    message.includes("NetworkError") ||
-    message.includes("request timed out")
-  );
-}
+let apiBase = DEFAULT_BASE_URL;
 
 function normalizeReviewPayload(payload) {
   return {
@@ -275,9 +171,13 @@ async function queueReviewStateSync(problemId, payload) {
   });
 }
 
+function request(pathOrUrl, options = {}) {
+  return requestJson(apiBase, pathOrUrl, options);
+}
+
 export const api = {
   setBaseUrl: (nextBase) => {
-    apiBase = normalizeApiBase(nextBase);
+    apiBase = normalizeBaseUrl(nextBase);
     setSyncBaseUrl(apiBase);
   },
   getBaseUrl: () => apiBase,
@@ -407,7 +307,7 @@ export const api = {
     }
 
     try {
-      const problems = await request(withQuery("/api/problems", query));
+      const problems = await request(buildUrl(apiBase, "/api/problems", query));
       if (Array.isArray(problems) && problems.length > 0) {
         await saveCachedProblems(problems);
       }
@@ -419,15 +319,24 @@ export const api = {
       throw error;
     }
   },
-  getSubmissions: async (query = {}, options = {}) => {
-    const result = await getCachedFirstCollection({
-      entity: "submissions",
-      query,
-      getCachedRows: getCachedSubmissions,
-      path: "/api/submissions",
-      saveRows: saveCachedSubmissions,
-    });
-    return options.includeCacheInfo ? result : result.rows;
+  getSubmissions: async (query = {}) => {
+    const cached = await getCachedSubmissions(query);
+    if (cached.length > 0) {
+      return cached;
+    }
+
+    try {
+      const submissions = await request(buildUrl(apiBase, "/api/submissions", query));
+      if (Array.isArray(submissions) && submissions.length > 0) {
+        await saveCachedSubmissions(submissions);
+      }
+      return Array.isArray(submissions) ? submissions : [];
+    } catch (error) {
+      if (isNetworkError(error)) {
+        return cached;
+      }
+      throw error;
+    }
   },
 };
 
