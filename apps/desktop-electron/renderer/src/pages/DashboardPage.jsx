@@ -2,7 +2,14 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "../lib/api.js";
 import { formatDate, platformLabel, statusLabel } from "../lib/format.js";
 
-export function DashboardPage({ serviceStatus, runtimeInfo }) {
+function getFreshnessLabel(meta) {
+  if (!meta?.lastSyncedAt) {
+    return "未同步";
+  }
+  return meta.stale ? "缓存可能陈旧" : "已更新";
+}
+
+export function DashboardPage({ serviceStatus, runtimeInfo, cacheStatus, connectivity, syncQueue }) {
   const [data, setData] = useState({
     owner: null,
     accounts: [],
@@ -88,36 +95,40 @@ export function DashboardPage({ serviceStatus, runtimeInfo }) {
             <strong>{statusLabel(serviceStatus.state)}</strong>
           </div>
           <div>
-            <span>绑定账号</span>
-            <strong>{data.accounts.length}</strong>
+            <span>网络判定</span>
+            <strong>{connectivity === "service-unreachable" ? "服务不可达" : connectivity === "offline" ? "离线" : "在线"}</strong>
           </div>
           <div>
             <span>待复习</span>
             <strong>{data.reviewSummary?.dueReviewCount ?? 0}</strong>
           </div>
           <div>
-            <span>已排期</span>
-            <strong>{data.reviewSummary?.scheduledReviewCount ?? 0}</strong>
+            <span>待同步操作</span>
+            <strong>{syncQueue.length}</strong>
           </div>
         </div>
       </section>
 
-      <section className="panel stats-strip">
+      <section className="panel stats-strip full-span">
         <article>
-          <span>总提交数</span>
-          <strong>{data.reviewSummary?.totalSubmissions ?? 0}</strong>
+          <span>题库缓存</span>
+          <strong>{getFreshnessLabel(cacheStatus.problems)}</strong>
+          <small>{formatDate(cacheStatus.problems?.lastSyncedAt)}</small>
         </article>
         <article>
-          <span>待复习</span>
-          <strong>{reviewCounts.TODO ?? 0}</strong>
+          <span>提交缓存</span>
+          <strong>{getFreshnessLabel(cacheStatus.submissions)}</strong>
+          <small>{formatDate(cacheStatus.submissions?.lastSyncedAt)}</small>
         </article>
         <article>
-          <span>复习中</span>
-          <strong>{reviewCounts.REVIEWING ?? 0}</strong>
+          <span>账号缓存</span>
+          <strong>{getFreshnessLabel(cacheStatus.accounts)}</strong>
+          <small>{formatDate(cacheStatus.accounts?.lastSyncedAt)}</small>
         </article>
         <article>
-          <span>已完成</span>
-          <strong>{reviewCounts.DONE ?? 0}</strong>
+          <span>复习状态缓存</span>
+          <strong>{getFreshnessLabel(cacheStatus.reviewStates)}</strong>
+          <small>{formatDate(cacheStatus.reviewStates?.lastSyncedAt)}</small>
         </article>
       </section>
 
@@ -134,9 +145,7 @@ export function DashboardPage({ serviceStatus, runtimeInfo }) {
           </button>
         </div>
         {serviceUnavailable ? (
-          <p className="muted">
-            等待本地服务 {runtimeInfo.serviceUrl || serviceStatus.url} 就绪。
-          </p>
+          <p className="muted">等待本地服务 {runtimeInfo.serviceUrl || serviceStatus.url} 就绪。</p>
         ) : null}
         {loading ? <p className="muted">正在加载仪表盘数据...</p> : null}
         {error ? <p className="error-text">{error}</p> : null}
@@ -153,6 +162,31 @@ export function DashboardPage({ serviceStatus, runtimeInfo }) {
                 <div className="meta-pill">
                   {statusLabel(account.status)}
                   <span>{formatDate(account.lastSyncedAt)}</span>
+                </div>
+              </article>
+            ))
+          )}
+        </div>
+      </section>
+
+      <section className="panel">
+        <div className="panel-header">
+          <h3>离线可预期性</h3>
+          <span className="caption">缓存与重试状态</span>
+        </div>
+        <div className="stack-list">
+          {syncQueue.length === 0 ? (
+            <p className="muted">同步队列为空，没有待重试的离线写操作。</p>
+          ) : (
+            syncQueue.map((item) => (
+              <article key={item.id} className="inline-card">
+                <div>
+                  <strong>{item.type || "unknown"}</strong>
+                  <p>{item.path}</p>
+                </div>
+                <div className="meta-pill">
+                  重试 {item.retryCount ?? 0} 次
+                  <span>{item.lastError || "等待发送"}</span>
                 </div>
               </article>
             ))
@@ -273,9 +307,7 @@ export function DashboardPage({ serviceStatus, runtimeInfo }) {
             <p>
               拉取 {latestTask.fetchedCount} / 写入 {latestTask.insertedCount}
             </p>
-            {latestTask.errorMessage ? (
-              <p className="error-text">{latestTask.errorMessage}</p>
-            ) : null}
+            {latestTask.errorMessage ? <p className="error-text">{latestTask.errorMessage}</p> : null}
           </div>
         ) : (
           <p className="muted">尚无同步任务。</p>
@@ -290,9 +322,7 @@ export function DashboardPage({ serviceStatus, runtimeInfo }) {
         <div className="mini-stats">
           <article>
             <span>数据目录</span>
-            <strong title={runtimeInfo.runtimeDir || "等待中"}>
-              {runtimeInfo.runtimeDir || "等待中"}
-            </strong>
+            <strong title={runtimeInfo.runtimeDir || "等待中"}>{runtimeInfo.runtimeDir || "等待中"}</strong>
           </article>
           <article>
             <span>服务地址</span>

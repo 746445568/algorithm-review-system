@@ -1,10 +1,13 @@
 import {
   getSyncQueue,
+  markCollectionSyncAttempt,
+  markCollectionSynced,
   removeFromSyncQueue,
   saveAccounts,
   saveProblems,
   saveReviewState,
   saveSubmissions,
+  updateSyncQueueOperation,
 } from "./db.js";
 
 import { DEFAULT_BASE_URL, buildUrl, normalizeBaseUrl, requestJson } from "./http.js";
@@ -39,6 +42,37 @@ async function fetchPagedCollection(path, pageSize = DEFAULT_PAGE_SIZE) {
   return items;
 }
 
+async function syncCollection(entity, fetcher, saver) {
+  const attemptAt = new Date().toISOString();
+  await markCollectionSyncAttempt(entity, {
+    lastFetchAttemptAt: attemptAt,
+    source: "sync-all",
+    stale: true,
+    lastError: null,
+  });
+
+  try {
+    const rows = await fetcher();
+    await saver(rows);
+    await markCollectionSynced(entity, {
+      lastSyncedAt: new Date().toISOString(),
+      lastFetchAttemptAt: attemptAt,
+      source: "sync-all",
+      stale: false,
+      lastError: null,
+    });
+    return rows;
+  } catch (error) {
+    await markCollectionSyncAttempt(entity, {
+      lastFetchAttemptAt: attemptAt,
+      source: "sync-all",
+      stale: true,
+      lastError: error?.message || "同步失败",
+    });
+    throw error;
+  }
+}
+
 /**
  * Updates the backend base URL used by sync operations.
  *
@@ -66,15 +100,33 @@ export async function isOnline() {
   }
 }
 
+export function getConnectivityStatus() {
+  if (typeof navigator !== "undefined" && navigator.onLine === false) {
+    return Promise.resolve({ isOnline: false, reason: "offline" });
+  }
+
+  return request("/health", { method: "GET" })
+    .then(() => ({ isOnline: true, reason: "online" }))
+    .catch((error) => ({
+      isOnline: false,
+      reason: "service-unreachable",
+      errorMessage: error?.message || "服务不可达",
+    }));
+}
+
+
+export async function checkOnline() {
+  const result = await getConnectivityStatus();
+  return result.isOnline;
+}
+
 /**
  * Fetches all problems from backend and updates IndexedDB cache.
  *
  * @returns {Promise<Array<Record<string, any>>>}
  */
 export async function syncProblems() {
-  const problems = await fetchPagedCollection("/api/problems");
-  await saveProblems(problems);
-  return problems;
+  return syncCollection("problems", () => fetchPagedCollection("/api/problems"), saveProblems);
 }
 
 /**
@@ -83,9 +135,11 @@ export async function syncProblems() {
  * @returns {Promise<Array<Record<string, any>>>}
  */
 export async function syncSubmissions() {
-  const submissions = await fetchPagedCollection("/api/submissions");
-  await saveSubmissions(submissions);
-  return submissions;
+  return syncCollection(
+    "submissions",
+    () => fetchPagedCollection("/api/submissions"),
+    saveSubmissions
+  );
 }
 
 /**
@@ -94,10 +148,14 @@ export async function syncSubmissions() {
  * @returns {Promise<Array<Record<string, any>>>}
  */
 export async function syncAccounts() {
-  const accounts = await request("/api/accounts");
-  const rows = Array.isArray(accounts) ? accounts : [];
-  await saveAccounts(rows);
-  return rows;
+  return syncCollection(
+    "accounts",
+    async () => {
+      const accounts = await request("/api/accounts");
+      return Array.isArray(accounts) ? accounts : [];
+    },
+    saveAccounts
+  );
 }
 
 /**
@@ -106,38 +164,44 @@ export async function syncAccounts() {
  * @returns {Promise<Array<Record<string, any>>>}
  */
 export async function syncReviewStates() {
-  const summary = await request("/api/review/summary");
-  const summaries = Array.isArray(summary?.problemSummaries) ? summary.problemSummaries : [];
-  const saved = [];
+  return syncCollection(
+    "reviewStates",
+    async () => {
+      const summary = await request("/api/review/summary");
+      const summaries = Array.isArray(summary?.problemSummaries) ? summary.problemSummaries : [];
+      const saved = [];
 
-  for (const item of summaries) {
-    const problemId = Number(item.problemId);
-    if (!Number.isFinite(problemId) || problemId <= 0) {
-      continue;
-    }
+      for (const item of summaries) {
+        const problemId = Number(item.problemId);
+        if (!Number.isFinite(problemId) || problemId <= 0) {
+          continue;
+        }
 
-    try {
-      const fullState = await request(`/api/review/items/${problemId}`);
-      const state = await saveReviewState(fullState);
-      if (state) {
-        saved.push(state);
+        try {
+          const fullState = await request(`/api/review/items/${problemId}`);
+          const state = await saveReviewState(fullState);
+          if (state) {
+            saved.push(state);
+          }
+          continue;
+        } catch {}
+
+        const state = await saveReviewState({
+          problemId,
+          status: item.reviewStatus || "TODO",
+          notes: "",
+          nextReviewAt: item.nextReviewAt || null,
+          lastUpdatedAt: item.lastReviewUpdatedAt || new Date().toISOString(),
+        });
+        if (state) {
+          saved.push(state);
+        }
       }
-      continue;
-    } catch {}
 
-    const state = await saveReviewState({
-      problemId,
-      status: item.reviewStatus || "TODO",
-      notes: "",
-      nextReviewAt: item.nextReviewAt || null,
-      lastUpdatedAt: item.lastReviewUpdatedAt || new Date().toISOString(),
-    });
-    if (state) {
-      saved.push(state);
-    }
-  }
-
-  return saved;
+      return saved;
+    },
+    async () => {}
+  );
 }
 
 /**
@@ -146,10 +210,11 @@ export async function syncReviewStates() {
  * @returns {Promise<Record<string, any>>}
  */
 export async function syncAll() {
-  const online = await isOnline();
-  if (!online) {
+  const connectivity = await getConnectivityStatus();
+  if (!connectivity.isOnline) {
     return {
       isOnline: false,
+      reason: connectivity.reason,
       problems: [],
       submissions: [],
       accounts: [],
@@ -166,6 +231,7 @@ export async function syncAll() {
 
   return {
     isOnline: true,
+    reason: connectivity.reason,
     problems,
     submissions,
     accounts,
@@ -187,6 +253,10 @@ async function processQueueOperation(operation) {
 
   if (operation.type === "saveReviewState" && result?.problemId) {
     await saveReviewState(result);
+    await markCollectionSynced("reviewStates", {
+      source: "queue-flush",
+      stale: false,
+    });
   }
 
   return result;
@@ -198,10 +268,11 @@ async function processQueueOperation(operation) {
  * @returns {Promise<Record<string, any>>}
  */
 export async function processSyncQueue() {
-  const online = await isOnline();
-  if (!online) {
+  const connectivity = await getConnectivityStatus();
+  if (!connectivity.isOnline) {
     return {
       isOnline: false,
+      reason: connectivity.reason,
       processedCount: 0,
       failedCount: 0,
     };
@@ -216,13 +287,19 @@ export async function processSyncQueue() {
       await processQueueOperation(operation);
       await removeFromSyncQueue(operation.id);
       processedCount += 1;
-    } catch {
+    } catch (error) {
       failedCount += 1;
+      await updateSyncQueueOperation(operation.id, {
+        retryCount: Number(operation?.retryCount || 0) + 1,
+        lastTriedAt: new Date().toISOString(),
+        lastError: error?.message || "同步失败",
+      });
     }
   }
 
   return {
     isOnline: true,
+    reason: connectivity.reason,
     processedCount,
     failedCount,
   };
