@@ -2,11 +2,9 @@
    方案 A「清冷蓝调」— 与 Web 版统一的蓝色主色调
    ═══════════════════════════════════════════════ */
 
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,500;0,9..40,700;1,9..40,400&display=swap');
-
 :root {
   color-scheme: light;
-  font-family: "DM Sans", "Noto Sans SC", "Microsoft YaHei", "PingFang SC", "Segoe UI Variable Text", sans-serif;
+  font-family: "Microsoft YaHei", "PingFang SC", "Noto Sans SC", "Segoe UI Variable Text", sans-serif;
   background: #f8fafc;
   color: #0f172a;
   --bg: #f8fafc;
