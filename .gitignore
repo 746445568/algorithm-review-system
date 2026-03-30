@@ -14,4 +14,4 @@ build/
 logs/
 .vscode/
 .idea/
-.claude/
+.claude/.superpowers/
