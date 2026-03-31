@@ -61,7 +61,7 @@ function Toast({ message, isError, onDone }) {
     const t = setTimeout(onDone, 2000);
     return () => clearTimeout(t);
   }, [onDone]);
-  return <div className={`ap-toast ${isError ? "ap-toast--error" : ""}`}>{message}</div>;
+  return <div className={`an-toast ${isError ? "an-toast--error" : ""}`}>{message}</div>;
 }
 
 // ─── Problem Search Selectors ────────────────────────────────────────────────
@@ -89,18 +89,18 @@ function ProblemSearchSelector({ value, onChange, problems }) {
   const selectedProblem = problems.find((p) => p.problemId === value);
 
   return (
-    <div className="ap-problem-selector" ref={wrapperRef}>
+    <div className="an-problem-selector" ref={wrapperRef}>
       <div
-        className="ap-selector-trigger"
+        className="an-selector-trigger"
         onClick={() => setIsOpen(!isOpen)}
       >
         {selectedProblem ? (
-          <span className="ap-selected-label">
-            <span className="ap-platform-badge">{selectedProblem.platform}</span>
+          <span className="an-selected-label">
+            <span className="an-platform-badge">{selectedProblem.platform}</span>
             {selectedProblem.title}
           </span>
         ) : (
-          <span className="ap-placeholder">选择题目...</span>
+          <span className="an-placeholder">选择题目...</span>
         )}
         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
           <polyline points="6 9 12 15 18 9" />
@@ -108,31 +108,31 @@ function ProblemSearchSelector({ value, onChange, problems }) {
       </div>
 
       {isOpen && (
-        <div className="ap-dropdown">
+        <div className="an-dropdown">
           <input
             type="text"
-            className="ap-search-input"
+            className="an-search-input"
             placeholder="搜索题目..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             autoFocus
           />
-          <div className="ap-dropdown-list">
+          <div className="an-dropdown-list">
             {filteredProblems.length === 0 ? (
-              <div className="ap-dropdown-empty">未找到题目</div>
+              <div className="an-dropdown-empty">未找到题目</div>
             ) : (
               filteredProblems.map((problem) => (
                 <div
                   key={problem.problemId}
-                  className={`ap-dropdown-item${problem.problemId === value ? " ap-dropdown-item--selected" : ""}`}
+                  className={`an-dropdown-item${problem.problemId === value ? " an-dropdown-item--selected" : ""}`}
                   onClick={() => {
                     onChange(problem.problemId);
                     setIsOpen(false);
                     setSearchTerm("");
                   }}
                 >
-                  <span className="ap-platform-badge">{problem.platform}</span>
-                  <span className="ap-dropdown-title">{problem.title}</span>
+                  <span className="an-platform-badge">{problem.platform}</span>
+                  <span className="an-dropdown-title">{problem.title}</span>
                 </div>
               ))
             )}
@@ -337,12 +337,12 @@ export function AnalysisPage() {
   }
 
   return (
-    <div className="ap-container">
+    <div className="an-container">
       {/* Header */}
-      <div className="ap-header">
+      <div className="an-header">
         <button
           type="button"
-          className="ap-back-btn"
+          className="an-back-btn"
           onClick={() => navigateTo("dashboard")}
           title="返回仪表盘"
         >
@@ -351,28 +351,28 @@ export function AnalysisPage() {
           </svg>
           返回
         </button>
-        <h2 className="ap-title">AI 分析</h2>
+        <h2 className="an-title">AI 分析</h2>
       </div>
 
       {/* Main content - two columns */}
-      <div className="ap-main">
+      <div className="an-main">
         {/* Left column - Global Report */}
-        <div className="ap-column ap-column--left">
-          <div className="ap-panel">
-            <h3 className="ap-panel-title">全局报告</h3>
+        <div className="an-column an-column--left">
+          <div className="an-panel">
+            <h3 className="an-panel-title">全局报告</h3>
 
             {/* Period toggle */}
-            <div className="ap-period-toggle">
+            <div className="an-period-toggle">
               <button
                 type="button"
-                className={`ap-period-btn${period === "week" ? " ap-period-btn--active" : ""}`}
+                className={`an-period-btn${period === "week" ? " an-period-btn--active" : ""}`}
                 onClick={() => setPeriod("week")}
               >
                 本周
               </button>
               <button
                 type="button"
-                className={`ap-period-btn${period === "month" ? " ap-period-btn--active" : ""}`}
+                className={`an-period-btn${period === "month" ? " an-period-btn--active" : ""}`}
                 onClick={() => setPeriod("month")}
               >
                 本月
@@ -382,12 +382,12 @@ export function AnalysisPage() {
             {/* Generate button */}
             <button
               type="button"
-              className="primary-button ap-generate-btn"
+              className="primary-button an-generate-btn"
               disabled={globalLoading}
               onClick={handleGenerateGlobalAnalysis}
             >
               {globalLoading ? (
-                <><span className="ap-spinner" /> 生成中…</>
+                <><span className="an-spinner" /> 生成中…</>
               ) : (
                 "生成报告"
               )}
@@ -395,7 +395,7 @@ export function AnalysisPage() {
 
             {/* Global analysis result */}
             {globalError && (
-              <div className="ap-error-msg">
+              <div className="an-error-msg">
                 {globalError.includes("provider and model are required")
                   ? "请先在设置页面配置 AI 服务（提供商 + 模型 + API Key）"
                   : `生成失败：${globalError}`}
@@ -403,8 +403,8 @@ export function AnalysisPage() {
             )}
 
             {(globalLoading || (globalTask && globalTask.status !== "SUCCESS" && globalTask.status !== "FAILED")) && (
-              <div className="ap-progress">
-                <span className="ap-spinner" />
+              <div className="an-progress">
+                <span className="an-spinner" />
                 <span>
                   {!globalTask && "正在提交…"}
                   {globalTask?.status === "PENDING" && "排队等待中…"}
@@ -414,8 +414,8 @@ export function AnalysisPage() {
             )}
 
             {globalTask?.status === "FAILED" && (
-              <div className="ap-failed">
-                <p className="ap-error-msg">{globalTask.errorMessage || "分析任务失败，请重试"}</p>
+              <div className="an-failed">
+                <p className="an-error-msg">{globalTask.errorMessage || "分析任务失败，请重试"}</p>
                 <button
                   type="button"
                   className="ghost-button"
@@ -427,38 +427,38 @@ export function AnalysisPage() {
             )}
 
             {globalTask?.status === "SUCCESS" && (
-              <div className="ap-result">
-                <div className="ap-result-meta">
-                  <span className="ap-provider-badge">{globalTask.provider}</span>
+              <div className="an-result">
+                <div className="an-result-meta">
+                  <span className="an-provider-badge">{globalTask.provider}</span>
                   <span className="muted">·</span>
                   <span className="muted">{globalTask.model}</span>
                   <span className="muted">·</span>
                   <span className="muted">{formatDate(globalTask.updatedAt)}</span>
                 </div>
-                <div className="ap-result-body">
+                <div className="an-result-body">
                   <SimpleMarkdown text={globalTask.resultText} />
                 </div>
               </div>
             )}
 
             {/* Comparison section */}
-            <div className="ap-comp-section">
-              <h4 className="ap-comp-title">环比分析</h4>
+            <div className="an-comp-section">
+              <h4 className="an-comp-title">环比分析</h4>
               <button
                 type="button"
-                className="ghost-button ap-comp-btn"
+                className="ghost-button an-comp-btn"
                 disabled={compLoading}
                 onClick={handleGenerateComparison}
               >
                 {compLoading ? (
-                  <><span className="ap-spinner" /> 生成中…</>
+                  <><span className="an-spinner" /> 生成中…</>
                 ) : (
                   "生成环比"
                 )}
               </button>
 
               {compError && (
-                <div className="ap-error-msg ap-error-msg--small">
+                <div className="an-error-msg an-error-msg--small">
                   {compError.includes("provider and model are required")
                     ? "请先配置 AI 服务"
                     : `生成失败：${compError}`}
@@ -466,8 +466,8 @@ export function AnalysisPage() {
               )}
 
               {(compLoading || (compTask && compTask.status !== "SUCCESS" && compTask.status !== "FAILED")) && (
-                <div className="ap-progress ap-progress--small">
-                  <span className="ap-spinner" />
+                <div className="an-progress an-progress--small">
+                  <span className="an-spinner" />
                   <span>
                     {!compTask && "正在提交…"}
                     {compTask?.status === "PENDING" && "排队等待中…"}
@@ -477,19 +477,19 @@ export function AnalysisPage() {
               )}
 
               {compTask?.status === "FAILED" && (
-                <div className="ap-failed ap-failed--small">
-                  <p className="ap-error-msg">{compTask.errorMessage || "分析失败"}</p>
+                <div className="an-failed an-failed--small">
+                  <p className="an-error-msg">{compTask.errorMessage || "分析失败"}</p>
                 </div>
               )}
 
               {compTask?.status === "SUCCESS" && (
-                <div className="ap-result ap-result--compact">
-                  <div className="ap-result-meta">
-                    <span className="ap-provider-badge">{compTask.provider}</span>
+                <div className="an-result an-result--compact">
+                  <div className="an-result-meta">
+                    <span className="an-provider-badge">{compTask.provider}</span>
                     <span className="muted">·</span>
                     <span className="muted">{formatDate(compTask.updatedAt)}</span>
                   </div>
-                  <div className="ap-result-body">
+                  <div className="an-result-body">
                     <SimpleMarkdown text={compTask.resultText} />
                   </div>
                 </div>
@@ -499,13 +499,13 @@ export function AnalysisPage() {
         </div>
 
         {/* Right column - Single Problem Analysis */}
-        <div className="ap-column ap-column--right">
-          <div className="ap-panel">
-            <h3 className="ap-panel-title">单题分析</h3>
+        <div className="an-column an-column--right">
+          <div className="an-panel">
+            <h3 className="an-panel-title">单题分析</h3>
 
             {/* Problem selector */}
-            <div className="ap-field">
-              <label className="ap-label" htmlFor="ap-problem-select">选择题目</label>
+            <div className="an-field">
+              <label className="an-label" htmlFor="ap-problem-select">选择题目</label>
               <ProblemSearchSelector
                 value={selectedProblemId}
                 onChange={setSelectedProblemId}
@@ -516,12 +516,12 @@ export function AnalysisPage() {
             {/* Generate button */}
             <button
               type="button"
-              className="primary-button ap-generate-btn"
+              className="primary-button an-generate-btn"
               disabled={problemLoading || !selectedProblemId}
               onClick={() => handleGenerateProblemAnalysis(selectedProblemId)}
             >
               {problemLoading ? (
-                <><span className="ap-spinner" /> 生成中…</>
+                <><span className="an-spinner" /> 生成中…</>
               ) : (
                 "生成分析"
               )}
@@ -529,7 +529,7 @@ export function AnalysisPage() {
 
             {/* Problem analysis result */}
             {problemError && (
-              <div className="ap-error-msg">
+              <div className="an-error-msg">
                 {problemError.includes("provider and model are required")
                   ? "请先在设置页面配置 AI 服务（提供商 + 模型 + API Key）"
                   : `生成失败：${problemError}`}
@@ -537,8 +537,8 @@ export function AnalysisPage() {
             )}
 
             {(problemLoading || (problemTask && problemTask.status !== "SUCCESS" && problemTask.status !== "FAILED")) && (
-              <div className="ap-progress">
-                <span className="ap-spinner" />
+              <div className="an-progress">
+                <span className="an-spinner" />
                 <span>
                   {!problemTask && "正在提交…"}
                   {problemTask?.status === "PENDING" && "排队等待中…"}
@@ -548,8 +548,8 @@ export function AnalysisPage() {
             )}
 
             {problemTask?.status === "FAILED" && (
-              <div className="ap-failed">
-                <p className="ap-error-msg">{problemTask.errorMessage || "分析任务失败，请重试"}</p>
+              <div className="an-failed">
+                <p className="an-error-msg">{problemTask.errorMessage || "分析任务失败，请重试"}</p>
                 <button
                   type="button"
                   className="ghost-button"
@@ -561,15 +561,15 @@ export function AnalysisPage() {
             )}
 
             {problemTask?.status === "SUCCESS" && (
-              <div className="ap-result">
-                <div className="ap-result-meta">
-                  <span className="ap-provider-badge">{problemTask.provider}</span>
+              <div className="an-result">
+                <div className="an-result-meta">
+                  <span className="an-provider-badge">{problemTask.provider}</span>
                   <span className="muted">·</span>
                   <span className="muted">{problemTask.model}</span>
                   <span className="muted">·</span>
                   <span className="muted">{formatDate(problemTask.updatedAt)}</span>
                 </div>
-                <div className="ap-result-body">
+                <div className="an-result-body">
                   <SimpleMarkdown text={problemTask.resultText} />
                 </div>
               </div>
