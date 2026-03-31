@@ -297,7 +297,7 @@ export function App() {
         </section>
 
         {page === "dashboard" ? (
-          <DashboardPage serviceStatus={serviceStatus} runtimeInfo={runtimeInfo} cacheStatus={cacheStatus} connectivity={connectivity} syncQueue={syncQueue} />
+          <DashboardPage serviceStatus={serviceStatus} runtimeInfo={runtimeInfo} cacheStatus={cacheStatus} connectivity={connectivity} syncQueue={syncQueue} onNavigate={setPage} />
         ) : null}
 
         {page === "accounts" ? (
@@ -305,7 +305,7 @@ export function App() {
         ) : null}
 
         {page === "review" ? (
-          <ReviewPage serviceStatus={serviceStatus} runtimeInfo={runtimeInfo} />
+          <ReviewPage serviceStatus={serviceStatus} runtimeInfo={runtimeInfo} onNavigate={setPage} />
         ) : null}
 
         {page === "settings" ? (

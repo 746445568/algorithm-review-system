@@ -9,13 +9,14 @@ function getFreshnessLabel(meta) {
   return meta.stale ? "缓存可能陈旧" : "已更新";
 }
 
-export function DashboardPage({ serviceStatus, runtimeInfo, cacheStatus, connectivity, syncQueue }) {
+export function DashboardPage({ serviceStatus, runtimeInfo, cacheStatus = {}, connectivity, syncQueue = [], onNavigate }) {
   const [data, setData] = useState({
     owner: null,
     accounts: [],
     syncTasks: [],
     reviewSummary: null,
   });
+  const [latestAnalysis, setLatestAnalysis] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const refreshSequenceRef = useRef(0);
@@ -69,6 +70,12 @@ export function DashboardPage({ serviceStatus, runtimeInfo, cacheStatus, connect
     return () => window.clearInterval(timer);
   }, [refresh, serviceStatus.state]);
 
+  useEffect(() => {
+    api.getLatestAnalysis()
+      .then((data) => setLatestAnalysis(data?.task ?? null))
+      .catch(() => {});
+  }, []);
+
   const latestTask = data.syncTasks[0];
   const weakTags = data.reviewSummary?.weakTags ?? [];
   const repeatedFailures = data.reviewSummary?.repeatedFailures ?? [];
@@ -78,7 +85,26 @@ export function DashboardPage({ serviceStatus, runtimeInfo, cacheStatus, connect
 
   return (
     <div className="page-grid">
-      <section className="panel hero-panel">
+      {latestAnalysis && (
+          <section className="dash-ai-card">
+            <div className="dash-ai-header">
+              <span className="dash-ai-title">🤖 最新 AI 分析</span>
+              <span className="muted">{latestAnalysis.period === "week" ? "本周" : "本月"}</span>
+            </div>
+            <p className="dash-ai-preview">
+              {latestAnalysis.resultText?.slice(0, 120)}…
+            </p>
+            <button
+              type="button"
+              className="ghost-button"
+              onClick={() => onNavigate?.("analysis")}
+            >
+              查看完整分析 →
+            </button>
+          </section>
+        )}
+
+        <section className="panel hero-panel">
         <div className="hero-copy">
           <span className="section-label">
             {serviceStatus.state === "healthy" ? "已连接" : "连接中"}
