@@ -1,0 +1,97 @@
+<h2>单题分析：从哪里触发？</h2>
+<p class="subtitle">AI 分析页和复习页都可能是入口，选一种你觉得最顺手的操作路径</p>
+
+<div class="cards">
+  <div class="card" data-choice="review-trigger" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding:12px;background:#0f1729;border-radius:8px;font-size:11px;">
+      <!-- Review page layout -->
+      <div style="display:flex;gap:6px;height:110px;">
+        <!-- left list -->
+        <div style="width:80px;background:#1e293b;border-radius:5px;padding:6px;flex-shrink:0;">
+          <div style="color:#64748b;font-size:9px;margin-bottom:4px;">题目列表</div>
+          <div style="background:#1e3a5f;border-left:2px solid #3b82f6;padding:3px 5px;border-radius:0 3px 3px 0;margin-bottom:3px;">
+            <div style="color:#e2e8f0;font-size:9px;">1234A</div>
+          </div>
+          <div style="padding:3px 5px;"><div style="color:#64748b;font-size:9px;">1234B</div></div>
+          <div style="padding:3px 5px;"><div style="color:#64748b;font-size:9px;">1235C</div></div>
+        </div>
+        <!-- right detail -->
+        <div style="flex:1;background:#111827;border-radius:5px;padding:8px;">
+          <div style="color:#e2e8f0;font-size:10px;font-weight:bold;margin-bottom:4px;">1234A · Two Sum</div>
+          <div style="display:flex;gap:4px;margin-bottom:6px;">
+            <span style="background:#1e293b;color:#64748b;padding:2px 6px;border-radius:3px;font-size:9px;">复习状态</span>
+            <span style="background:#1e293b;color:#64748b;padding:2px 6px;border-radius:3px;font-size:9px;">提交记录</span>
+          </div>
+          <!-- AI button in detail -->
+          <div style="background:#1e3a5f;border:1px solid #3b82f6;border-radius:5px;padding:6px;display:flex;align-items:center;gap:6px;">
+            <span style="font-size:14px;">🤖</span>
+            <div>
+              <div style="color:#60a5fa;font-size:9px;font-weight:bold;">分析这道题</div>
+              <div style="color:#64748b;font-size:8px;">AI 分析此题的错误模式</div>
+            </div>
+            <span style="margin-left:auto;color:#3b82f6;font-size:9px;">→</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A · 在复习详情页触发，跳转到 AI 分析页</h3>
+      <p>复习题目时，右侧出现"分析这道题"按钮，点击后跳转到 AI 分析页并自动显示该题结果。复习流程中自然衔接，上下文连贯。</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="ai-page-select" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding:12px;background:#0f1729;border-radius:8px;font-size:11px;">
+      <!-- AI analysis page layout -->
+      <div style="background:#111827;border-radius:5px;padding:8px;height:110px;overflow:hidden;">
+        <div style="color:#e2e8f0;font-size:10px;font-weight:bold;margin-bottom:6px;">🤖 AI 分析</div>
+        <div style="display:flex;gap:4px;margin-bottom:6px;">
+          <span style="background:#1e3a5f;color:#60a5fa;padding:2px 8px;border-radius:3px;font-size:9px;border:1px solid #3b82f6;">全局报告</span>
+          <span style="background:#1e293b;color:#64748b;padding:2px 8px;border-radius:3px;font-size:9px;">单题分析</span>
+        </div>
+        <div style="background:#1e293b;border-radius:4px;padding:6px;">
+          <div style="color:#64748b;font-size:9px;margin-bottom:4px;">选择题目</div>
+          <div style="display:flex;gap:3px;flex-wrap:wrap;">
+            <span style="background:#111827;color:#94a3b8;padding:2px 5px;border-radius:3px;font-size:8px;border:1px solid #334;">1234A</span>
+            <span style="background:#1e3a5f;color:#60a5fa;padding:2px 5px;border-radius:3px;font-size:8px;border:1px solid #3b82f6;">1234B ✓</span>
+            <span style="background:#111827;color:#94a3b8;padding:2px 5px;border-radius:3px;font-size:8px;border:1px solid #334;">1235C</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B · 在 AI 分析页内选题</h3>
+      <p>AI 分析页里的"单题分析" Tab 展示题目列表，用户在这里选题再生成分析。入口统一在 AI 分析页，不影响复习流程，但需要再次找题。</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="both" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding:12px;background:#0f1729;border-radius:8px;font-size:11px;">
+      <div style="display:flex;gap:6px;height:110px;">
+        <div style="flex:1;background:#1e293b;border-radius:5px;padding:8px;">
+          <div style="color:#60a5fa;font-size:9px;font-weight:bold;margin-bottom:4px;">复习页</div>
+          <div style="background:#111827;border-radius:4px;padding:5px;margin-bottom:4px;">
+            <div style="color:#94a3b8;font-size:9px;">1234B 的错误分析</div>
+          </div>
+          <div style="background:#1e3a5f;border-radius:4px;padding:4px;text-align:center;">
+            <span style="color:#60a5fa;font-size:8px;">🤖 分析 →</span>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;color:#3b82f6;font-size:16px;">→</div>
+        <div style="flex:1;background:#111827;border-radius:5px;padding:8px;">
+          <div style="color:#60a5fa;font-size:9px;font-weight:bold;margin-bottom:4px;">AI 分析页</div>
+          <div style="background:#1e293b;border-radius:4px;padding:5px;margin-bottom:3px;">
+            <div style="color:#94a3b8;font-size:8px;">📊 全局报告</div>
+          </div>
+          <div style="background:#1e3a5f;border:1px solid #3b82f6;border-radius:4px;padding:5px;">
+            <div style="color:#60a5fa;font-size:8px;">🔍 1234B 分析</div>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>C · 两处都能触发（复习页 + AI 分析页选题）</h3>
+      <p>复习某道题时可以直接点"分析"跳转，AI 分析页里也可以独立选题分析。覆盖两种使用场景，但实现量翻倍。</p>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,79 @@
+<h2>全文怎么看？</h2>
+<p class="subtitle">仪表盘卡片只能展示摘要，完整分析有几段话。点击后如何查看全文？</p>
+
+<div class="cards">
+  <div class="card" data-choice="modal" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding:12px;background:#0f1729;border-radius:8px;font-size:11px;position:relative;min-height:120px;">
+      <!-- dashboard bg -->
+      <div style="opacity:0.3;display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:6px;">
+        <div style="background:#1e293b;border-radius:4px;height:28px;"></div>
+        <div style="background:#1e293b;border-radius:4px;height:28px;"></div>
+      </div>
+      <!-- card with truncated -->
+      <div style="background:#1e3a5f;border:1px solid #3b82f6;border-radius:5px;padding:8px;opacity:0.4;">
+        <div style="color:#60a5fa;font-size:10px;font-weight:bold;">✨ AI 分析</div>
+        <div style="color:#94a3b8;font-size:9px;margin-top:3px;">你在 DP 题上正确率最低…<span style="color:#3b82f6;"> 查看全文 →</span></div>
+      </div>
+      <!-- modal overlay -->
+      <div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;">
+        <div style="background:#1e293b;border:1px solid #334;border-radius:8px;padding:12px;width:90%;box-shadow:0 8px 24px rgba(0,0,0,0.6);">
+          <div style="color:#e2e8f0;font-size:10px;font-weight:bold;margin-bottom:6px;">AI 弱点分析 <span style="float:right;color:#64748b;cursor:pointer;">✕</span></div>
+          <div style="color:#94a3b8;font-size:9px;line-height:1.6;">你在动态规划题上的正确率最低（38%），建议重点复习区间 DP 和背包问题…<br/><br/>图论方面表现良好，但最短路径题偶有失误…</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A · 弹窗（Modal）</h3>
+      <p>卡片上显示摘要 + "查看全文 →"，点击后弹出全文 Modal。不离开仪表盘，体验连贯，但弹窗要实现关闭/滚动。</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="expand" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding:12px;background:#0f1729;border-radius:8px;font-size:11px;">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:4px;opacity:0.3;">
+        <div style="background:#1e293b;border-radius:4px;height:24px;"></div>
+        <div style="background:#1e293b;border-radius:4px;height:24px;"></div>
+      </div>
+      <!-- collapsed card -->
+      <div style="background:#1e3a5f;border:1px solid #3b82f6;border-radius:5px;padding:8px;margin-bottom:4px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <div style="color:#60a5fa;font-size:10px;font-weight:bold;">✨ AI 分析</div>
+          <div style="color:#3b82f6;font-size:9px;">展开 ▼</div>
+        </div>
+        <div style="color:#94a3b8;font-size:9px;margin-top:3px;">你在 DP 题上正确率最低…</div>
+      </div>
+      <!-- expanded content below -->
+      <div style="background:#111827;border:1px solid #1e3a5f;border-radius:5px;padding:8px;">
+        <div style="color:#94a3b8;font-size:9px;line-height:1.5;">你在动态规划题上的正确率最低（38%）…<br/>建议重点复习区间 DP 和背包问题…<br/><span style="color:#64748b;">图论方面表现良好，但…</span></div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B · 卡片内展开</h3>
+      <p>卡片本身可以折叠/展开，全文直接在仪表盘内展开显示。不需要新组件，但展开后会把其他卡片推很远。</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="page" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding:12px;background:#0f1729;border-radius:8px;font-size:11px;">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:4px;opacity:0.3;">
+        <div style="background:#1e293b;border-radius:4px;height:24px;"></div>
+        <div style="background:#1e293b;border-radius:4px;height:24px;"></div>
+      </div>
+      <div style="background:#1e3a5f;border:1px solid #3b82f6;border-radius:5px;padding:8px;margin-bottom:4px;">
+        <div style="color:#60a5fa;font-size:10px;font-weight:bold;">✨ AI 分析</div>
+        <div style="color:#94a3b8;font-size:9px;margin-top:3px;">你在 DP 题上正确率最低…</div>
+        <div style="margin-top:6px;background:#3b82f6;color:#fff;padding:3px 8px;border-radius:4px;display:inline-block;font-size:9px;">进入分析页 →</div>
+      </div>
+      <!-- fake page transition -->
+      <div style="background:#111827;border-radius:5px;padding:8px;border:1px dashed #334;">
+        <div style="color:#3b82f6;font-size:9px;margin-bottom:4px;">← 返回仪表盘</div>
+        <div style="color:#e2e8f0;font-size:10px;font-weight:bold;margin-bottom:4px;">AI 弱点分析</div>
+        <div style="color:#94a3b8;font-size:9px;line-height:1.5;">完整分析内容…</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>C · 跳转到独立分析页</h3>
+      <p>卡片只做摘要入口，点击跳到专属分析页。最大展示空间，但兜了一圈回到了方案 B（独立页面），只是入口在仪表盘。</p>
+    </div>
+  </div>
+</div>
