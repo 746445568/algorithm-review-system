@@ -85,24 +85,38 @@ export function DashboardPage({ serviceStatus, runtimeInfo, cacheStatus = {}, co
 
   return (
     <div className="page-grid">
-      {latestAnalysis && (
-          <section className="dash-ai-card">
-            <div className="dash-ai-header">
-              <span className="dash-ai-title">🤖 最新 AI 分析</span>
-              <span className="muted">{latestAnalysis.period === "week" ? "本周" : "本月"}</span>
-            </div>
+      <section className="dash-ai-card">
+        <div className="dash-ai-header">
+          <span className="dash-ai-title">🤖 AI 分析</span>
+          {latestAnalysis ? (
+            <span className="muted">{latestAnalysis.period === "week" ? "本周" : "本月"} · {new Date(latestAnalysis.updatedAt).toLocaleString('zh-CN')}</span>
+          ) : (
+            <span className="muted">暂无历史记录</span>
+          )}
+        </div>
+        {latestAnalysis ? (
+          <>
             <p className="dash-ai-preview">
-              {latestAnalysis.resultText?.slice(0, 120)}…
+              {latestAnalysis.resultText?.slice(0, 80)}…
             </p>
             <button
               type="button"
               className="ghost-button"
               onClick={() => onNavigate?.("analysis")}
             >
-              查看完整分析 →
+              进入分析页 →
             </button>
-          </section>
+          </>
+        ) : (
+          <button
+            type="button"
+            className="primary-button"
+            onClick={() => onNavigate?.("analysis")}
+          >
+            生成首份分析
+          </button>
         )}
+      </section>
 
         <section className="panel hero-panel">
         <div className="hero-copy">
