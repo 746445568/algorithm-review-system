@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "../lib/api.js";
 import { formatDate, platformLabel, statusLabel, tagLabel } from "../lib/format.js";
+import { useNavigation } from "../lib/NavigationContext.jsx";
 
 function getFreshnessLabel(meta) {
   if (!meta?.lastSyncedAt) {
@@ -16,6 +17,7 @@ export function DashboardPage({ serviceStatus, runtimeInfo, cacheStatus = {}, co
     syncTasks: [],
     reviewSummary: null,
   });
+  const { navigateTo } = useNavigation();
   const [latestAnalysis, setLatestAnalysis] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -102,7 +104,7 @@ export function DashboardPage({ serviceStatus, runtimeInfo, cacheStatus = {}, co
             <button
               type="button"
               className="ghost-button"
-              onClick={() => onNavigate?.("analysis")}
+              onClick={() => navigateTo("analysis")}
             >
               进入分析页 →
             </button>
@@ -111,7 +113,7 @@ export function DashboardPage({ serviceStatus, runtimeInfo, cacheStatus = {}, co
           <button
             type="button"
             className="primary-button"
-            onClick={() => onNavigate?.("analysis")}
+            onClick={() => navigateTo("analysis")}
           >
             生成首份分析
           </button>
