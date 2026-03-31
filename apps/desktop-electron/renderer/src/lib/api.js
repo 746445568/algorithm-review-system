@@ -180,6 +180,12 @@ export const api = {
       method: "POST",
       body: JSON.stringify({}),
     }),
+  generateAnalysis: (opts = {}) =>
+    request("/api/analysis/generate", {
+      method: "POST",
+      body: JSON.stringify(opts),
+    }),
+  getAnalysisTask: (taskId) => request(`/api/analysis/${taskId}`),
   getProblems: async (query = {}) => {
     const cached = await getCachedProblems(query);
     if (cached.length > 0) {
