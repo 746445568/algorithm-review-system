@@ -10,7 +10,7 @@ function getFreshnessLabel(meta) {
   return meta.stale ? "缓存可能陈旧" : "已更新";
 }
 
-export function DashboardPage({ serviceStatus, runtimeInfo, cacheStatus = {}, connectivity, syncQueue = []) }) {
+export function DashboardPage({ serviceStatus, runtimeInfo, cacheStatus = {}, connectivity, syncQueue = [], onNavigate }) {
   const [data, setData] = useState({
     owner: null,
     accounts: [],
