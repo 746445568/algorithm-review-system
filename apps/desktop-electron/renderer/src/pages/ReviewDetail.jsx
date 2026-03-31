@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "../lib/api.js";
 import { formatDate, statusLabel, tagLabel, toDatetimeLocalValue, verdictTone } from "../lib/format.js";
+import { useNavigation } from "../lib/NavigationContext.jsx";
 import { useReviewFlow } from "../hooks/useReviewFlow.js";
 
 const STATUS_OPTIONS = [
@@ -108,6 +109,7 @@ export function ReviewDetail({
   const [supportMessage, setSupportMessage] = useState("");
   const [toast, setToast] = useState(null);
   const [activeTab, setActiveTab] = useState("state");
+  const { navigateTo } = useNavigation();
   const [analysisTask, setAnalysisTask] = useState(null);
   const [analysisLoading, setAnalysisLoading] = useState(false);
   const [analysisError, setAnalysisError] = useState(null);
@@ -321,7 +323,7 @@ export function ReviewDetail({
               <button
                 type="button"
                 className="ghost-button"
-                onClick={() => onNavigate?.("analysis", { problemId: selectedProblemId })}
+                onClick={() => navigateTo("analysis", { problemId: selectedProblemId })}
               >
                 分析这道题
               </button>
@@ -551,7 +553,7 @@ export function ReviewDetail({
                 <button
                   type="button"
                   className="ghost-button"
-                  onClick={() => onNavigate?.("analysis", { problemId: selectedProblem?.problemId })}
+                  onClick={() => navigateTo("analysis", { problemId: selectedProblem?.problemId })}
                 >
                   在分析页查看 →
                 </button>
