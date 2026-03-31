@@ -107,9 +107,13 @@ export function ReviewDetail({
   const [supportMessage, setSupportMessage] = useState("");
   const [toast, setToast] = useState(null);
   const [activeTab, setActiveTab] = useState("state");
+  const [analysisTask, setAnalysisTask] = useState(null);
+  const [analysisLoading, setAnalysisLoading] = useState(false);
+  const [analysisError, setAnalysisError] = useState(null);
 
   const seqRef = useRef(0);
   const autoAdvRef = useRef(null);
+  const analysisPollRef = useRef(null);
 
   const selectedProblemId = selectedProblem?.problemId ?? null;
   const serviceUnavailable = serviceStatus.state !== "healthy";
@@ -189,7 +193,10 @@ export function ReviewDetail({
     }
   }, [selectedProblemId, reviewStateSupported, reviewSaving, reviewState, onReviewSaved, filteredProblems, onSelect, serviceUrl]);
 
-  useEffect(() => () => clearTimeout(autoAdvRef.current), []);
+  useEffect(() => () => {
+    clearTimeout(autoAdvRef.current);
+    clearTimeout(analysisPollRef.current);
+  }, []);
 
   const { currentIndex, total, hasNext, hasPrev, goNext, goPrev } = useReviewFlow({
     problems: filteredProblems,
@@ -198,6 +205,49 @@ export function ReviewDetail({
     onSave: saveReviewState,
     onStatusChange: (status) => setReviewState((s) => ({ ...s, status })),
   });
+
+  // ── AI Analysis ──
+  function stopAnalysisPoll() {
+    if (analysisPollRef.current) { clearTimeout(analysisPollRef.current); analysisPollRef.current = null; }
+  }
+
+  function scheduleAnalysisPoll(taskId) {
+    stopAnalysisPoll();
+    analysisPollRef.current = setTimeout(async () => {
+      try {
+        const task = await api.getAnalysisTask(taskId);
+        setAnalysisTask(task);
+        if (task.status !== "SUCCESS" && task.status !== "FAILED") {
+          scheduleAnalysisPoll(taskId);
+        } else {
+          setAnalysisLoading(false);
+        }
+      } catch (err) {
+        setAnalysisLoading(false);
+        setAnalysisError(err.message);
+      }
+    }, 2000);
+  }
+
+  async function handleGenerateAnalysis() {
+    if (analysisLoading) return;
+    stopAnalysisPoll();
+    setAnalysisLoading(true);
+    setAnalysisTask(null);
+    setAnalysisError(null);
+    try {
+      const { task } = await api.generateAnalysis({});
+      setAnalysisTask(task);
+      if (task.status === "SUCCESS" || task.status === "FAILED") {
+        setAnalysisLoading(false);
+      } else {
+        scheduleAnalysisPoll(task.id);
+      }
+    } catch (err) {
+      setAnalysisLoading(false);
+      setAnalysisError(err.message);
+    }
+  }
 
   // ── Empty state ──
   if (!selectedProblem) {
@@ -324,6 +374,7 @@ export function ReviewDetail({
             { id: "state",       label: "复习状态" },
             { id: "submissions", label: `提交记录${hasSubmissions ? ` (${selectedSubmissions.length})` : ""}` },
             { id: "raw",         label: "原始数据" },
+            { id: "analysis",    label: "AI 分析" },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -463,6 +514,91 @@ export function ReviewDetail({
               <pre className="rd-raw-pre">{formatRawJSON(representativeSubmission.rawJson)}</pre>
             ) : (
               <p className="muted">无可用原始数据。</p>
+            )}
+          </div>
+        )}
+
+        {/* Tab: AI Analysis */}
+        {activeTab === "analysis" && (
+          <div className="panel rd-ai-panel">
+            {/* Empty / error state */}
+            {!analysisTask && !analysisLoading && (
+              <div className="rd-ai-empty">
+                <p className="rd-ai-hint">基于全部复习数据生成个性化弱点分析，帮助你找到最需要补强的知识点。</p>
+                {analysisError && (
+                  <p className="rd-ai-error-msg">
+                    {analysisError.includes("provider and model are required")
+                      ? "请先在设置页面配置 AI 服务（提供商 + 模型 + API Key）"
+                      : `分析失败：${analysisError}`}
+                  </p>
+                )}
+                <button
+                  type="button"
+                  className="primary-button"
+                  disabled={serviceUnavailable}
+                  onClick={() => void handleGenerateAnalysis()}
+                >
+                  生成 AI 分析
+                </button>
+                {serviceUnavailable && <p className="muted" style={{ fontSize: 12 }}>等待本地服务就绪…</p>}
+              </div>
+            )}
+
+            {/* Submitting / polling progress */}
+            {(analysisLoading || (analysisTask && analysisTask.status !== "SUCCESS" && analysisTask.status !== "FAILED")) && (
+              <div className="rd-ai-progress">
+                <span className="rd-spinner" />
+                <span>
+                  {!analysisTask && "正在提交…"}
+                  {analysisTask?.status === "PENDING" && "排队等待中…"}
+                  {analysisTask?.status === "RUNNING" && "AI 分析中，请稍候…"}
+                </span>
+                {analysisTask && (
+                  <span className="rd-ai-provider-hint muted">
+                    {analysisTask.provider} · {analysisTask.model}
+                  </span>
+                )}
+              </div>
+            )}
+
+            {/* Failed state */}
+            {analysisTask?.status === "FAILED" && (
+              <div className="rd-ai-failed">
+                <p className="rd-ai-error-msg">
+                  {analysisTask.errorMessage || "分析任务失败，请重试"}
+                </p>
+                <button
+                  type="button"
+                  className="ghost-button"
+                  onClick={() => { setAnalysisTask(null); setAnalysisError(null); }}
+                >
+                  重试
+                </button>
+              </div>
+            )}
+
+            {/* Success state */}
+            {analysisTask?.status === "SUCCESS" && (
+              <div className="rd-ai-result-area">
+                <div className="rd-ai-meta">
+                  <span className="rd-ai-provider-badge">{analysisTask.provider}</span>
+                  <span className="muted">·</span>
+                  <span className="muted">{analysisTask.model}</span>
+                  <span className="muted">·</span>
+                  <span className="muted">{formatDate(analysisTask.updatedAt)}</span>
+                  <button
+                    type="button"
+                    className="ghost-button rd-ai-regen-btn"
+                    disabled={analysisLoading}
+                    onClick={() => void handleGenerateAnalysis()}
+                  >
+                    重新生成
+                  </button>
+                </div>
+                <div className="rd-ai-result">
+                  <SimpleMarkdown text={analysisTask.resultText} />
+                </div>
+              </div>
             )}
           </div>
         )}
