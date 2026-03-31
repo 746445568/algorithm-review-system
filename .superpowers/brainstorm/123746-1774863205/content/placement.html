@@ -1,0 +1,73 @@
+<h2>AI 分析放在哪里？</h2>
+<p class="subtitle">分析是全局的（覆盖你所有题目的错误数据），不是针对单道题。三种放置方案如下：</p>
+
+<div class="cards">
+  <div class="card" data-choice="tab" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding:16px;background:#0f1729;border-radius:8px;font-family:monospace;font-size:12px;">
+      <div style="display:flex;gap:0;margin-bottom:12px;border-bottom:1px solid #334;">
+        <span style="padding:6px 12px;color:#fff;border-bottom:2px solid #3b82f6;font-size:11px;">复习状态</span>
+        <span style="padding:6px 12px;color:#64748b;font-size:11px;">提交记录 (3)</span>
+        <span style="padding:6px 12px;color:#64748b;font-size:11px;">原始数据</span>
+        <span style="padding:6px 12px;color:#64748b;font-size:11px;">✨ AI 分析</span>
+      </div>
+      <div style="background:#1e293b;border-radius:6px;padding:12px;color:#94a3b8;text-align:center;font-size:11px;">
+        <div style="font-size:20px;margin-bottom:8px;">🤖</div>
+        <div>基于全部复习数据生成弱点分析</div>
+        <div style="margin-top:10px;background:#3b82f6;color:#fff;padding:5px 12px;border-radius:5px;display:inline-block;">生成 AI 分析</div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A · 复习详情里的第四个 Tab</h3>
+      <p>在现有 ReviewDetail 面板中追加 "AI 分析" Tab，无需新页面。复习题目时随时可以调出全局分析，但入口藏在题目详情里，不够显眼。</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="page" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding:16px;background:#0f1729;border-radius:8px;font-family:monospace;font-size:12px;">
+      <div style="display:flex;height:100px;">
+        <div style="width:100px;background:#1e293b;border-radius:6px 0 0 6px;padding:8px;font-size:10px;">
+          <div style="color:#64748b;margin-bottom:6px;">导航</div>
+          <div style="color:#64748b;margin-bottom:4px;">📊 仪表盘</div>
+          <div style="color:#64748b;margin-bottom:4px;">📝 复习</div>
+          <div style="color:#3b82f6;margin-bottom:4px;font-weight:bold;">🤖 AI 分析</div>
+          <div style="color:#64748b;margin-bottom:4px;">⚙️ 设置</div>
+        </div>
+        <div style="flex:1;background:#111827;border-radius:0 6px 6px 0;padding:10px;">
+          <div style="color:#e2e8f0;font-size:11px;margin-bottom:6px;font-weight:bold;">AI 弱点分析</div>
+          <div style="color:#94a3b8;font-size:10px;background:#1e293b;border-radius:4px;padding:8px;">
+            上次分析：2 小时前 · deepseek<br/>
+            <span style="color:#60a5fa;">你在动态规划题上的正确率最低…</span>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B · 独立"AI 分析"页面（左侧导航新增）</h3>
+      <p>在左侧导航栏新增一个 "AI 分析" 页面，与仪表盘、复习、设置平级。入口最显眼，专注于分析体验，但需要改动路由和导航结构。</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="dashboard" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding:16px;background:#0f1729;border-radius:8px;font-family:monospace;font-size:12px;">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">
+        <div style="background:#1e293b;border-radius:5px;padding:8px;font-size:10px;color:#94a3b8;">
+          <div style="color:#e2e8f0;font-weight:bold;margin-bottom:3px;">已绑定账号</div>
+          Codeforces · ackun
+        </div>
+        <div style="background:#1e293b;border-radius:5px;padding:8px;font-size:10px;color:#94a3b8;">
+          <div style="color:#e2e8f0;font-weight:bold;margin-bottom:3px;">复习管线</div>
+          待复习 3 道
+        </div>
+        <div style="background:#1e3a5f;border:1px solid #3b82f6;border-radius:5px;padding:8px;font-size:10px;color:#94a3b8;grid-column:1/-1;">
+          <div style="color:#60a5fa;font-weight:bold;margin-bottom:3px;">✨ AI 弱点分析</div>
+          <div style="color:#e2e8f0;font-size:9px;">你在 DP 题上的正确率最低（38%）…</div>
+          <div style="color:#3b82f6;font-size:9px;margin-top:4px;">重新生成 →</div>
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>C · 仪表盘里的分析卡片</h3>
+      <p>在仪表盘（Dashboard）中新增一个 AI 分析卡片，和账号、复习管线、薄弱标签并列。最快浏览，但结果展示空间有限，长文本展示体验差。</p>
+    </div>
+  </div>
+</div>

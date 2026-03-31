@@ -1,0 +1,84 @@
+<h2>AI 分析页长什么样？</h2>
+<p class="subtitle">页面需要容纳两大功能：全局报告（周报/月报）和单题分析。两种布局方向：</p>
+
+<div class="split">
+  <div class="mockup">
+    <div class="mockup-header">A · Tab 切换（上下两区）</div>
+    <div class="mockup-body" style="padding:12px;background:#0f1729;font-size:11px;min-height:200px;">
+      <!-- Nav bar -->
+      <div style="background:#1e293b;border-radius:5px;padding:6px 10px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;">
+        <span style="color:#e2e8f0;font-weight:bold;font-size:11px;">🤖 AI 分析</span>
+        <span style="color:#3b82f6;font-size:9px;">← 返回</span>
+      </div>
+      <!-- Tabs -->
+      <div style="display:flex;border-bottom:1px solid #334;margin-bottom:10px;">
+        <span style="padding:5px 12px;color:#3b82f6;border-bottom:2px solid #3b82f6;font-size:10px;font-weight:bold;">📊 全局报告</span>
+        <span style="padding:5px 12px;color:#64748b;font-size:10px;">🔍 单题分析</span>
+      </div>
+      <!-- Content area -->
+      <div style="background:#1e293b;border-radius:5px;padding:10px;">
+        <div style="display:flex;gap:6px;margin-bottom:8px;">
+          <span style="background:#1e3a5f;color:#60a5fa;padding:2px 8px;border-radius:3px;font-size:9px;border:1px solid #3b82f6;">本周</span>
+          <span style="background:#111827;color:#64748b;padding:2px 8px;border-radius:3px;font-size:9px;">本月</span>
+          <span style="background:#111827;color:#64748b;padding:2px 8px;border-radius:3px;font-size:9px;">自定义</span>
+        </div>
+        <div style="color:#94a3b8;font-size:9px;line-height:1.6;">
+          <strong style="color:#e2e8f0;">本周复习周报</strong><br/>
+          本周共复习 12 道题，DP 正确率从 38% 升至 52%…<br/>
+          <span style="color:#64748b;">建议下周重点：图论最短路径</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="mockup">
+    <div class="mockup-header">B · 左右分栏（报告 + 单题并列）</div>
+    <div class="mockup-body" style="padding:12px;background:#0f1729;font-size:11px;min-height:200px;">
+      <div style="background:#1e293b;border-radius:5px;padding:6px 10px;margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;">
+        <span style="color:#e2e8f0;font-weight:bold;font-size:11px;">🤖 AI 分析</span>
+        <span style="color:#3b82f6;font-size:9px;">← 返回</span>
+      </div>
+      <div style="display:flex;gap:8px;height:160px;">
+        <!-- Left: global report -->
+        <div style="flex:1;background:#1e293b;border-radius:5px;padding:8px;overflow:hidden;">
+          <div style="color:#60a5fa;font-size:9px;font-weight:bold;margin-bottom:5px;">📊 全局报告</div>
+          <div style="display:flex;gap:3px;margin-bottom:5px;">
+            <span style="background:#1e3a5f;color:#60a5fa;padding:1px 5px;border-radius:2px;font-size:8px;border:1px solid #3b82f6;">周</span>
+            <span style="background:#111827;color:#64748b;padding:1px 5px;border-radius:2px;font-size:8px;">月</span>
+          </div>
+          <div style="color:#94a3b8;font-size:8px;line-height:1.5;">本周复习 12 道，DP 正确率↑14%…<br/><span style="color:#64748b;">建议：图论最短路径</span></div>
+        </div>
+        <!-- Right: per-problem -->
+        <div style="flex:1;background:#1e293b;border-radius:5px;padding:8px;overflow:hidden;">
+          <div style="color:#60a5fa;font-size:9px;font-weight:bold;margin-bottom:5px;">🔍 单题分析</div>
+          <div style="background:#111827;border-radius:3px;padding:4px;margin-bottom:4px;">
+            <div style="color:#94a3b8;font-size:8px;">🔵 1234A · Two Sum</div>
+          </div>
+          <div style="background:#1e3a5f;border:1px solid #3b82f6;border-radius:3px;padding:4px;">
+            <div style="color:#60a5fa;font-size:8px;font-weight:bold;">📌 当前分析</div>
+            <div style="color:#94a3b8;font-size:8px;">从复习页跳入，边界条件处理…</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="section" style="margin-top:16px;">
+  <div class="options">
+    <div class="option" data-choice="tab-layout" onclick="toggleSelect(this)">
+      <div class="letter">A</div>
+      <div class="content">
+        <h3>Tab 切换</h3>
+        <p>全局报告 / 单题分析各占一个 Tab，内容区大，专注感强。适合内容多、需要完整阅读的分析文本。</p>
+      </div>
+    </div>
+    <div class="option" data-choice="split-layout" onclick="toggleSelect(this)">
+      <div class="letter">B</div>
+      <div class="content">
+        <h3>左右分栏</h3>
+        <p>两个功能同时可见。从复习页跳入时，右侧直接高亮该题，全局报告在左侧作为参照。信息密度高，屏幕够大时效果好。</p>
+      </div>
+    </div>
+  </div>
+</div>

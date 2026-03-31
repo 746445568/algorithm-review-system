@@ -1,0 +1,99 @@
+<h2>全局报告里有什么？</h2>
+<p class="subtitle">周报/月报的内容组成，三种丰富程度，你想要哪种？</p>
+
+<div class="cards">
+  <div class="card" data-choice="text-only" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding:12px;background:#0f1729;border-radius:8px;font-size:11px;">
+      <div style="background:#1e293b;border-radius:5px;padding:10px;">
+        <div style="display:flex;gap:4px;margin-bottom:8px;">
+          <span style="background:#1e3a5f;color:#60a5fa;padding:2px 6px;border-radius:3px;font-size:9px;border:1px solid #3b82f6;">本周</span>
+          <span style="background:#111827;color:#64748b;padding:2px 6px;border-radius:3px;font-size:9px;">本月</span>
+          <button style="margin-left:auto;background:#3b82f6;color:#fff;border:none;padding:2px 8px;border-radius:3px;font-size:9px;cursor:pointer;">生成报告</button>
+        </div>
+        <div style="color:#94a3b8;font-size:9px;line-height:1.7;border-left:2px solid #3b82f6;padding-left:8px;">
+          <strong style="color:#e2e8f0;">📋 本周复习周报</strong><br/>
+          本周共复习 12 道题目，涵盖动态规划、图论和贪心三个方向。DP 题目的正确率仍是你最大的薄弱点，尤其是区间 DP 类型。<br/><br/>
+          <span style="color:#60a5fa;">🎯 下周建议：</span>重点攻克背包 DP 变体，建议从 Knapsack 系列开始系统练习。
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>A · 纯 AI 文本</h3>
+      <p>只有 AI 生成的叙述性分析段落。实现最简单，LLM 直接输出 Markdown，前端渲染即可。</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="stats-plus-text" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding:12px;background:#0f1729;border-radius:8px;font-size:11px;">
+      <div style="background:#1e293b;border-radius:5px;padding:10px;">
+        <div style="display:flex;gap:4px;margin-bottom:8px;">
+          <span style="background:#1e3a5f;color:#60a5fa;padding:2px 6px;border-radius:3px;font-size:9px;border:1px solid #3b82f6;">本周</span>
+          <span style="background:#111827;color:#64748b;padding:2px 6px;border-radius:3px;font-size:9px;">本月</span>
+          <button style="margin-left:auto;background:#3b82f6;color:#fff;border:none;padding:2px 8px;border-radius:3px;font-size:9px;cursor:pointer;">生成</button>
+        </div>
+        <!-- stats strip -->
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin-bottom:8px;">
+          <div style="background:#111827;border-radius:4px;padding:5px;text-align:center;">
+            <div style="color:#e2e8f0;font-size:13px;font-weight:bold;">12</div>
+            <div style="color:#64748b;font-size:8px;">题已复习</div>
+          </div>
+          <div style="background:#111827;border-radius:4px;padding:5px;text-align:center;">
+            <div style="color:#f59e0b;font-size:13px;font-weight:bold;">38%</div>
+            <div style="color:#64748b;font-size:8px;">DP 正确率</div>
+          </div>
+          <div style="background:#111827;border-radius:4px;padding:5px;text-align:center;">
+            <div style="color:#10b981;font-size:13px;font-weight:bold;">3</div>
+            <div style="color:#64748b;font-size:8px;">已完全掌握</div>
+          </div>
+        </div>
+        <!-- weak tags -->
+        <div style="margin-bottom:6px;">
+          <div style="color:#64748b;font-size:8px;margin-bottom:3px;">薄弱标签</div>
+          <div style="display:flex;gap:3px;">
+            <span style="background:#7f1d1d;color:#fca5a5;padding:1px 5px;border-radius:3px;font-size:8px;">动态规划</span>
+            <span style="background:#78350f;color:#fcd34d;padding:1px 5px;border-radius:3px;font-size:8px;">图论</span>
+          </div>
+        </div>
+        <!-- AI text -->
+        <div style="color:#94a3b8;font-size:8px;line-height:1.5;border-left:2px solid #3b82f6;padding-left:6px;">
+          DP 正确率 38% 仍是主要薄弱点，建议重点攻克区间 DP…
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>B · 数据摘要 + AI 分析文本</h3>
+      <p>顶部展示本周关键数字（复习题数、各类型正确率、薄弱标签），下方是 AI 生成的叙述分析。数据部分从已有 review/summary 接口取，无需额外 LLM 调用。</p>
+    </div>
+  </div>
+
+  <div class="card" data-choice="comparison" onclick="toggleSelect(this)">
+    <div class="card-image" style="padding:12px;background:#0f1729;border-radius:8px;font-size:11px;">
+      <div style="background:#1e293b;border-radius:5px;padding:10px;">
+        <div style="display:flex;gap:4px;margin-bottom:8px;">
+          <span style="background:#1e3a5f;color:#60a5fa;padding:2px 6px;border-radius:3px;font-size:9px;border:1px solid #3b82f6;">本周</span>
+          <span style="background:#111827;color:#64748b;padding:2px 6px;border-radius:3px;font-size:9px;">本月</span>
+        </div>
+        <!-- comparison -->
+        <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;margin-bottom:6px;">
+          <div style="background:#111827;border-radius:4px;padding:6px;">
+            <div style="color:#64748b;font-size:8px;margin-bottom:3px;">上周</div>
+            <div style="color:#94a3b8;font-size:9px;">复习 8 题</div>
+            <div style="color:#94a3b8;font-size:9px;">DP: 30%</div>
+          </div>
+          <div style="background:#1e3a5f;border:1px solid #3b82f6;border-radius:4px;padding:6px;">
+            <div style="color:#60a5fa;font-size:8px;margin-bottom:3px;">本周</div>
+            <div style="color:#e2e8f0;font-size:9px;">复习 12 题 <span style="color:#10b981;">↑4</span></div>
+            <div style="color:#e2e8f0;font-size:9px;">DP: 38% <span style="color:#10b981;">↑8%</span></div>
+          </div>
+        </div>
+        <div style="color:#94a3b8;font-size:8px;line-height:1.5;border-left:2px solid #3b82f6;padding-left:6px;">
+          相比上周进步明显，继续保持节奏…
+        </div>
+      </div>
+    </div>
+    <div class="card-body">
+      <h3>C · 环比对比 + AI 点评</h3>
+      <p>本周 vs 上周（或本月 vs 上月）的数据对比，AI 基于差异给出点评。需要后端存储历史快照，实现复杂度最高。</p>
+    </div>
+  </div>
+</div>
