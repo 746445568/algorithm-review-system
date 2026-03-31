@@ -49,7 +49,7 @@ function applyReviewState(summary, problemId, savedState) {
   };
 }
 
-export function ReviewPage({ serviceStatus, runtimeInfo }) {
+export function ReviewPage({ serviceStatus, runtimeInfo, onNavigate }) {
   const [summary, setSummary] = useState(null);
   const [problems, setProblems] = useState([]);
   const [submissions, setSubmissions] = useState([]);
@@ -173,6 +173,7 @@ export function ReviewPage({ serviceStatus, runtimeInfo }) {
         filteredProblems={filteredProblems}
         onSelect={setSelectedProblemId}
         onReviewSaved={handleReviewSaved}
+        onNavigate={onNavigate}
       />
     </div>
   );

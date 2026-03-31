@@ -95,6 +95,7 @@ export function ReviewDetail({
   filteredProblems,
   onSelect,
   onReviewSaved,
+  onNavigate,
 }) {
   const [reviewState, setReviewState] = useState({
     status: "TODO",
@@ -539,6 +540,13 @@ export function ReviewDetail({
                   onClick={() => void handleGenerateAnalysis()}
                 >
                   生成 AI 分析
+                </button>
+                <button
+                  type="button"
+                  className="ghost-button"
+                  onClick={() => onNavigate?.("analysis", { problemId: selectedProblem?.problemId })}
+                >
+                  在分析页查看 →
                 </button>
                 {serviceUnavailable && <p className="muted" style={{ fontSize: 12 }}>等待本地服务就绪…</p>}
               </div>
