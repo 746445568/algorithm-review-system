@@ -1737,3 +1737,98 @@ textarea {
   }
   .rl-list { max-height: 260px; }
 }
+
+/* ─── AI Analysis tab (rd-ai-*) ──────────────────────── */
+.rd-ai-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  min-height: 160px;
+}
+
+/* Empty / trigger state */
+.rd-ai-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  padding: 36px 16px;
+  text-align: center;
+}
+.rd-ai-hint {
+  margin: 0;
+  font-size: 13px;
+  color: var(--muted);
+  max-width: 300px;
+  line-height: 1.6;
+}
+.rd-ai-error-msg {
+  margin: 0;
+  font-size: 13px;
+  color: var(--bad);
+}
+
+/* Progress state */
+.rd-ai-progress {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 36px 16px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--muted);
+}
+.rd-ai-provider-hint { font-size: 11px; }
+
+/* Failed state */
+.rd-ai-failed {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  padding: 28px 16px;
+  text-align: center;
+}
+
+/* Success state */
+.rd-ai-result-area {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.rd-ai-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  flex-wrap: wrap;
+}
+.rd-ai-provider-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 2px 8px;
+  border-radius: 6px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: capitalize;
+}
+.rd-ai-regen-btn {
+  margin-left: auto;
+  font-size: 12px;
+  padding: 4px 10px;
+}
+.rd-ai-result {
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--bg);
+  font-size: 14px;
+  line-height: 1.7;
+  max-height: 480px;
+  overflow-y: auto;
+}
