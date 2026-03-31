@@ -186,15 +186,15 @@ export const api = {
       body: JSON.stringify(opts),
     }),
   getAnalysisTask: (taskId) => request(`/api/analysis/${taskId}`),
-  generateComparisonAnalysis: ({ period, provider, model } = {}) =>
+  generateComparisonAnalysis: (opts = {}) =>
     request("/api/analysis/generate-comparison", {
       method: "POST",
-      body: JSON.stringify({ period, provider, model }),
+      body: JSON.stringify(opts),
     }),
-  generateProblemAnalysis: (problemId, { provider, model } = {}) =>
+  generateProblemAnalysis: (problemId, opts = {}) =>
     request(`/api/analysis/generate-problem/${problemId}`, {
       method: "POST",
-      body: JSON.stringify({ provider, model }),
+      body: JSON.stringify(opts),
     }),
   getLatestAnalysis: () => request("/api/analysis/latest"),
 
