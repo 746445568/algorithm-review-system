@@ -318,6 +318,13 @@ export function ReviewDetail({
               <span className={`rd-solved-badge ${selectedProblem.solvedLater ? "badge-good" : "badge-bad"}`}>
                 {selectedProblem.solvedLater ? "已通过" : "仍未通过"}
               </span>
+              <button
+                type="button"
+                className="ghost-button"
+                onClick={() => onNavigate?.("analysis", { problemId: selectedProblemId })}
+              >
+                分析这道题
+              </button>
               {selectedProblemRecord?.url ? (
                 <button
                   type="button"
