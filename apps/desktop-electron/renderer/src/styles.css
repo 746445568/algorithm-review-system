@@ -1832,3 +1832,212 @@ textarea {
   max-height: 480px;
   overflow-y: auto;
 }
+
+/* ========================================
+   AI Analysis Page (an-*)
+   ======================================== */
+
+.an-page {
+  padding: 24px;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.an-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 24px;
+}
+
+.an-header h2 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 600;
+}
+
+.an-container {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+
+@media (max-width: 1024px) {
+  .an-container {
+    grid-template-columns: 1fr;
+  }
+}
+
+.an-left,
+.an-right {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.an-section {
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--bg-card);
+}
+
+.an-section h3 {
+  margin: 0 0 16px 0;
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.an-section h4 {
+  margin: 16px 0 12px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.an-controls {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.an-controls button {
+  flex: 1;
+}
+
+.an-select {
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 14px;
+  margin-bottom: 12px;
+  cursor: pointer;
+}
+
+.an-select:focus {
+  outline: 2px solid var(--accent);
+  border-color: transparent;
+}
+
+.an-divider {
+  border: none;
+  border-top: 1px solid var(--line);
+  margin: 24px 0;
+}
+
+.an-error {
+  color: #ef4444;
+  font-size: 14px;
+  margin: 12px 0;
+  padding: 12px;
+  background: rgba(239, 68, 68, 0.1);
+  border-radius: 8px;
+}
+
+.an-result {
+  margin-top: 16px;
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--bg);
+  max-height: 500px;
+  overflow-y: auto;
+}
+
+.an-result pre {
+  margin: 0;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1.7;
+  color: var(--text);
+}
+
+/* Dashboard AI Card */
+.dash-ai-card {
+  grid-column: 1 / -1;
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--accent-soft) 0%, var(--bg-card) 100%);
+}
+
+.dash-ai-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.dash-ai-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.dash-ai-preview {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin: 0 0 16px 0;
+  line-height: 1.6;
+}
+
+/* ─── AI Analysis Page (an-*) ──────────────────────── */
+.an-page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  padding: 24px;
+}
+
+.an-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.an-split {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+
+@media (max-width: 1024px) {
+  .an-split {
+    grid-template-columns: 1fr;
+  }
+}
+
+.an-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--bg);
+}
+
+.an-controls {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.an-result {
+  padding: 16px;
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  background: var(--bg);
+  font-size: 14px;
+  line-height: 1.7;
+  max-height: 480px;
+  overflow-y: auto;
+}
