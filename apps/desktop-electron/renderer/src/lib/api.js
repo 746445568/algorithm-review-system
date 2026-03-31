@@ -186,6 +186,18 @@ export const api = {
       body: JSON.stringify(opts),
     }),
   getAnalysisTask: (taskId) => request(`/api/analysis/${taskId}`),
+  generateComparisonAnalysis: ({ period, provider, model } = {}) =>
+    request("/api/analysis/generate-comparison", {
+      method: "POST",
+      body: JSON.stringify({ period, provider, model }),
+    }),
+  generateProblemAnalysis: (problemId, { provider, model } = {}) =>
+    request(`/api/analysis/generate-problem/${problemId}`, {
+      method: "POST",
+      body: JSON.stringify({ provider, model }),
+    }),
+  getLatestAnalysis: () => request("/api/analysis/latest"),
+
   getProblems: async (query = {}) => {
     const cached = await getCachedProblems(query);
     if (cached.length > 0) {
