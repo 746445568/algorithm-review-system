@@ -1,25 +1,33 @@
-import { createContext, useCallback, useContext, useState } from "react";
+import { createContext, useContext, useState, useCallback } from "react";
 
 const NavigationContext = createContext(null);
 
-export function NavigationProvider({ children, initialPage = "dashboard" }) {
-  const [page, setPage] = useState(initialPage);
+export function NavigationProvider({ children }) {
+  const [currentPage, setCurrentPage] = useState("dashboard");
   const [navigationState, setNavigationState] = useState({});
 
-  const navigateTo = useCallback((nextPage, state = {}) => {
+  const navigateTo = useCallback((page, state = {}) => {
+    setCurrentPage(page);
     setNavigationState(state);
-    setPage(nextPage);
   }, []);
 
+  const value = {
+    page: currentPage,
+    navigationState,
+    navigateTo,
+  };
+
   return (
-    <NavigationContext.Provider value={{ page, navigationState, navigateTo, setPage }}>
+    <NavigationContext.Provider value={value}>
       {children}
     </NavigationContext.Provider>
   );
 }
 
 export function useNavigation() {
-  const ctx = useContext(NavigationContext);
-  if (!ctx) throw new Error("useNavigation must be used within NavigationProvider");
-  return ctx;
+  const context = useContext(NavigationContext);
+  if (!context) {
+    throw new Error("useNavigation must be used within NavigationProvider");
+  }
+  return context;
 }

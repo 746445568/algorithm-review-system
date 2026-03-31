@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { NavigationProvider, useNavigation } from "./lib/NavigationContext.jsx";
+import { AnalysisPage } from "./pages/AnalysisPage.jsx";
 import { DashboardPage } from "./pages/DashboardPage.jsx";
 import { AccountsPage } from "./pages/AccountsPage.jsx";
 import { ReviewPage } from "./pages/ReviewPage.jsx";
@@ -52,10 +54,18 @@ const navItems = [
     ),
   },
   {
+    id: "analysis", label: "AI 分析", kicker: "洞察",
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/>
+      </svg>
+    ),
+  },
+  {
     id: "settings", label: "设置", kicker: "配置",
     icon: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+        <circle cx="12" cy="12" r="3" /><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
       </svg>
     ),
   },
@@ -70,8 +80,8 @@ const initialStatus = {
   pid: null,
 };
 
-export function App() {
-  const [page, setPage] = useState("dashboard");
+function AppShell() {
+  const { page, navigateTo } = useNavigation();
   const [serviceStatus, setServiceStatus] = useState(initialStatus);
   const [runtimeInfo, setRuntimeInfo] = useState({
     serviceUrl: initialStatus.url,
@@ -221,7 +231,7 @@ export function App() {
               key={item.id}
               type="button"
               className={item.id === page ? "nav-item active" : "nav-item"}
-              onClick={() => setPage(item.id)}
+              onClick={() => navigateTo(item.id)}
             >
               <span className="nav-icon">{item.icon}</span>
               <div className="nav-text">
@@ -289,7 +299,7 @@ export function App() {
           <div>
             <strong>{serviceStatus.message}</strong>
             <p>
-              来源: {serviceStatus.source}
+              来源：{serviceStatus.source}
               {serviceStatus.pid ? ` / 进程 ${serviceStatus.pid}` : ""}
               {` / 上次同步 ${lastSyncLabel}`}
             </p>
@@ -297,7 +307,7 @@ export function App() {
         </section>
 
         {page === "dashboard" ? (
-          <DashboardPage serviceStatus={serviceStatus} runtimeInfo={runtimeInfo} cacheStatus={cacheStatus} connectivity={connectivity} syncQueue={syncQueue} onNavigate={setPage} />
+          <DashboardPage serviceStatus={serviceStatus} runtimeInfo={runtimeInfo} cacheStatus={cacheStatus} connectivity={connectivity} syncQueue={syncQueue} onNavigate={navigateTo} />
         ) : null}
 
         {page === "accounts" ? (
@@ -305,7 +315,11 @@ export function App() {
         ) : null}
 
         {page === "review" ? (
-          <ReviewPage serviceStatus={serviceStatus} runtimeInfo={runtimeInfo} onNavigate={setPage} />
+          <ReviewPage serviceStatus={serviceStatus} runtimeInfo={runtimeInfo} onNavigate={navigateTo} />
+        ) : null}
+
+        {page === "analysis" ? (
+          <AnalysisPage serviceStatus={serviceStatus} runtimeInfo={runtimeInfo} />
         ) : null}
 
         {page === "settings" ? (
@@ -318,5 +332,13 @@ export function App() {
         ) : null}
       </main>
     </div>
+  );
+}
+
+export function App() {
+  return (
+    <NavigationProvider>
+      <AppShell />
+    </NavigationProvider>
   );
 }
