@@ -312,24 +312,20 @@ export function AnalysisPage() {
     }, 2000);
   }
 
-  function handleGenerateProblemAnalysis(problemId) {
+  async function handleGenerateProblemAnalysis(problemId) {
     if (problemLoading || !problemId) return;
     stopProblemPoll();
     setProblemLoading(true);
     setProblemTask(null);
     setProblemError(null);
     try {
-      api.generateProblemAnalysis(problemId, {}).then(({ task }) => {
-        setProblemTask(task);
-        if (task.status === "SUCCESS" || task.status === "FAILED") {
-          setProblemLoading(false);
-        } else {
-          scheduleProblemPoll(task.id);
-        }
-      }).catch((err) => {
+      const { task } = await api.generateProblemAnalysis(problemId, {});
+      setProblemTask(task);
+      if (task.status === "SUCCESS" || task.status === "FAILED") {
         setProblemLoading(false);
-        setProblemError(err.message);
-      });
+      } else {
+        scheduleProblemPoll(task.id);
+      }
     } catch (err) {
       setProblemLoading(false);
       setProblemError(err.message);

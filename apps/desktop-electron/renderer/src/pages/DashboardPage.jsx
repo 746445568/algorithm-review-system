@@ -75,7 +75,7 @@ export function DashboardPage({ serviceStatus, runtimeInfo, cacheStatus = {}, co
   useEffect(() => {
     api.getLatestAnalysis()
       .then((data) => setLatestAnalysis(data?.task ?? null))
-      .catch(() => {});
+      .catch((err) => console.error("getLatestAnalysis failed:", err));
   }, []);
 
   const latestTask = data.syncTasks[0];
