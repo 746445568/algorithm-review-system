@@ -158,6 +158,11 @@ export const api = {
       throw error;
     }
   },
+  rateReview: (problemId, quality) =>
+    request(`/api/review/items/${Number(problemId)}/rate`, {
+      method: "POST",
+      body: JSON.stringify({ quality }),
+    }),
   getAISettings: () => request("/api/settings/ai"),
   saveAISettings: (payload) =>
     request("/api/settings/ai", {

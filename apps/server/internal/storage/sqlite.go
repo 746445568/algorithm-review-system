@@ -17,7 +17,7 @@ import (
 	"ojreviewdesktop/internal/models"
 )
 
-const schemaVersion = 2
+const schemaVersion = 3
 
 type DB struct {
 	conn  *sql.DB
@@ -218,10 +218,32 @@ CREATE TABLE IF NOT EXISTS app_settings (
 	if _, err := db.conn.Exec(`INSERT OR IGNORE INTO owner_profile(id, name) VALUES (1, 'Owner')`); err != nil {
 		return err
 	}
+	if err := db.migrateToV3(); err != nil {
+		return err
+	}
+
 	_, err := db.conn.Exec(`
 INSERT INTO schema_meta(key, value) VALUES ('schema_version', ?)
 ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = CURRENT_TIMESTAMP`, fmt.Sprintf("%d", schemaVersion))
 	return err
+}
+
+func (db *DB) migrateToV3() error {
+	alters := []string{
+		`ALTER TABLE problem_review_states ADD COLUMN ease_factor REAL NOT NULL DEFAULT 2.5`,
+		`ALTER TABLE problem_review_states ADD COLUMN interval_days INTEGER NOT NULL DEFAULT 0`,
+		`ALTER TABLE problem_review_states ADD COLUMN repetition_count INTEGER NOT NULL DEFAULT 0`,
+		`ALTER TABLE problem_review_states ADD COLUMN last_quality INTEGER`,
+	}
+	for _, stmt := range alters {
+		if _, err := db.conn.Exec(stmt); err != nil {
+			if strings.Contains(err.Error(), "duplicate column") {
+				continue
+			}
+			return err
+		}
+	}
+	return nil
 }
 
 func (db *DB) Owner() (models.OwnerProfile, error) {
@@ -771,7 +793,8 @@ func (db *DB) GetReviewSnapshot(id int64) (models.ReviewSnapshot, error) {
 
 func (db *DB) GetProblemReviewState(problemID int64) (models.ProblemReviewState, error) {
 	row := db.conn.QueryRow(`
-SELECT problem_id, status, notes, next_review_at, last_updated_at
+SELECT problem_id, status, notes, next_review_at, last_updated_at,
+       ease_factor, interval_days, repetition_count, last_quality
 FROM problem_review_states
 WHERE problem_id = ?`, problemID)
 
@@ -787,6 +810,7 @@ WHERE problem_id = ?`, problemID)
 		ProblemID:     problemID,
 		Status:        models.ReviewStatusTodo,
 		Notes:         "",
+		EaseFactor:    2.5,
 		LastUpdatedAt: time.Now().UTC(),
 	}, nil
 }
@@ -803,18 +827,36 @@ func (db *DB) SaveProblemReviewState(state models.ProblemReviewState) (models.Pr
 		nextReviewAt = state.NextReviewAt.UTC().Format(time.RFC3339)
 	}
 
+	ef := state.EaseFactor
+	if ef < 1.3 {
+		ef = 2.5
+	}
+	var lastQuality any
+	if state.LastQuality != nil {
+		lastQuality = *state.LastQuality
+	}
+
 	_, err := db.conn.Exec(`
-INSERT INTO problem_review_states(problem_id, status, notes, next_review_at, last_updated_at)
-VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
+INSERT INTO problem_review_states(problem_id, status, notes, next_review_at, last_updated_at,
+	ease_factor, interval_days, repetition_count, last_quality)
+VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, ?, ?, ?, ?)
 ON CONFLICT(problem_id) DO UPDATE SET
 	status = excluded.status,
 	notes = excluded.notes,
 	next_review_at = excluded.next_review_at,
-	last_updated_at = CURRENT_TIMESTAMP`,
+	last_updated_at = CURRENT_TIMESTAMP,
+	ease_factor = excluded.ease_factor,
+	interval_days = excluded.interval_days,
+	repetition_count = excluded.repetition_count,
+	last_quality = excluded.last_quality`,
 		state.ProblemID,
 		status,
 		notes,
 		nextReviewAt,
+		ef,
+		state.IntervalDays,
+		state.RepetitionCount,
+		lastQuality,
 	)
 	if err != nil {
 		return models.ProblemReviewState{}, err
@@ -1143,7 +1185,11 @@ func scanProblemReviewState(scanner interface{ Scan(dest ...any) error }) (model
 	var state models.ProblemReviewState
 	var nextReviewAtRaw sql.NullString
 	var lastUpdatedAtRaw string
-	if err := scanner.Scan(&state.ProblemID, &state.Status, &state.Notes, &nextReviewAtRaw, &lastUpdatedAtRaw); err != nil {
+	var lastQuality sql.NullInt64
+	if err := scanner.Scan(
+		&state.ProblemID, &state.Status, &state.Notes, &nextReviewAtRaw, &lastUpdatedAtRaw,
+		&state.EaseFactor, &state.IntervalDays, &state.RepetitionCount, &lastQuality,
+	); err != nil {
 		return state, err
 	}
 
@@ -1159,6 +1205,11 @@ func scanProblemReviewState(scanner interface{ Scan(dest ...any) error }) (model
 			return state, fmt.Errorf("parse review state next_review_at: %w", err)
 		}
 		state.NextReviewAt = &parsed
+	}
+
+	if lastQuality.Valid {
+		q := int(lastQuality.Int64)
+		state.LastQuality = &q
 	}
 
 	return state, nil

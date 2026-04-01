@@ -10,6 +10,13 @@ const STATUS_OPTIONS = [
   { value: "DONE",      label: "已完成", chipClass: "rl-chip-good"    },
 ];
 
+const RATE_OPTIONS = [
+  { quality: 1, label: "忘了", key: "Q", className: "rd-rate-btn--forgot"  },
+  { quality: 2, label: "困难", key: "W", className: "rd-rate-btn--hard"    },
+  { quality: 3, label: "一般", key: "E", className: "rd-rate-btn--medium"  },
+  { quality: 5, label: "简单", key: "R", className: "rd-rate-btn--easy"    },
+];
+
 function isMissingReviewStateRoute(error) {
   return /\b404\b/.test(error?.message || "");
 }
@@ -107,6 +114,8 @@ export function ReviewDetail({
   const [supportMessage, setSupportMessage] = useState("");
   const [toast, setToast] = useState(null);
   const [activeTab, setActiveTab] = useState("state");
+  const [srsInfo, setSrsInfo] = useState({ easeFactor: 2.5, intervalDays: 0, repetitionCount: 0 });
+  const [rating, setRating] = useState(false);
 
   const seqRef = useRef(0);
   const autoAdvRef = useRef(null);
@@ -133,6 +142,11 @@ export function ReviewDetail({
         notes: state.notes || "",
         nextReviewAt: toDatetimeLocalValue(state.nextReviewAt),
         lastUpdatedAt: state.lastUpdatedAt || "",
+      });
+      setSrsInfo({
+        easeFactor: state.easeFactor ?? 2.5,
+        intervalDays: state.intervalDays ?? 0,
+        repetitionCount: state.repetitionCount ?? 0,
       });
       setReviewStateSupported(true);
       setSupportMessage("");
@@ -189,7 +203,53 @@ export function ReviewDetail({
     }
   }, [selectedProblemId, reviewStateSupported, reviewSaving, reviewState, onReviewSaved, filteredProblems, onSelect, serviceUrl]);
 
+  const handleRate = useCallback(async (quality) => {
+    if (!selectedProblemId || !reviewStateSupported || rating) return;
+    setRating(true);
+    try {
+      const result = await api.rateReview(selectedProblemId, quality);
+      setSrsInfo({
+        easeFactor: result.easeFactor ?? 2.5,
+        intervalDays: result.intervalDays ?? 0,
+        repetitionCount: result.repetitionCount ?? 0,
+      });
+      setReviewState((s) => ({
+        ...s,
+        status: result.status || "SCHEDULED",
+        nextReviewAt: toDatetimeLocalValue(result.nextReviewAt),
+        lastUpdatedAt: result.lastUpdatedAt || s.lastUpdatedAt,
+      }));
+      onReviewSaved(result);
+      const days = result.intervalDays ?? 0;
+      setToast({ message: `已评分，下次复习：${days} 天后`, isError: false });
+      const idx = filteredProblems.findIndex((p) => p.problemId === selectedProblemId);
+      if (idx < filteredProblems.length - 1) {
+        clearTimeout(autoAdvRef.current);
+        autoAdvRef.current = setTimeout(() => {
+          onSelect(filteredProblems[idx + 1].problemId);
+        }, 1200);
+      }
+    } catch (err) {
+      setToast({ message: `评分失败：${err.message}`, isError: true });
+    } finally {
+      setRating(false);
+    }
+  }, [selectedProblemId, reviewStateSupported, rating, onReviewSaved, filteredProblems, onSelect]);
+
   useEffect(() => () => clearTimeout(autoAdvRef.current), []);
+
+  useEffect(() => {
+    if (!reviewStateSupported || serviceUnavailable) return;
+    const keyMap = { q: 1, w: 2, e: 3, r: 5 };
+    const onKey = (e) => {
+      if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return;
+      if (activeTab !== "state") return;
+      const quality = keyMap[e.key.toLowerCase()];
+      if (quality) handleRate(quality);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [reviewStateSupported, serviceUnavailable, activeTab, handleRate]);
 
   const { currentIndex, total, hasNext, hasPrev, goNext, goPrev } = useReviewFlow({
     problems: filteredProblems,
@@ -307,6 +367,14 @@ export function ReviewDetail({
                 {selectedProblem.latestVerdict || "—"}
               </strong>
             </article>
+            <article>
+              <span>复习间隔</span>
+              <strong>{srsInfo.intervalDays > 0 ? `${srsInfo.intervalDays} 天` : "—"}</strong>
+            </article>
+            <article>
+              <span>累计复习</span>
+              <strong>{srsInfo.repetitionCount > 0 ? `${srsInfo.repetitionCount} 次` : "—"}</strong>
+            </article>
           </div>
 
           {selectedTags.length > 0 && (
@@ -362,7 +430,29 @@ export function ReviewDetail({
             </div>
 
             <div className="rd-field">
-              <label className="rd-label" htmlFor="rd-next-review">下次复习时间</label>
+              <span className="rd-label">间隔重复评分</span>
+              <div className="rd-rate-btns">
+                {RATE_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.quality}
+                    type="button"
+                    className={`rd-rate-btn ${opt.className}`}
+                    disabled={!reviewStateSupported || rating || serviceUnavailable}
+                    onClick={() => handleRate(opt.quality)}
+                    title={`快捷键 ${opt.key}`}
+                  >
+                    <span className="rd-rate-key">{opt.key}</span>
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+              {srsInfo.intervalDays > 0 && (
+                <p className="rd-srs-hint">当前间隔 {srsInfo.intervalDays} 天 · 已复习 {srsInfo.repetitionCount} 次 · 熟练度 {srsInfo.easeFactor.toFixed(2)}</p>
+              )}
+            </div>
+
+            <div className="rd-field">
+              <label className="rd-label" htmlFor="rd-next-review">下次复习时间（手动调整）</label>
               <input
                 id="rd-next-review"
                 type="datetime-local"
