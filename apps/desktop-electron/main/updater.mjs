@@ -1,5 +1,6 @@
 // apps/desktop-electron/main/updater.mjs
-import { autoUpdater } from "electron-updater";
+import pkg from "electron-updater";
+const { autoUpdater } = pkg;
 
 export function initAutoUpdater(ipcMain, app, getWindow) {
   // Skip in dev mode (no latest.yml available)
