@@ -94,11 +94,20 @@ func (s *Server) routes() {
 }
 
 func (s *Server) handleHealth(w http.ResponseWriter, _ *http.Request) {
+	settings, err := s.db.LoadAISettings()
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	firstRun := settings.APIKey == ""
+
 	writeJSON(w, http.StatusOK, map[string]any{
 		"status":    "ok",
 		"timestamp": time.Now().UTC().Format(time.RFC3339),
 		"version":   buildinfo.Version,
 		"commit":    buildinfo.Commit,
+		"firstRun":  firstRun,
 	})
 }
 
