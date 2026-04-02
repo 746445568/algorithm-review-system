@@ -35,7 +35,7 @@ func LoadConfig() (Config, error) {
 		ExportDir:     filepath.Join(base, "exports"),
 		SecureDir:     filepath.Join(base, "secure"),
 		DBPath:        filepath.Join(base, "data", "ojreview.db"),
-		ListenAddr:    "127.0.0.1:38473",
+		ListenAddr:    "0.0.0.0:38473",
 		MasterKeyPath: filepath.Join(base, "secure", "master.key"),
 	}
 

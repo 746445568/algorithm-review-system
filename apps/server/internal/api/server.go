@@ -21,6 +21,8 @@ import (
 	"ojreviewdesktop/internal/storage"
 )
 
+const sqliteBusyUserMessage = "当前有并发分析或同步任务占用数据库，请稍后重试"
+
 type Server struct {
 	cfg      app.Config
 	db       *storage.DB
@@ -79,6 +81,9 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("GET /api/contests", s.handleContests)
 	s.mux.HandleFunc("POST /api/contests/sync", s.handleSyncContests)
 	s.mux.HandleFunc("POST /api/analysis/generate", s.handleAnalysisGenerate)
+	s.mux.HandleFunc("POST /api/analysis/generate-comparison", s.handleAnalysisGenerateComparison)
+	s.mux.HandleFunc("POST /api/analysis/generate-problem/{problemId}", s.handleAnalysisGenerateProblem)
+	s.mux.HandleFunc("GET /api/analysis/latest", s.handleAnalysisLatest)
 	s.mux.HandleFunc("GET /api/analysis/{taskId}", s.handleAnalysisTask)
 	s.mux.HandleFunc("GET /api/settings/ai", s.handleGetAISettings)
 	s.mux.HandleFunc("PUT /api/settings/ai", s.handlePutAISettings)
@@ -383,8 +388,34 @@ func (s *Server) handleSyncContests(w http.ResponseWriter, _ *http.Request) {
 		"updated": inserted,
 	})
 }
+
+// parsePeriodBounds returns the [start, end] of the requested calendar period
+// relative to now. "week" = Mon–Sun of current ISO week; "month" = 1st–last of current month.
+func parsePeriodBounds(period string, now time.Time) (start, end time.Time, err error) {
+	now = now.UTC()
+	switch period {
+	case "week":
+		weekday := int(now.Weekday())
+		if weekday == 0 {
+			weekday = 7 // Sunday → 7 in ISO week
+		}
+		monday := now.AddDate(0, 0, -(weekday - 1))
+		start = time.Date(monday.Year(), monday.Month(), monday.Day(), 0, 0, 0, 0, time.UTC)
+		end = start.AddDate(0, 0, 7).Add(-time.Nanosecond)
+		return
+	case "month":
+		start = time.Date(now.Year(), now.Month(), 1, 0, 0, 0, 0, time.UTC)
+		end = start.AddDate(0, 1, 0).Add(-time.Nanosecond)
+		return
+	default:
+		err = fmt.Errorf("unknown period %q: must be 'week' or 'month'", period)
+		return
+	}
+}
+
 func (s *Server) handleAnalysisGenerate(w http.ResponseWriter, r *http.Request) {
 	var payload struct {
+		Period          string `json:"period"`
 		Provider        string `json:"provider"`
 		Model           string `json:"model"`
 		InputSnapshotID int64  `json:"inputSnapshotId"`
@@ -410,21 +441,58 @@ func (s *Server) handleAnalysisGenerate(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 	if payload.InputSnapshotID == 0 {
-		summary, err := s.db.GetReviewSummary()
+		var summary map[string]any
+		if payload.Period == "" || payload.Period == "all" {
+			summary, err = s.db.GetReviewSummary()
+		} else {
+			var periodStart, periodEnd time.Time
+			periodStart, periodEnd, err = parsePeriodBounds(payload.Period, time.Now())
+			if err != nil {
+				writeError(w, http.StatusBadRequest, err.Error())
+				return
+			}
+			summary, err = s.db.GetReviewSummaryForPeriod(periodStart, periodEnd)
+		}
 		if err != nil {
 			writeError(w, http.StatusInternalServerError, err.Error())
 			return
 		}
-		snapshot, err := s.db.CreateReviewSnapshot(summary)
+		summaryJSON, err := json.Marshal(summary)
 		if err != nil {
-			writeError(w, http.StatusInternalServerError, err.Error())
+			writeError(w, http.StatusInternalServerError, normalizeAnalysisCreationError(err).Error())
 			return
 		}
-		payload.InputSnapshotID = snapshot.ID
+		task, reused, err := s.db.CreateAnalysisTaskWithTypedSnapshot(
+			payload.Provider,
+			payload.Model,
+			string(summaryJSON),
+			"global",
+			nil,
+		)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, normalizeAnalysisCreationError(err).Error())
+			return
+		}
+		if !reused {
+			taskID := task.ID
+			_ = s.queue.Enqueue(jobs.Job{
+				Key:      jobs.AnalysisJobKey(taskID),
+				TaskType: models.TaskTypeAnalysis,
+				TaskID:   taskID,
+				Run: func(ctx context.Context) error {
+					return s.runAnalysisTask(ctx, taskID)
+				},
+			})
+		}
+		writeJSON(w, http.StatusAccepted, map[string]any{
+			"task":   task,
+			"reused": reused,
+		})
+		return
 	}
 	task, reused, err := s.db.CreateAnalysisTask(payload.Provider, payload.Model, payload.InputSnapshotID)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, err.Error())
+		writeError(w, http.StatusInternalServerError, normalizeAnalysisCreationError(err).Error())
 		return
 	}
 	if !reused {
@@ -454,6 +522,187 @@ func (s *Server) handleAnalysisTask(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
 			writeError(w, http.StatusNotFound, "analysis task not found")
+			return
+		}
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, task)
+}
+
+func (s *Server) handleAnalysisGenerateComparison(w http.ResponseWriter, r *http.Request) {
+	var payload struct {
+		Period   string `json:"period"`
+		Provider string `json:"provider"`
+		Model    string `json:"model"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid json body")
+		return
+	}
+	if payload.Period == "" {
+		writeError(w, http.StatusBadRequest, "period is required")
+		return
+	}
+
+	settings, err := s.db.LoadAISettings()
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if payload.Provider == "" {
+		payload.Provider = settings.Provider
+	}
+	if payload.Model == "" {
+		payload.Model = settings.Model
+	}
+	if payload.Provider == "" || payload.Model == "" {
+		writeError(w, http.StatusBadRequest, "provider and model are required; configure AI settings first")
+		return
+	}
+
+	now := time.Now()
+	thisStart, thisEnd, err := parsePeriodBounds(payload.Period, now)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	// Previous period: same duration, immediately before this one
+	duration := thisEnd.Sub(thisStart) + time.Nanosecond
+	prevEnd := thisStart.Add(-time.Nanosecond)
+	prevStart := prevEnd.Add(-duration).Add(time.Nanosecond)
+
+	thisSummary, err := s.db.GetReviewSummaryForPeriod(thisStart, thisEnd)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	prevSummary, err := s.db.GetReviewSummaryForPeriod(prevStart, prevEnd)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	combined := map[string]any{
+		"type":       "comparison",
+		"period":     payload.Period,
+		"thisPeriod": thisSummary,
+		"prevPeriod": prevSummary,
+	}
+	combinedJSON, err := json.Marshal(combined)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	task, reused, err := s.db.CreateAnalysisTaskWithTypedSnapshot(
+		payload.Provider,
+		payload.Model,
+		string(combinedJSON),
+		"global_comparison",
+		nil,
+	)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, normalizeAnalysisCreationError(err).Error())
+		return
+	}
+	if !reused {
+		taskID := task.ID
+		_ = s.queue.Enqueue(jobs.Job{
+			Key:      jobs.AnalysisJobKey(taskID),
+			TaskType: models.TaskTypeAnalysis,
+			TaskID:   taskID,
+			Run: func(ctx context.Context) error {
+				return s.runAnalysisTask(ctx, taskID)
+			},
+		})
+	}
+	writeJSON(w, http.StatusAccepted, map[string]any{"task": task, "reused": reused})
+}
+
+func (s *Server) handleAnalysisGenerateProblem(w http.ResponseWriter, r *http.Request) {
+	problemID, err := parseTaskID(r.PathValue("problemId")) // reuses the int64 parser
+	if err != nil || problemID <= 0 {
+		writeError(w, http.StatusBadRequest, "invalid problem id")
+		return
+	}
+
+	var payload struct {
+		Provider string `json:"provider"`
+		Model    string `json:"model"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid json body")
+		return
+	}
+
+	settings, err := s.db.LoadAISettings()
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if payload.Provider == "" {
+		payload.Provider = settings.Provider
+	}
+	if payload.Model == "" {
+		payload.Model = settings.Model
+	}
+	if payload.Provider == "" || payload.Model == "" {
+		writeError(w, http.StatusBadRequest, "provider and model are required; configure AI settings first")
+		return
+	}
+
+	data, err := s.db.GetProblemAnalysisData(problemID)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			writeError(w, http.StatusNotFound, "problem not found")
+			return
+		}
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if len(data.Submissions) == 0 {
+		writeError(w, http.StatusBadRequest, "该题暂无提交记录，无法进行 AI 分析")
+		return
+	}
+
+	dataJSON, err := json.Marshal(data)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	task, reused, err := s.db.CreateAnalysisTaskWithTypedSnapshot(
+		payload.Provider,
+		payload.Model,
+		string(dataJSON),
+		"problem",
+		&problemID,
+	)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, normalizeAnalysisCreationError(err).Error())
+		return
+	}
+	if !reused {
+		taskID := task.ID
+		_ = s.queue.Enqueue(jobs.Job{
+			Key:      jobs.AnalysisJobKey(taskID),
+			TaskType: models.TaskTypeAnalysis,
+			TaskID:   taskID,
+			Run: func(ctx context.Context) error {
+				return s.runAnalysisTask(ctx, taskID)
+			},
+		})
+	}
+	writeJSON(w, http.StatusAccepted, map[string]any{"task": task, "reused": reused})
+}
+
+func (s *Server) handleAnalysisLatest(w http.ResponseWriter, _ *http.Request) {
+	task, err := s.db.GetLatestGlobalAnalysisTask()
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			w.WriteHeader(http.StatusNoContent)
 			return
 		}
 		writeError(w, http.StatusInternalServerError, err.Error())
@@ -583,6 +832,19 @@ func writeJSON(w http.ResponseWriter, status int, payload any) {
 
 func writeError(w http.ResponseWriter, status int, message string) {
 	writeJSON(w, status, map[string]string{"error": message})
+}
+
+func normalizeAnalysisCreationError(err error) error {
+	if err == nil {
+		return nil
+	}
+
+	message := strings.ToLower(err.Error())
+	if strings.Contains(message, "database is locked") || strings.Contains(message, "sqlite_busy") {
+		return errors.New(sqliteBusyUserMessage)
+	}
+
+	return err
 }
 
 func parseTaskID(raw string) (int64, error) {

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "../lib/api.js";
 import { formatDate, platformLabel, statusLabel, tagLabel } from "../lib/format.js";
+import { useNavigation } from "../lib/NavigationContext.jsx";
 
 function getFreshnessLabel(meta) {
   if (!meta?.lastSyncedAt) {
@@ -9,13 +10,15 @@ function getFreshnessLabel(meta) {
   return meta.stale ? "缓存可能陈旧" : "已更新";
 }
 
-export function DashboardPage({ serviceStatus, runtimeInfo, cacheStatus, connectivity, syncQueue }) {
+export function DashboardPage({ serviceStatus, runtimeInfo, cacheStatus = {}, connectivity, syncQueue = [], onNavigate }) {
   const [data, setData] = useState({
     owner: null,
     accounts: [],
     syncTasks: [],
     reviewSummary: null,
   });
+  const { navigateTo } = useNavigation();
+  const [latestAnalysis, setLatestAnalysis] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const refreshSequenceRef = useRef(0);
@@ -69,6 +72,12 @@ export function DashboardPage({ serviceStatus, runtimeInfo, cacheStatus, connect
     return () => window.clearInterval(timer);
   }, [refresh, serviceStatus.state]);
 
+  useEffect(() => {
+    api.getLatestAnalysis()
+      .then((data) => setLatestAnalysis(data?.task ?? null))
+      .catch((err) => console.error("getLatestAnalysis failed:", err));
+  }, []);
+
   const latestTask = data.syncTasks[0];
   const weakTags = data.reviewSummary?.weakTags ?? [];
   const repeatedFailures = data.reviewSummary?.repeatedFailures ?? [];
@@ -78,7 +87,40 @@ export function DashboardPage({ serviceStatus, runtimeInfo, cacheStatus, connect
 
   return (
     <div className="page-grid">
-      <section className="panel hero-panel">
+      <section className="dash-ai-card">
+        <div className="dash-ai-header">
+          <span className="dash-ai-title">🤖 AI 分析</span>
+          {latestAnalysis ? (
+            <span className="muted">{latestAnalysis.period === "week" ? "本周" : "本月"} · {new Date(latestAnalysis.updatedAt).toLocaleString('zh-CN')}</span>
+          ) : (
+            <span className="muted">暂无历史记录</span>
+          )}
+        </div>
+        {latestAnalysis ? (
+          <>
+            <p className="dash-ai-preview">
+              {latestAnalysis.resultText?.slice(0, 80)}…
+            </p>
+            <button
+              type="button"
+              className="ghost-button"
+              onClick={() => navigateTo("analysis")}
+            >
+              进入分析页 →
+            </button>
+          </>
+        ) : (
+          <button
+            type="button"
+            className="primary-button"
+            onClick={() => navigateTo("analysis")}
+          >
+            生成首份分析
+          </button>
+        )}
+      </section>
+
+        <section className="panel hero-panel">
         <div className="hero-copy">
           <span className="section-label">
             {serviceStatus.state === "healthy" ? "已连接" : "连接中"}

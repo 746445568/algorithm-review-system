@@ -2,7 +2,7 @@ const DEFAULT_BASE_URL = "http://127.0.0.1:38473";
 const REQUEST_TIMEOUT_MS = 10000;
 
 export function normalizeBaseUrl(nextBase) {
-  if (!nextBase) {
+  if (nextBase === null || nextBase === undefined) {
     return DEFAULT_BASE_URL;
   }
 
@@ -10,7 +10,9 @@ export function normalizeBaseUrl(nextBase) {
 }
 
 export function buildUrl(baseUrl, path, query = {}) {
-  const url = new URL(path, normalizeBaseUrl(baseUrl));
+  const normalizedBaseUrl = normalizeBaseUrl(baseUrl);
+  const resolvedBaseUrl = normalizedBaseUrl === "" ? window.location.origin : normalizedBaseUrl;
+  const url = new URL(path, resolvedBaseUrl);
   for (const [key, value] of Object.entries(query)) {
     if (value !== undefined && value !== null && value !== "") {
       url.searchParams.set(key, String(value));

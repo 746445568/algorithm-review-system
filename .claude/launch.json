@@ -1,0 +1,23 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "Legacy Frontend (Next.js)",
+      "runtimeExecutable": "C:/Program Files/nodejs/npm",
+      "runtimeArgs": ["run", "dev:frontend"],
+      "port": 3000
+    },
+    {
+      "name": "Legacy Backend (Express/tsx)",
+      "runtimeExecutable": "C:/Program Files/nodejs/npm",
+      "runtimeArgs": ["run", "dev:backend"],
+      "port": 3001
+    },
+    {
+      "name": "Vite Renderer",
+      "runtimeExecutable": "wsl.exe",
+      "runtimeArgs": ["-d", "MyWSL", "--", "bash", "-c", "cd ~/.openclaw/workspace/algorithm-review-system/apps/desktop-electron && node node_modules/vite/bin/vite.js --config renderer/vite.config.mjs --port 5180 --host 0.0.0.0"],
+      "port": 5180
+    }
+  ]
+}

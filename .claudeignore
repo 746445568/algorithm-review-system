@@ -1,0 +1,36 @@
+# 依赖
+node_modules/
+apps/server/go.sum
+
+# 构建产物
+apps/desktop-electron/dist/
+apps/desktop-electron/build/
+apps/desktop-electron/renderer/dist/
+frontend/.next/
+backend/dist/
+
+# 编译后的二进制
+apps/desktop-electron/bin/
+
+# 数据库文件
+prisma/dev.db
+backups/
+
+# 日志
+logs/
+build-desktop.log
+
+# 测试截图 & 测试输出
+output/
+*.png
+.playwright-mcp/
+
+# 安装包 & 打包资源
+cloudflared-linux-amd64.deb
+packaging/
+
+# 历史遗留（WinUI C#，不在运行链路中）
+apps/desktop/
+
+# 文档中的 AI 规划文件（非项目代码）
+docs/superpowers/

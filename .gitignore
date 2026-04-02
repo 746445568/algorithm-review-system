@@ -15,3 +15,4 @@ logs/
 .vscode/
 .idea/
 .claude/.superpowers/
+.playwright-cli/

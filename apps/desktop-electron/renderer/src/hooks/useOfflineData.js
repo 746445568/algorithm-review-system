@@ -93,9 +93,9 @@ export function useOfflineData() {
     if (result.reason === "offline") {
       setStatusMessage("设备当前离线，正在使用本地缓存。");
     } else if (result.reason === "service-unreachable") {
-      setStatusMessage(result.errorMessage || "本地服务不可达，正在使用缓存数据。");
+      setStatusMessage(result.errorMessage || "本地 Go 服务不可达，正在使用缓存数据。");
     } else {
-      setStatusMessage("本地服务在线，可按需刷新缓存。");
+      setStatusMessage("本地 Go 服务在线，可按需刷新缓存。");
     }
 
     return result;
