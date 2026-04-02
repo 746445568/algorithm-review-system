@@ -1,0 +1,35 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git -C ~/algorithm-review-system status)",
+      "Bash(grep:*)",
+      "Bash(bash /home/r9000p746445568/.claude/plugins/cache/claude-plugins-official/superpowers/5.0.6/skills/brainstorming/scripts/start-server.sh --project-dir /home/r9000p746445568/.openclaw/workspace/algorithm-review-system)",
+      "Bash(git add:*)",
+      "Bash(git commit -m \"docs: AI 分析页功能设计文档 + 初版实施计划:*)",
+      "Bash(go build:*)",
+      "Bash(git commit:*)",
+      "Bash(curl -s http://127.0.0.1:5180)",
+      "Bash(curl -s http://127.0.0.1:38473/health)",
+      "Bash(echo \"exit:$?\")",
+      "Bash(curl -s http://localhost:5180)",
+      "mcp__plugin_playwright_playwright__browser_navigate",
+      "mcp__plugin_playwright_playwright__browser_take_screenshot",
+      "mcp__plugin_playwright_playwright__browser_snapshot",
+      "mcp__plugin_playwright_playwright__browser_click",
+      "Bash(git fetch:*)",
+      "Bash(git rebase:*)",
+      "Bash(git stash:*)",
+      "Bash(sed -n '1795,3829p' /home/r9000p746445568/.openclaw/workspace/algorithm-review-system/apps/server/internal/storage/sqlite.go)",
+      "Read(//tmp/**)",
+      "Bash(sed -n '1795,1808p' /home/r9000p746445568/.openclaw/workspace/algorithm-review-system/apps/desktop-electron/renderer/src/styles.css)",
+      "Bash(sed -n '3630,3643p' /home/r9000p746445568/.openclaw/workspace/algorithm-review-system/apps/desktop-electron/renderer/src/styles.css)",
+      "Bash(git checkout:*)",
+      "Bash(curl -s http://localhost:38473/health)",
+      "Bash(npm run:*)",
+      "Bash(pkill -f \"vite --config\")",
+      "Bash(npx vite:*)",
+      "Bash(curl:*)",
+      "Skill(codex:rescue)"
+    ]
+  }
+}

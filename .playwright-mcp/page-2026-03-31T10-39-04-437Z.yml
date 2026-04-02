@@ -1,0 +1,83 @@
+- generic [ref=e3]:
+  - complementary [ref=e4]:
+    - generic [ref=e6]:
+      - img [ref=e7]
+      - generic [ref=e11]:
+        - generic [ref=e12]: 算法竞赛
+        - heading "OJ 错题复盘" [level=1] [ref=e13]
+    - navigation "Primary" [ref=e14]:
+      - button "仪表盘 总览" [ref=e15] [cursor=pointer]:
+        - img [ref=e17]
+        - generic [ref=e22]:
+          - generic [ref=e23]: 仪表盘
+          - generic [ref=e24]: 总览
+      - button "账号管理 同步" [ref=e25] [cursor=pointer]:
+        - img [ref=e27]
+        - generic [ref=e32]:
+          - generic [ref=e33]: 账号管理
+          - generic [ref=e34]: 同步
+      - button "错题复习 工作流" [ref=e35] [cursor=pointer]:
+        - img [ref=e37]
+        - generic [ref=e40]:
+          - generic [ref=e41]: 错题复习
+          - generic [ref=e42]: 工作流
+      - button "AI 分析 洞察" [ref=e43] [cursor=pointer]:
+        - img [ref=e45]
+        - generic [ref=e47]:
+          - generic [ref=e48]: AI 分析
+          - generic [ref=e49]: 洞察
+      - button "设置 配置" [ref=e50] [cursor=pointer]:
+        - img [ref=e52]
+        - generic [ref=e55]:
+          - generic [ref=e56]: 设置
+          - generic [ref=e57]: 配置
+    - generic [ref=e58]:
+      - generic [ref=e59]: 运行时
+      - generic [ref=e60]:
+        - generic [ref=e61]:
+          - term [ref=e62]: 服务地址
+          - definition [ref=e63]: http://127.0.0.1:38473
+        - generic [ref=e64]:
+          - term [ref=e65]: 数据目录
+          - definition [ref=e66]: 等待中
+        - generic [ref=e67]:
+          - term [ref=e68]: 模式
+          - definition [ref=e69]: 开发版
+  - main [ref=e70]:
+    - generic [ref=e71]:
+      - generic [ref=e72]:
+        - generic [ref=e73]: 当前页面
+        - heading "AI 分析" [level=2] [ref=e190]
+      - generic [ref=e75]:
+        - generic [ref=e76]: 在线
+        - button "立即同步" [ref=e77] [cursor=pointer]
+        - generic [ref=e78]: healthy
+        - button "重启服务" [ref=e79] [cursor=pointer]
+    - generic [ref=e81]:
+      - strong [ref=e82]: connected to local Go service (browser dev mode)
+      - paragraph [ref=e83]: 来源：direct / 上次同步 2026/03/31 18:36
+    - generic [ref=e191]:
+      - generic [ref=e192]:
+        - button "返回" [ref=e193] [cursor=pointer]:
+          - img [ref=e194]
+          - text: 返回
+        - heading "AI 分析" [level=2] [ref=e196]
+      - generic [ref=e197]:
+        - generic [ref=e199]:
+          - heading "全局报告" [level=3] [ref=e200]
+          - generic [ref=e201]:
+            - button "本周" [ref=e202] [cursor=pointer]
+            - button "本月" [ref=e203] [cursor=pointer]
+          - button "生成报告" [ref=e204] [cursor=pointer]
+          - generic [ref=e217]: 请先在设置页面配置 AI 服务（提供商 + 模型 + API Key）
+          - generic [ref=e205]:
+            - heading "环比分析" [level=4] [ref=e206]
+            - button "生成环比" [ref=e207] [cursor=pointer]
+        - generic [ref=e209]:
+          - heading "单题分析" [level=3] [ref=e210]
+          - generic [ref=e211]:
+            - text: 选择题目
+            - generic [ref=e213]:
+              - text: 选择题目...
+              - img [ref=e214]
+          - button "生成分析" [disabled] [ref=e216]

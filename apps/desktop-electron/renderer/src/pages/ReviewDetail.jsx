@@ -230,13 +230,13 @@ export function ReviewDetail({
   }
 
   async function handleGenerateAnalysis() {
-    if (analysisLoading) return;
+    if (analysisLoading || !selectedProblemId) return;
     stopAnalysisPoll();
     setAnalysisLoading(true);
     setAnalysisTask(null);
     setAnalysisError(null);
     try {
-      const { task } = await api.generateAnalysis({});
+      const { task } = await api.generateProblemAnalysis(selectedProblemId, {});
       setAnalysisTask(task);
       if (task.status === "SUCCESS" || task.status === "FAILED") {
         setAnalysisLoading(false);
@@ -535,7 +535,7 @@ export function ReviewDetail({
                 <button
                   type="button"
                   className="primary-button"
-                  disabled={serviceUnavailable}
+                  disabled={serviceUnavailable || !selectedProblemId}
                   onClick={() => void handleGenerateAnalysis()}
                 >
                   生成 AI 分析

@@ -1,0 +1,164 @@
+- generic [ref=e3]:
+  - complementary [ref=e4]:
+    - generic [ref=e6]:
+      - img [ref=e7]
+      - generic [ref=e11]:
+        - generic [ref=e12]: 算法竞赛
+        - heading "OJ 错题复盘" [level=1] [ref=e13]
+    - navigation "Primary" [ref=e14]:
+      - button "仪表盘 总览" [ref=e15] [cursor=pointer]:
+        - img [ref=e17]
+        - generic [ref=e22]:
+          - generic [ref=e23]: 仪表盘
+          - generic [ref=e24]: 总览
+      - button "账号管理 同步" [ref=e25] [cursor=pointer]:
+        - img [ref=e27]
+        - generic [ref=e32]:
+          - generic [ref=e33]: 账号管理
+          - generic [ref=e34]: 同步
+      - button "错题复习 工作流" [ref=e35] [cursor=pointer]:
+        - img [ref=e37]
+        - generic [ref=e40]:
+          - generic [ref=e41]: 错题复习
+          - generic [ref=e42]: 工作流
+      - button "AI 分析 洞察" [ref=e43] [cursor=pointer]:
+        - img [ref=e45]
+        - generic [ref=e47]:
+          - generic [ref=e48]: AI 分析
+          - generic [ref=e49]: 洞察
+      - button "设置 配置" [ref=e50] [cursor=pointer]:
+        - img [ref=e52]
+        - generic [ref=e55]:
+          - generic [ref=e56]: 设置
+          - generic [ref=e57]: 配置
+    - generic [ref=e58]:
+      - generic [ref=e59]: 运行时
+      - generic [ref=e60]:
+        - generic [ref=e61]:
+          - term [ref=e62]: 服务地址
+          - definition [ref=e63]: http://127.0.0.1:38473
+        - generic [ref=e64]:
+          - term [ref=e65]: 数据目录
+          - definition [ref=e66]: 等待中
+        - generic [ref=e67]:
+          - term [ref=e68]: 模式
+          - definition [ref=e69]: 开发版
+  - main [ref=e70]:
+    - generic [ref=e71]:
+      - generic [ref=e72]:
+        - generic [ref=e73]: 当前页面
+        - heading "仪表盘" [level=2] [ref=e74]
+      - generic [ref=e75]:
+        - generic [ref=e76]: 离线
+        - button "立即同步" [ref=e77] [cursor=pointer]
+        - generic [ref=e78]: error
+        - button "重启服务" [ref=e79] [cursor=pointer]
+    - generic [ref=e81]:
+      - strong [ref=e82]: Go service unreachable (is ojreviewd running on :38473?)
+      - paragraph [ref=e83]: 来源：direct / 上次同步 尚未同步
+    - generic [ref=e84]:
+      - generic [ref=e85]:
+        - generic [ref=e86]:
+          - generic [ref=e87]: 🤖 AI 分析
+          - generic [ref=e88]: 暂无历史记录
+        - button "生成首份分析" [ref=e89] [cursor=pointer]
+      - generic [ref=e90]:
+        - generic [ref=e91]:
+          - generic [ref=e92]: 连接中
+          - heading "OJ 错题复盘 正在启动" [level=3] [ref=e93]
+          - paragraph [ref=e94]: 正在连接本地 Go 服务...
+        - generic [ref=e95]:
+          - generic [ref=e96]:
+            - generic [ref=e97]: 服务状态
+            - strong [ref=e98]: error
+          - generic [ref=e99]:
+            - generic [ref=e100]: 网络判定
+            - strong [ref=e101]: 在线
+          - generic [ref=e102]:
+            - generic [ref=e103]: 待复习
+            - strong [ref=e104]: "0"
+          - generic [ref=e105]:
+            - generic [ref=e106]: 待同步操作
+            - strong [ref=e107]: "0"
+      - generic [ref=e108]:
+        - article [ref=e109]:
+          - generic [ref=e110]: 题库缓存
+          - strong [ref=e111]: 未同步
+          - text: 等待中
+        - article [ref=e112]:
+          - generic [ref=e113]: 提交缓存
+          - strong [ref=e114]: 未同步
+          - text: 等待中
+        - article [ref=e115]:
+          - generic [ref=e116]: 账号缓存
+          - strong [ref=e117]: 未同步
+          - text: 等待中
+        - article [ref=e118]:
+          - generic [ref=e119]: 复习状态缓存
+          - strong [ref=e120]: 未同步
+          - text: 等待中
+      - generic [ref=e121]:
+        - generic [ref=e122]:
+          - heading "已绑定账号" [level=3] [ref=e123]
+          - button "刷新" [disabled] [ref=e124]
+        - paragraph [ref=e125]: 等待本地服务 http://127.0.0.1:38473 就绪。
+        - paragraph [ref=e127]: 尚未绑定任何平台账号。
+      - generic [ref=e128]:
+        - generic [ref=e129]:
+          - heading "离线可预期性" [level=3] [ref=e130]
+          - generic [ref=e131]: 缓存与重试状态
+        - paragraph [ref=e133]: 同步队列为空，没有待重试的离线写操作。
+      - generic [ref=e134]:
+        - generic [ref=e135]:
+          - heading "复习管线" [level=3] [ref=e136]
+          - generic [ref=e137]: 当前队列概况
+        - generic [ref=e138]:
+          - article [ref=e139]:
+            - generic [ref=e140]:
+              - strong [ref=e141]: 已排期
+              - paragraph [ref=e142]: 设置了下次复习时间的题目
+            - generic [ref=e143]: "0"
+          - article [ref=e144]:
+            - generic [ref=e145]:
+              - strong [ref=e146]: 待复习
+              - paragraph [ref=e147]: 复习时间已到的题目
+            - generic [ref=e148]: "0"
+          - article [ref=e149]:
+            - generic [ref=e150]:
+              - strong [ref=e151]: 已恢复
+              - paragraph [ref=e152]: 最终通过 (AC) 的题目
+            - generic [ref=e153]: "0"
+      - generic [ref=e154]:
+        - generic [ref=e155]:
+          - heading "薄弱标签" [level=3] [ref=e156]
+          - generic [ref=e157]: 正确率最低的知识点
+        - paragraph [ref=e159]: 暂无标签统计数据。
+      - generic [ref=e160]:
+        - generic [ref=e161]:
+          - heading "反复失败" [level=3] [ref=e162]
+          - generic [ref=e163]: 仍在循环出错的题目
+        - paragraph [ref=e165]: 没有题目超过反复失败阈值。
+      - generic [ref=e166]:
+        - generic [ref=e167]:
+          - heading "最近未解决" [level=3] [ref=e168]
+          - generic [ref=e169]: 需要复习的新题目
+        - paragraph [ref=e171]: 当前快照中没有未解决的题目。
+      - generic [ref=e172]:
+        - generic [ref=e173]:
+          - heading "最新任务" [level=3] [ref=e174]
+          - generic [ref=e175]: 最近一次同步活动
+        - paragraph [ref=e176]: 尚无同步任务。
+      - generic [ref=e177]:
+        - generic [ref=e178]:
+          - heading "运行时信息" [level=3] [ref=e179]
+          - generic [ref=e180]: 本地环境上下文
+        - generic [ref=e181]:
+          - article [ref=e182]:
+            - generic [ref=e183]: 数据目录
+            - strong [ref=e184]: 等待中
+          - article [ref=e185]:
+            - generic [ref=e186]: 服务地址
+            - strong [ref=e187]: http://127.0.0.1:38473
+          - article [ref=e188]:
+            - generic [ref=e189]: 打包模式
+            - strong [ref=e190]: 否

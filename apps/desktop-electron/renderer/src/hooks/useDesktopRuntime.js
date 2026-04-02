@@ -29,11 +29,14 @@ export function useDesktopRuntime() {
 
     async function bootstrap() {
       if (!desktopBridge.isAvailable()) {
+        // Browser debug mode: use Vite proxy (relative URL) instead of direct WSL address
+        api.setBaseUrl("");
         if (!cancelled) {
           setServiceStatus({
             ...initialServiceStatus,
-            state: "error",
-            message: "desktop bridge unavailable; preload did not initialize",
+            state: "starting",
+            source: "proxy",
+            message: "browser mode: using Vite proxy",
           });
         }
         return;

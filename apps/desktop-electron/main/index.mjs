@@ -61,7 +61,9 @@ class ServiceManager {
   }
 
   getRuntimeDir() {
-    return process.env.OJREVIEW_APP_DIR ?? path.join(app.getPath("appData"), "OJReviewDesktop");
+    return process.env.OJREVIEW_APP_DIR ?? (isDev
+      ? path.join(app.getAppPath(), ".ojreview-runtime")
+      : path.join(app.getPath("appData"), "OJReviewDesktop"));
   }
 
   getExpectedServiceMajor() {

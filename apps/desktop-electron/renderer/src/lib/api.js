@@ -185,6 +185,11 @@ export const api = {
       method: "POST",
       body: JSON.stringify(opts),
     }),
+  generateProblemAnalysis: (problemId, opts = {}) =>
+    request(`/api/analysis/generate-problem/${problemId}`, {
+      method: "POST",
+      body: JSON.stringify(opts),
+    }),
   getAnalysisTask: (taskId) => request(`/api/analysis/${taskId}`),
   getProblems: async (query = {}) => {
     const cached = await getCachedProblems(query);
