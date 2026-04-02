@@ -501,8 +501,12 @@ app.whenReady().then(() => {
   });
 });
 
-app.on("before-quit", () => {
-  void serviceManager.stop();
+let isQuitting = false;
+app.on("before-quit", (event) => {
+  if (isQuitting) return;
+  event.preventDefault();
+  isQuitting = true;
+  serviceManager.stop().finally(() => app.quit());
 });
 
 app.on("window-all-closed", () => {
