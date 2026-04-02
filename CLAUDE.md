@@ -1,3 +1,7 @@
+# CLAUDE.md
+
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+
 # OJ 错题复盘系统 — CLAUDE.md
 
 ## 项目简介
@@ -46,9 +50,10 @@ algorithm-review-system/
 │   │   ├── preload/index.mjs # contextBridge 暴露 desktopBridge API
 │   │   ├── renderer/src/     # React UI（JSX，无 TS）
 │   │   │   ├── App.jsx       # 根组件，主题/路由/服务状态
-│   │   │   ├── pages/        # DashboardPage / AccountsPage / ReviewPage / SettingsPage
-│   │   │   ├── hooks/        # useOfflineData.js（IndexedDB 缓存 + 同步）
-│   │   │   └── lib/          # api.js, format.js, db.js, sync.js
+│   │   │   ├── pages/        # DashboardPage / AccountsPage / ReviewPage / SettingsPage / AnalysisPage
+│   │   │   ├── components/   # 可复用组件（ProblemDetailPanel, ReviewFilterBar 等）
+│   │   │   ├── hooks/        # useOfflineData.js（IndexedDB 缓存 + 同步）等
+│   │   │   └── lib/          # api.js, format.js, db.js, sync.js, NavigationContext.jsx
 │   │   ├── scripts/          # dev.mjs, build.mjs, start-static.mjs
 │   │   └── bin/ojreviewd.exe # Electron 开发/打包使用的 Go 服务二进制
 │   ├── server/               # Go 后端服务源码（ojreviewd）
@@ -194,6 +199,8 @@ renderer (React)
 - 状态管理：本地 useState + useCallback，不引入外部状态库
 - API 调用统一通过 `lib/api.js` 的 `api` 对象，不要直接 `fetch`
 - `window.desktopBridge` 在调用前先判断是否存在（浏览器调试模式下不存在）
+- **页面导航**：使用 `lib/NavigationContext.jsx` 提供的 `useNavigation()` hook（`navigateTo(page, state)`），不要通过 prop 传递 `onNavigate`；`navigationState` 携带跨页面参数（如预选题目 ID）
+- **AI 分析异步任务**：后端返回 task 对象，前端轮询 `api.getAnalysisTask(id)` 直到 `status === "SUCCESS" | "FAILED"`；轮询用 `setTimeout` + `useRef` 管理，组件卸载时调用 stop 函数清除
 
 ### Go 服务（ojreviewd）
 - REST API 路径保持与 Web 后端一致（`/api/*`）
