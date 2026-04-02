@@ -7,6 +7,7 @@ import {
   getElectronBootstrapProbePayload,
   resolveElectronApi,
 } from "../bootstrap/electron-api.mjs";
+import { initAutoUpdater } from "./updater.mjs";
 
 const bootstrap = await resolveMainBootstrap();
 const { app, BrowserWindow, ipcMain, shell } = bootstrap.api;
@@ -486,18 +487,19 @@ ipcMain.handle("desktop:open-external", (_event, url) => shell.openExternal(url)
 ipcMain.handle("desktop:open-path", async (_event, targetPath) => shell.openPath(targetPath));
 
 app.whenReady().then(() => {
-  const window = createWindow();
+  let mainWindow = createWindow();
   void serviceManager.ensureStarted();
+  initAutoUpdater(ipcMain, app, () => mainWindow);
 
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) {
-      createWindow();
+      mainWindow = createWindow();
     }
   });
 
-  window.once("ready-to-show", () => {
-    window.show();
-    if (isDev) window.webContents.openDevTools();
+  mainWindow.once("ready-to-show", () => {
+    mainWindow.show();
+    if (isDev) mainWindow.webContents.openDevTools();
   });
 });
 

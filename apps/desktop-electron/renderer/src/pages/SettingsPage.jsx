@@ -33,6 +33,22 @@ export function SettingsPage({ runtimeInfo, serviceStatus, themeMode, onThemeCha
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const refreshSequenceRef = useRef(0);
+  const [updateInfo, setUpdateInfo] = useState(null);
+  const [updateDownloaded, setUpdateDownloaded] = useState(false);
+  const [checking, setChecking] = useState(false);
+
+  useEffect(() => {
+    const bridge = window.desktopBridge?.updater;
+    if (!bridge) return;
+    const unsubAvailable = bridge.onUpdateAvailable((info) => setUpdateInfo(info));
+    const unsubDownloaded = bridge.onUpdateDownloaded(() => setUpdateDownloaded(true));
+    return () => { unsubAvailable(); unsubDownloaded(); };
+  }, []);
+
+  function handleCheckUpdate() {
+    setChecking(true);
+    window.desktopBridge?.updater?.check?.().finally(() => setChecking(false));
+  }
 
   const refresh = useCallback(async () => {
     const requestId = refreshSequenceRef.current + 1;
@@ -335,6 +351,30 @@ export function SettingsPage({ runtimeInfo, serviceStatus, themeMode, onThemeCha
               </div>
             </article>
           ) : null}
+        </div>
+      </section>
+
+      <section className="panel">
+        <div className="panel-header">
+          <h3>应用更新</h3>
+          <span className="caption">检查并安装新版本</span>
+        </div>
+        <div className="form-stack">
+          {updateDownloaded ? (
+            <div>
+              <p>新版本已下载，重启后生效。</p>
+              <button className="btn-primary" onClick={() => window.desktopBridge?.updater?.install?.()}>立即重启安装</button>
+            </div>
+          ) : updateInfo ? (
+            <div>
+              <p>发现新版本：{updateInfo.version}</p>
+              <button className="btn-primary" onClick={() => window.desktopBridge?.updater?.download?.()}>下载更新</button>
+            </div>
+          ) : (
+            <button className="ghost-button" onClick={handleCheckUpdate} disabled={checking}>
+              {checking ? "检查中..." : "检查更新"}
+            </button>
+          )}
         </div>
       </section>
 
