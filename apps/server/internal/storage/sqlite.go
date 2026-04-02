@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 	"time"
 
 	_ "modernc.org/sqlite"
@@ -20,9 +21,10 @@ import (
 const schemaVersion = 2
 
 type DB struct {
-	conn  *sql.DB
-	cfg   app.Config
-	vault *cryptovault.Vault
+	conn    *sql.DB
+	cfg     app.Config
+	vault   *cryptovault.Vault
+	writeMu sync.Mutex
 }
 
 type SubmissionQueryOptions struct {
@@ -65,6 +67,8 @@ func Open(cfg app.Config, vault *cryptovault.Vault) (*DB, error) {
 	if err != nil {
 		return nil, err
 	}
+	conn.SetMaxOpenConns(1)
+	conn.SetMaxIdleConns(1)
 	if _, err := conn.Exec(`PRAGMA journal_mode=WAL; PRAGMA foreign_keys=ON; PRAGMA busy_timeout=5000;`); err != nil {
 		conn.Close()
 		return nil, err
@@ -977,6 +981,9 @@ ON CONFLICT(problem_id) DO UPDATE SET
 }
 
 func (db *DB) CreateAnalysisTask(provider, model string, snapshotID int64) (models.AnalysisTask, bool, error) {
+	db.writeMu.Lock()
+	defer db.writeMu.Unlock()
+
 	existing, err := db.findReusableAnalysisTask(snapshotID, provider, model)
 	if err == nil {
 		return existing, true, nil
@@ -992,6 +999,57 @@ VALUES (?, ?, ?, ?)`, models.TaskPending, provider, model, snapshotID)
 	}
 	task, err := db.GetLastAnalysisTask()
 	return task, false, err
+}
+
+func (db *DB) CreateAnalysisTaskWithTypedSnapshot(provider, model, summaryJSON, snapshotType string, problemID *int64) (models.AnalysisTask, bool, error) {
+	db.writeMu.Lock()
+	defer db.writeMu.Unlock()
+
+	tx, err := db.conn.Begin()
+	if err != nil {
+		return models.AnalysisTask{}, false, err
+	}
+	defer tx.Rollback()
+
+	if problemID != nil {
+		_, err = tx.Exec(
+			`INSERT INTO review_snapshots(summary_json, snapshot_type, problem_id) VALUES (?, ?, ?)`,
+			summaryJSON, snapshotType, *problemID,
+		)
+	} else {
+		_, err = tx.Exec(
+			`INSERT INTO review_snapshots(summary_json, snapshot_type) VALUES (?, ?)`,
+			summaryJSON, snapshotType,
+		)
+	}
+	if err != nil {
+		return models.AnalysisTask{}, false, err
+	}
+
+	var snapshotID int64
+	if err := tx.QueryRow(`SELECT last_insert_rowid()`).Scan(&snapshotID); err != nil {
+		return models.AnalysisTask{}, false, err
+	}
+
+	_, err = tx.Exec(`
+INSERT INTO analysis_tasks(status, provider, model, input_snapshot_id)
+VALUES (?, ?, ?, ?)`, models.TaskPending, provider, model, snapshotID)
+	if err != nil {
+		return models.AnalysisTask{}, false, err
+	}
+
+	task, err := scanAnalysisTask(tx.QueryRow(`
+SELECT id, status, provider, model, input_snapshot_id, COALESCE(result_text,''), COALESCE(result_json,''), COALESCE(error_message,''), retry_count, created_at, updated_at
+FROM analysis_tasks WHERE id = last_insert_rowid()`))
+	if err != nil {
+		return models.AnalysisTask{}, false, err
+	}
+
+	if err := tx.Commit(); err != nil {
+		return models.AnalysisTask{}, false, err
+	}
+
+	return task, false, nil
 }
 
 func (db *DB) GetLastAnalysisTask() (models.AnalysisTask, error) {
@@ -1570,15 +1628,15 @@ func copyFile(src, dst string) error {
 // GetReviewSummary aggregates review statistics
 func (db *DB) GetReviewSummary() (map[string]any, error) {
 	summary := map[string]any{
-		"totalSubmissions":    0,
-		"acRate":              0.0,
-		"weakTags":            []map[string]any{},
-		"repeatedFailures":    []map[string]any{},
-		"recentUnsolved":      []map[string]any{},
-		"problemSummaries":    []map[string]any{},
-		"contestGroups":       []map[string]any{},
-		"reviewStatusCounts":  map[string]int{},
-		"dueReviewCount":      0,
+		"totalSubmissions":     0,
+		"acRate":               0.0,
+		"weakTags":             []map[string]any{},
+		"repeatedFailures":     []map[string]any{},
+		"recentUnsolved":       []map[string]any{},
+		"problemSummaries":     []map[string]any{},
+		"contestGroups":        []map[string]any{},
+		"reviewStatusCounts":   map[string]int{},
+		"dueReviewCount":       0,
 		"scheduledReviewCount": 0,
 	}
 
@@ -1625,7 +1683,7 @@ func (db *DB) GetReviewSummary() (map[string]any, error) {
 		}
 		acRate := 0.0
 		if attempts > 0 {
-			acRate = math.Round(((float64(tagAC)*100.0/float64(attempts))*10)) / 10
+			acRate = math.Round(((float64(tagAC) * 100.0 / float64(attempts)) * 10)) / 10
 		}
 		weakTags = append(weakTags, map[string]any{
 			"tag":      tagName,

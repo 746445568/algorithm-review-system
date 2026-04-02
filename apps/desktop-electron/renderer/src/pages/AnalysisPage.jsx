@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { api } from "../lib/api.js";
 import { useNavigation } from "../lib/NavigationContext.jsx";
 import { formatDate } from "../lib/format.js";
+import { getAnalysisErrorMessage } from "../lib/runtimeStatus.js";
 
 // ─── Minimal Markdown renderer (zero deps) ───────────────────────────────────
 
@@ -170,6 +171,7 @@ export function AnalysisPage() {
   const globalPollRef = useRef(null);
   const compPollRef = useRef(null);
   const problemPollRef = useRef(null);
+  const problemSubmitRef = useRef(false);
 
   // Toast state
   const [toast, setToast] = useState(null);
@@ -215,7 +217,7 @@ export function AnalysisPage() {
         }
       } catch (err) {
         setGlobalLoading(false);
-        setGlobalError(err.message);
+        setGlobalError(getAnalysisErrorMessage(err.message));
       }
     }, 2000);
   }
@@ -236,7 +238,7 @@ export function AnalysisPage() {
       }
     } catch (err) {
       setGlobalLoading(false);
-      setGlobalError(err.message);
+      setGlobalError(getAnalysisErrorMessage(err.message));
     }
   }
 
@@ -261,7 +263,7 @@ export function AnalysisPage() {
         }
       } catch (err) {
         setCompLoading(false);
-        setCompError(err.message);
+        setCompError(getAnalysisErrorMessage(err.message));
       }
     }, 2000);
   }
@@ -282,7 +284,7 @@ export function AnalysisPage() {
       }
     } catch (err) {
       setCompLoading(false);
-      setCompError(err.message);
+      setCompError(getAnalysisErrorMessage(err.message));
     }
   }
 
@@ -307,13 +309,15 @@ export function AnalysisPage() {
         }
       } catch (err) {
         setProblemLoading(false);
-        setProblemError(err.message);
+        problemSubmitRef.current = false;
+        setProblemError(getAnalysisErrorMessage(err.message));
       }
     }, 2000);
   }
 
   async function handleGenerateProblemAnalysis(problemId) {
-    if (problemLoading || !problemId) return;
+    if (problemLoading || problemSubmitRef.current || !problemId) return;
+    problemSubmitRef.current = true;
     stopProblemPoll();
     setProblemLoading(true);
     setProblemTask(null);
@@ -323,12 +327,14 @@ export function AnalysisPage() {
       setProblemTask(task);
       if (task.status === "SUCCESS" || task.status === "FAILED") {
         setProblemLoading(false);
+        problemSubmitRef.current = false;
       } else {
         scheduleProblemPoll(task.id);
       }
     } catch (err) {
       setProblemLoading(false);
-      setProblemError(err.message);
+      problemSubmitRef.current = false;
+      setProblemError(getAnalysisErrorMessage(err.message));
     }
   }
 
@@ -392,9 +398,7 @@ export function AnalysisPage() {
             {/* Global analysis result */}
             {globalError && (
               <div className="an-error-msg">
-                {globalError.includes("provider and model are required")
-                  ? "请先在设置页面配置 AI 服务（提供商 + 模型 + API Key）"
-                  : `生成失败：${globalError}`}
+                {globalError}
               </div>
             )}
 
@@ -455,9 +459,7 @@ export function AnalysisPage() {
 
               {compError && (
                 <div className="an-error-msg an-error-msg--small">
-                  {compError.includes("provider and model are required")
-                    ? "请先配置 AI 服务"
-                    : `生成失败：${compError}`}
+                  {compError}
                 </div>
               )}
 
@@ -526,9 +528,7 @@ export function AnalysisPage() {
             {/* Problem analysis result */}
             {problemError && (
               <div className="an-error-msg">
-                {problemError.includes("provider and model are required")
-                  ? "请先在设置页面配置 AI 服务（提供商 + 模型 + API Key）"
-                  : `生成失败：${problemError}`}
+                {problemError}
               </div>
             )}
 

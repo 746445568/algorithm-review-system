@@ -32,6 +32,8 @@ export function platformLabel(platform) {
 
 export function statusLabel(status) {
   switch ((status || "").toUpperCase()) {
+    case "BROWSER":
+      return "浏览器预览";
     case "HEALTHY":
       return "正常";
     case "IDLE":

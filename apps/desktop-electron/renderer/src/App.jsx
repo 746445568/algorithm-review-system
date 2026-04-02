@@ -8,6 +8,13 @@ import { SettingsPage } from "./pages/SettingsPage.jsx";
 import { api } from "./lib/api.js";
 import { formatDate } from "./lib/format.js";
 import { useOfflineData } from "./hooks/useOfflineData.js";
+import {
+  getBrowserRuntimeServiceUrl,
+  getRenderedServiceIndicator,
+  getServiceBannerMessage,
+  getServiceStatusSnapshot,
+  shouldShowRestartService,
+} from "./lib/runtimeStatus.js";
 
 function resolveEffectiveTheme(mode) {
   if (mode === "dark") return "dark";
@@ -82,6 +89,7 @@ const initialStatus = {
 
 function AppShell() {
   const { page, navigateTo } = useNavigation();
+  const hasDesktopBridge = Boolean(window.desktopBridge);
   const [serviceStatus, setServiceStatus] = useState(initialStatus);
   const [runtimeInfo, setRuntimeInfo] = useState({
     serviceUrl: initialStatus.url,
@@ -89,6 +97,7 @@ function AppShell() {
     appPath: "",
     isPackaged: false,
   });
+  const [browserRuntime, setBrowserRuntime] = useState(null);
   const { isOnline, isSyncing, lastSyncAt, connectivity, cacheStatus, syncQueue, sync } = useOfflineData();
   const [themeMode, setThemeMode] = useState(
     () => localStorage.getItem("ojreview-theme") ?? "follow-system"
@@ -120,39 +129,32 @@ function AppShell() {
     api.setBaseUrl(initialStatus.url);
 
     async function bootstrap() {
-      if (!window.desktopBridge) {
-        // Browser dev mode: try Vite proxy first, fall back to direct connection
+      if (!hasDesktopBridge) {
+        // Browser dev mode: prefer Vite proxy, fall back to direct localhost access.
         const proxyWorks = await fetch("/health").then((r) => r.ok).catch(() => false);
         const baseUrl = proxyWorks ? "" : "http://127.0.0.1:38473";
+        const serviceUrl = getBrowserRuntimeServiceUrl({
+          proxyWorks,
+          fallbackUrl: baseUrl,
+        });
         api.setBaseUrl(baseUrl);
-        try {
-          const resp = proxyWorks
-            ? await fetch("/health")
-            : await fetch("http://127.0.0.1:38473/health");
-          if (resp.ok && !cancelled) {
-            setServiceStatus({
-              ...initialStatus,
-              state: "healthy",
-              source: "direct",
-              message: "connected to local Go service (browser dev mode)",
-            });
-          } else if (!cancelled) {
-            setServiceStatus({
-              ...initialStatus,
-              state: "error",
-              source: "direct",
-              message: "Go service /health returned non-OK",
-            });
-          }
-        } catch {
-          if (!cancelled) {
-            setServiceStatus({
-              ...initialStatus,
-              state: "error",
-              source: "direct",
-              message: "Go service unreachable (is ojreviewd running on :38473?)",
-            });
-          }
+
+        if (!cancelled) {
+          const source = proxyWorks ? "vite-proxy" : "browser-direct";
+          setRuntimeInfo((current) => ({
+            ...current,
+            serviceUrl,
+          }));
+          setBrowserRuntime({ source, serviceUrl });
+          setServiceStatus(
+            getServiceStatusSnapshot({
+              hasDesktopBridge: false,
+              isOnline,
+              serviceStatus: initialStatus,
+              serviceUrl,
+              source,
+            })
+          );
         }
         return;
       }
@@ -188,7 +190,23 @@ function AppShell() {
       cancelled = true;
       unsubscribe();
     };
-  }, []);
+  }, [hasDesktopBridge]);
+
+  useEffect(() => {
+    if (hasDesktopBridge || !browserRuntime) {
+      return;
+    }
+
+    setServiceStatus((current) =>
+      getServiceStatusSnapshot({
+        hasDesktopBridge: false,
+        isOnline,
+        serviceStatus: current,
+        serviceUrl: browserRuntime.serviceUrl,
+        source: browserRuntime.source,
+      })
+    );
+  }, [browserRuntime, hasDesktopBridge, isOnline, connectivity]);
 
   useEffect(() => {
     void sync();
@@ -207,6 +225,17 @@ function AppShell() {
     [page]
   );
   const lastSyncLabel = lastSyncAt ? formatDate(lastSyncAt.toISOString()) : "尚未同步";
+  const renderedIndicator = getRenderedServiceIndicator({
+    hasDesktopBridge,
+    isOnline,
+    serviceStatus,
+  });
+  const serviceBannerMessage = getServiceBannerMessage({
+    hasDesktopBridge,
+    isOnline,
+    connectivity,
+    serviceStatus,
+  });
 
   return (
     <div className="app-shell">
@@ -282,22 +311,24 @@ function AppShell() {
             >
               {isSyncing ? "同步中..." : "立即同步"}
             </button>
-            <span className={`service-pill ${serviceStatus.state}`}>
-              {serviceStatus.state}
+            <span className={`service-pill ${renderedIndicator.tone}`}>
+              {renderedIndicator.text}
             </span>
-            <button
-              type="button"
-              className="ghost-button"
-              onClick={() => window.desktopBridge?.restartService()}
-            >
-              重启服务
-            </button>
+            {shouldShowRestartService(hasDesktopBridge) ? (
+              <button
+                type="button"
+                className="ghost-button"
+                onClick={() => window.desktopBridge?.restartService()}
+              >
+                重启服务
+              </button>
+            ) : null}
           </div>
         </header>
 
         <section className="service-banner">
           <div>
-            <strong>{serviceStatus.message}</strong>
+            <strong>{serviceBannerMessage}</strong>
             <p>
               来源：{serviceStatus.source}
               {serviceStatus.pid ? ` / 进程 ${serviceStatus.pid}` : ""}

@@ -21,6 +21,8 @@ import (
 	"ojreviewdesktop/internal/storage"
 )
 
+const sqliteBusyUserMessage = "当前有并发分析或同步任务占用数据库，请稍后重试"
+
 type Server struct {
 	cfg      app.Config
 	db       *storage.DB
@@ -386,6 +388,7 @@ func (s *Server) handleSyncContests(w http.ResponseWriter, _ *http.Request) {
 		"updated": inserted,
 	})
 }
+
 // parsePeriodBounds returns the [start, end] of the requested calendar period
 // relative to now. "week" = Mon–Sun of current ISO week; "month" = 1st–last of current month.
 func parsePeriodBounds(period string, now time.Time) (start, end time.Time, err error) {
@@ -454,16 +457,42 @@ func (s *Server) handleAnalysisGenerate(w http.ResponseWriter, r *http.Request) 
 			writeError(w, http.StatusInternalServerError, err.Error())
 			return
 		}
-		snapshot, err := s.db.CreateReviewSnapshot(summary)
+		summaryJSON, err := json.Marshal(summary)
 		if err != nil {
-			writeError(w, http.StatusInternalServerError, err.Error())
+			writeError(w, http.StatusInternalServerError, normalizeAnalysisCreationError(err).Error())
 			return
 		}
-		payload.InputSnapshotID = snapshot.ID
+		task, reused, err := s.db.CreateAnalysisTaskWithTypedSnapshot(
+			payload.Provider,
+			payload.Model,
+			string(summaryJSON),
+			"global",
+			nil,
+		)
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, normalizeAnalysisCreationError(err).Error())
+			return
+		}
+		if !reused {
+			taskID := task.ID
+			_ = s.queue.Enqueue(jobs.Job{
+				Key:      jobs.AnalysisJobKey(taskID),
+				TaskType: models.TaskTypeAnalysis,
+				TaskID:   taskID,
+				Run: func(ctx context.Context) error {
+					return s.runAnalysisTask(ctx, taskID)
+				},
+			})
+		}
+		writeJSON(w, http.StatusAccepted, map[string]any{
+			"task":   task,
+			"reused": reused,
+		})
+		return
 	}
 	task, reused, err := s.db.CreateAnalysisTask(payload.Provider, payload.Model, payload.InputSnapshotID)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, err.Error())
+		writeError(w, http.StatusInternalServerError, normalizeAnalysisCreationError(err).Error())
 		return
 	}
 	if !reused {
@@ -567,15 +596,15 @@ func (s *Server) handleAnalysisGenerateComparison(w http.ResponseWriter, r *http
 		return
 	}
 
-	snapshot, err := s.db.CreateTypedSnapshotJSON(string(combinedJSON), "global_comparison", nil)
+	task, reused, err := s.db.CreateAnalysisTaskWithTypedSnapshot(
+		payload.Provider,
+		payload.Model,
+		string(combinedJSON),
+		"global_comparison",
+		nil,
+	)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-
-	task, reused, err := s.db.CreateAnalysisTask(payload.Provider, payload.Model, snapshot.ID)
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, err.Error())
+		writeError(w, http.StatusInternalServerError, normalizeAnalysisCreationError(err).Error())
 		return
 	}
 	if !reused {
@@ -644,15 +673,15 @@ func (s *Server) handleAnalysisGenerateProblem(w http.ResponseWriter, r *http.Re
 		return
 	}
 
-	snapshot, err := s.db.CreateTypedSnapshotJSON(string(dataJSON), "problem", &problemID)
+	task, reused, err := s.db.CreateAnalysisTaskWithTypedSnapshot(
+		payload.Provider,
+		payload.Model,
+		string(dataJSON),
+		"problem",
+		&problemID,
+	)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, err.Error())
-		return
-	}
-
-	task, reused, err := s.db.CreateAnalysisTask(payload.Provider, payload.Model, snapshot.ID)
-	if err != nil {
-		writeError(w, http.StatusInternalServerError, err.Error())
+		writeError(w, http.StatusInternalServerError, normalizeAnalysisCreationError(err).Error())
 		return
 	}
 	if !reused {
@@ -803,6 +832,19 @@ func writeJSON(w http.ResponseWriter, status int, payload any) {
 
 func writeError(w http.ResponseWriter, status int, message string) {
 	writeJSON(w, status, map[string]string{"error": message})
+}
+
+func normalizeAnalysisCreationError(err error) error {
+	if err == nil {
+		return nil
+	}
+
+	message := strings.ToLower(err.Error())
+	if strings.Contains(message, "database is locked") || strings.Contains(message, "sqlite_busy") {
+		return errors.New(sqliteBusyUserMessage)
+	}
+
+	return err
 }
 
 func parseTaskID(raw string) (int64, error) {
