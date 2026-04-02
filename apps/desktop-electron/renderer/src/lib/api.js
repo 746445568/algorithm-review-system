@@ -106,6 +106,7 @@ export const api = {
     setSyncBaseUrl(apiBase);
   },
   getBaseUrl: () => apiBase,
+  getHealth: () => request("/health"),
   getOwner: () => request("/api/me"),
   getAccounts: () => request("/api/accounts"),
   createAccount: (platform, handle) =>

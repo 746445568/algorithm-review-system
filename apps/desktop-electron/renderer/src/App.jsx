@@ -5,6 +5,7 @@ import { DashboardPage } from "./pages/DashboardPage.jsx";
 import { AccountsPage } from "./pages/AccountsPage.jsx";
 import { ReviewPage } from "./pages/ReviewPage.jsx";
 import { SettingsPage } from "./pages/SettingsPage.jsx";
+import { OnboardingPage } from "./pages/OnboardingPage.jsx";
 import { api } from "./lib/api.js";
 import { formatDate } from "./lib/format.js";
 import { useOfflineData } from "./hooks/useOfflineData.js";
@@ -102,6 +103,7 @@ function AppShell() {
   const [themeMode, setThemeMode] = useState(
     () => localStorage.getItem("ojreview-theme") ?? "follow-system"
   );
+  const [showOnboarding, setShowOnboarding] = useState(false);
 
   const handleThemeChange = useCallback((mode) => {
     localStorage.setItem("ojreview-theme", mode);
@@ -220,6 +222,14 @@ function AppShell() {
     };
   }, [sync]);
 
+  useEffect(() => {
+    if (serviceStatus?.state === "healthy") {
+      api.getHealth().then(payload => {
+        if (payload?.firstRun) setShowOnboarding(true);
+      }).catch(() => {});
+    }
+  }, [serviceStatus?.state]);
+
   const activeNav = useMemo(
     () => navItems.find((item) => item.id === page) ?? navItems[0],
     [page]
@@ -236,6 +246,10 @@ function AppShell() {
     connectivity,
     serviceStatus,
   });
+
+  if (showOnboarding) {
+    return <OnboardingPage onComplete={() => setShowOnboarding(false)} />;
+  }
 
   return (
     <div className="app-shell">
