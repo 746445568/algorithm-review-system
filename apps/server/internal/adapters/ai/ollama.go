@@ -57,7 +57,7 @@ func (p *OllamaProvider) Analyze(input string, s Settings) (string, string, erro
 	}
 	req.Header.Set("Content-Type", "application/json")
 
-	client := &http.Client{Timeout: 60 * time.Second}
+	client := &http.Client{Timeout: 300 * time.Second}
 	resp, err := client.Do(req)
 	if err != nil {
 		return "", "", fmt.Errorf("Ollama request failed: %w", err)
