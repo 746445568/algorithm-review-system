@@ -47,6 +47,10 @@ func (p *DeepSeekProvider) Analyze(input string, s Settings) (string, string, er
 		"model": s.Model,
 		"messages": []map[string]string{
 			{
+				"role":    "system",
+				"content": analysisSystemPrompt,
+			},
+			{
 				"role":    "user",
 				"content": analysisUserPrompt(input),
 			},

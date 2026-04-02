@@ -13,7 +13,7 @@ import (
 
 const (
 	defaultOpenAIBaseURL = "https://api.openai.com/v1"
-	analysisSystemPrompt = "Analyze this competitive programming review data and provide insights. Highlight weak areas, repeated failure patterns, and concrete next practice steps."
+	analysisSystemPrompt = "你是一位算法竞赛教练，请用中文分析这份错题复盘数据，指出薄弱环节、重复出错的模式，并给出具体的下一步练习建议。"
 )
 
 type OpenAIProvider struct{}
@@ -141,7 +141,7 @@ func analyzeOpenAICompatible(input string, s Settings, expectedProvider, default
 }
 
 func buildAnalysisPrompt(input string) string {
-	return fmt.Sprintf("Review data JSON:\n%s", input)
+	return fmt.Sprintf("以下是错题复盘数据（JSON 格式），请用中文输出分析报告：\n%s", input)
 }
 
 func normalizeBaseURL(rawBaseURL, defaultBaseURL string) (string, error) {
