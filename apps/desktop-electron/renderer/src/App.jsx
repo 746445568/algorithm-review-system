@@ -79,15 +79,7 @@ export function App() {
     appPath: "",
     isPackaged: false,
   });
-  const {
-    isOnline,
-    isSyncing,
-    lastSyncAt,
-    sync,
-    connectivity,
-    cacheStatus,
-    syncQueue,
-  } = useOfflineData();
+  const { isOnline, isSyncing, lastSyncAt, connectivity, cacheStatus, syncQueue, sync } = useOfflineData();
   const [themeMode, setThemeMode] = useState(
     () => localStorage.getItem("ojreview-theme") ?? "follow-system"
   );
@@ -305,13 +297,7 @@ export function App() {
         </section>
 
         {page === "dashboard" ? (
-          <DashboardPage
-            serviceStatus={serviceStatus}
-            runtimeInfo={runtimeInfo}
-            cacheStatus={cacheStatus}
-            connectivity={connectivity}
-            syncQueue={syncQueue}
-          />
+          <DashboardPage serviceStatus={serviceStatus} runtimeInfo={runtimeInfo} cacheStatus={cacheStatus} connectivity={connectivity} syncQueue={syncQueue} />
         ) : null}
 
         {page === "accounts" ? (

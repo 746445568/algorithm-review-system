@@ -158,6 +158,11 @@ export const api = {
       throw error;
     }
   },
+  rateReview: (problemId, quality) =>
+    request(`/api/review/items/${Number(problemId)}/rate`, {
+      method: "POST",
+      body: JSON.stringify({ quality }),
+    }),
   getAISettings: () => request("/api/settings/ai"),
   saveAISettings: (payload) =>
     request("/api/settings/ai", {
@@ -180,17 +185,6 @@ export const api = {
       method: "POST",
       body: JSON.stringify({}),
     }),
-  generateAnalysis: (opts = {}) =>
-    request("/api/analysis/generate", {
-      method: "POST",
-      body: JSON.stringify(opts),
-    }),
-  generateProblemAnalysis: (problemId, opts = {}) =>
-    request(`/api/analysis/generate-problem/${problemId}`, {
-      method: "POST",
-      body: JSON.stringify(opts),
-    }),
-  getAnalysisTask: (taskId) => request(`/api/analysis/${taskId}`),
   getProblems: async (query = {}) => {
     const cached = await getCachedProblems(query);
     if (cached.length > 0) {

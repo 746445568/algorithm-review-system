@@ -121,11 +121,15 @@ type ReviewSnapshot struct {
 }
 
 type ProblemReviewState struct {
-	ProblemID     int64        `json:"problemId"`
-	Status        ReviewStatus `json:"status"`
-	Notes         string       `json:"notes"`
-	NextReviewAt  *time.Time   `json:"nextReviewAt,omitempty"`
-	LastUpdatedAt time.Time    `json:"lastUpdatedAt"`
+	ProblemID       int64        `json:"problemId"`
+	Status          ReviewStatus `json:"status"`
+	Notes           string       `json:"notes"`
+	NextReviewAt    *time.Time   `json:"nextReviewAt,omitempty"`
+	LastUpdatedAt   time.Time    `json:"lastUpdatedAt"`
+	EaseFactor      float64      `json:"easeFactor"`
+	IntervalDays    int          `json:"intervalDays"`
+	RepetitionCount int          `json:"repetitionCount"`
+	LastQuality     *int         `json:"lastQuality,omitempty"`
 }
 
 type AnalysisTask struct {

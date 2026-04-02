@@ -1,10 +1,12 @@
 package judges
 
 import (
+	"crypto/tls"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -19,6 +21,8 @@ const (
 	codeforcesBaseURL    = "https://codeforces.com/api"
 	codeforcesPageSize   = 50
 	codeforcesMinSpacing = 250 * time.Millisecond
+	codeforcesMaxRetries = 3
+	codeforcesRetryDelay = 2 * time.Second
 )
 
 type CodeforcesAdapter struct {
@@ -70,8 +74,19 @@ type codeforcesContest struct {
 }
 
 func NewCodeforcesAdapter() Adapter {
+	transport := &http.Transport{
+		Proxy: http.ProxyFromEnvironment,
+		DialContext: (&net.Dialer{
+			Timeout:   30 * time.Second,
+			KeepAlive: 30 * time.Second,
+		}).DialContext,
+		TLSHandshakeTimeout:   60 * time.Second,
+		ResponseHeaderTimeout: 30 * time.Second,
+		ExpectContinueTimeout: 5 * time.Second,
+		TLSClientConfig:       &tls.Config{MinVersion: tls.VersionTLS12},
+	}
 	return &CodeforcesAdapter{
-		client:  &http.Client{Timeout: 30 * time.Second},
+		client:  &http.Client{Timeout: 120 * time.Second, Transport: transport},
 		baseURL: codeforcesBaseURL,
 	}
 }
@@ -255,39 +270,75 @@ func (a *CodeforcesAdapter) getJSON(path string, query url.Values, target any) e
 		endpoint += "?" + query.Encode()
 	}
 
-	req, err := http.NewRequest(http.MethodGet, endpoint, nil)
-	if err != nil {
-		return fmt.Errorf("build request: %w", err)
-	}
-
-	resp, err := a.client.Do(req)
-	if err != nil {
-		return fmt.Errorf("request failed: %w", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		body, _ := io.ReadAll(resp.Body)
-		return fmt.Errorf("http %d: %s", resp.StatusCode, strings.TrimSpace(string(body)))
-	}
-
-	var envelope codeforcesAPIEnvelope
-	if err := json.NewDecoder(resp.Body).Decode(&envelope); err != nil {
-		return fmt.Errorf("decode response: %w", err)
-	}
-
-	if envelope.Status != "OK" {
-		if envelope.Comment != "" {
-			return errors.New(envelope.Comment)
+	var lastErr error
+	for attempt := 0; attempt <= codeforcesMaxRetries; attempt++ {
+		if attempt > 0 {
+			time.Sleep(codeforcesRetryDelay * time.Duration(attempt))
 		}
-		return fmt.Errorf("codeforces api status: %s", envelope.Status)
+
+		req, err := http.NewRequest(http.MethodGet, endpoint, nil)
+		if err != nil {
+			return fmt.Errorf("build request: %w", err)
+		}
+
+		resp, err := a.client.Do(req)
+		if err != nil {
+			lastErr = fmt.Errorf("request failed: %w", err)
+			// 网络/TLS 错误可重试
+			if isRetryableError(err) {
+				continue
+			}
+			return lastErr
+		}
+
+		body, readErr := io.ReadAll(resp.Body)
+		resp.Body.Close()
+		if readErr != nil {
+			lastErr = fmt.Errorf("read response: %w", readErr)
+			continue
+		}
+
+		if resp.StatusCode != http.StatusOK {
+			// 429 / 5xx 可重试
+			if resp.StatusCode == http.StatusTooManyRequests || resp.StatusCode >= 500 {
+				lastErr = fmt.Errorf("http %d: %s", resp.StatusCode, strings.TrimSpace(string(body)))
+				continue
+			}
+			return fmt.Errorf("http %d: %s", resp.StatusCode, strings.TrimSpace(string(body)))
+		}
+
+		var envelope codeforcesAPIEnvelope
+		if err := json.Unmarshal(body, &envelope); err != nil {
+			return fmt.Errorf("decode response: %w", err)
+		}
+
+		if envelope.Status != "OK" {
+			if envelope.Comment != "" {
+				return errors.New(envelope.Comment)
+			}
+			return fmt.Errorf("codeforces api status: %s", envelope.Status)
+		}
+
+		if err := json.Unmarshal(envelope.Result, target); err != nil {
+			return fmt.Errorf("decode result: %w", err)
+		}
+
+		return nil
 	}
 
-	if err := json.Unmarshal(envelope.Result, target); err != nil {
-		return fmt.Errorf("decode result: %w", err)
-	}
+	return fmt.Errorf("after %d retries: %w", codeforcesMaxRetries, lastErr)
+}
 
-	return nil
+func isRetryableError(err error) bool {
+	if err == nil {
+		return false
+	}
+	msg := err.Error()
+	return strings.Contains(msg, "timeout") ||
+		strings.Contains(msg, "TLS handshake") ||
+		strings.Contains(msg, "connection reset") ||
+		strings.Contains(msg, "EOF") ||
+		strings.Contains(msg, "no such host")
 }
 
 func (a *CodeforcesAdapter) waitRateLimit() {

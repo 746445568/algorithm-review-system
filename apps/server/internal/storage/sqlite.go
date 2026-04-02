@@ -17,7 +17,7 @@ import (
 	"ojreviewdesktop/internal/models"
 )
 
-const schemaVersion = 2
+const schemaVersion = 3
 
 type DB struct {
 	conn  *sql.DB
@@ -74,26 +74,6 @@ func Open(cfg app.Config, vault *cryptovault.Vault) (*DB, error) {
 
 func (db *DB) Close() error { return db.conn.Close() }
 
-// addColumnIfMissing adds a column to table if it does not yet exist.
-// Safe to call on every startup (idempotent).
-func (db *DB) addColumnIfMissing(table, column, definition string) error {
-	var count int
-	if err := db.conn.QueryRow(
-		fmt.Sprintf(`SELECT COUNT(*) FROM pragma_table_info('%s') WHERE name = ?`, table),
-		column,
-	).Scan(&count); err != nil {
-		return fmt.Errorf("addColumnIfMissing(%s.%s): pragma: %w", table, column, err)
-	}
-	if count > 0 {
-		return nil
-	}
-	_, err := db.conn.Exec(fmt.Sprintf(`ALTER TABLE %s ADD COLUMN %s %s`, table, column, definition))
-	if err != nil {
-		return fmt.Errorf("addColumnIfMissing(%s.%s): alter: %w", table, column, err)
-	}
-	return nil
-}
-
 func (db *DB) MigrateWithBackup() error {
 	if _, err := os.Stat(db.cfg.DBPath); err == nil {
 		backupPath := filepath.Join(db.cfg.DataDir, fmt.Sprintf("ojreview.pre-migration.%s.db", time.Now().UTC().Format("20060102-150405")))
@@ -102,13 +82,6 @@ func (db *DB) MigrateWithBackup() error {
 		}
 	}
 	if err := db.ensureSchema(); err != nil {
-		return err
-	}
-	// Idempotent column additions for existing databases
-	if err := db.addColumnIfMissing("review_snapshots", "snapshot_type", "TEXT NOT NULL DEFAULT 'global'"); err != nil {
-		return err
-	}
-	if err := db.addColumnIfMissing("review_snapshots", "problem_id", "INTEGER"); err != nil {
 		return err
 	}
 	return nil
@@ -197,9 +170,7 @@ CREATE TABLE IF NOT EXISTS sync_tasks (
 CREATE TABLE IF NOT EXISTS review_snapshots (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   generated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
-  summary_json TEXT NOT NULL,
-  snapshot_type TEXT NOT NULL DEFAULT 'global',
-  problem_id INTEGER
+  summary_json TEXT NOT NULL
 );
 CREATE TABLE IF NOT EXISTS problem_review_states (
   problem_id INTEGER PRIMARY KEY,
@@ -247,10 +218,32 @@ CREATE TABLE IF NOT EXISTS app_settings (
 	if _, err := db.conn.Exec(`INSERT OR IGNORE INTO owner_profile(id, name) VALUES (1, 'Owner')`); err != nil {
 		return err
 	}
+	if err := db.migrateToV3(); err != nil {
+		return err
+	}
+
 	_, err := db.conn.Exec(`
 INSERT INTO schema_meta(key, value) VALUES ('schema_version', ?)
 ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = CURRENT_TIMESTAMP`, fmt.Sprintf("%d", schemaVersion))
 	return err
+}
+
+func (db *DB) migrateToV3() error {
+	alters := []string{
+		`ALTER TABLE problem_review_states ADD COLUMN ease_factor REAL NOT NULL DEFAULT 2.5`,
+		`ALTER TABLE problem_review_states ADD COLUMN interval_days INTEGER NOT NULL DEFAULT 0`,
+		`ALTER TABLE problem_review_states ADD COLUMN repetition_count INTEGER NOT NULL DEFAULT 0`,
+		`ALTER TABLE problem_review_states ADD COLUMN last_quality INTEGER`,
+	}
+	for _, stmt := range alters {
+		if _, err := db.conn.Exec(stmt); err != nil {
+			if strings.Contains(err.Error(), "duplicate column") {
+				continue
+			}
+			return err
+		}
+	}
+	return nil
 }
 
 func (db *DB) Owner() (models.OwnerProfile, error) {
@@ -785,7 +778,7 @@ func (db *DB) CreateReviewSnapshot(summary map[string]any) (models.ReviewSnapsho
 	if err != nil {
 		return models.ReviewSnapshot{}, err
 	}
-	_, err = db.conn.Exec(`INSERT INTO review_snapshots(summary_json, snapshot_type) VALUES (?, 'global')`, string(bytes))
+	_, err = db.conn.Exec(`INSERT INTO review_snapshots(summary_json) VALUES (?)`, string(bytes))
 	if err != nil {
 		return models.ReviewSnapshot{}, err
 	}
@@ -798,31 +791,10 @@ func (db *DB) GetReviewSnapshot(id int64) (models.ReviewSnapshot, error) {
 	return scanReviewSnapshot(row)
 }
 
-// CreateTypedSnapshotJSON stores a pre-serialised JSON blob with explicit
-// snapshot_type and optional problem_id. Used by comparison and problem endpoints.
-func (db *DB) CreateTypedSnapshotJSON(summaryJSON, snapshotType string, problemID *int64) (models.ReviewSnapshot, error) {
-	var err error
-	if problemID != nil {
-		_, err = db.conn.Exec(
-			`INSERT INTO review_snapshots(summary_json, snapshot_type, problem_id) VALUES (?, ?, ?)`,
-			summaryJSON, snapshotType, *problemID,
-		)
-	} else {
-		_, err = db.conn.Exec(
-			`INSERT INTO review_snapshots(summary_json, snapshot_type) VALUES (?, ?)`,
-			summaryJSON, snapshotType,
-		)
-	}
-	if err != nil {
-		return models.ReviewSnapshot{}, err
-	}
-	row := db.conn.QueryRow(`SELECT id, generated_at, summary_json FROM review_snapshots WHERE id = last_insert_rowid()`)
-	return scanReviewSnapshot(row)
-}
-
 func (db *DB) GetProblemReviewState(problemID int64) (models.ProblemReviewState, error) {
 	row := db.conn.QueryRow(`
-SELECT problem_id, status, notes, next_review_at, last_updated_at
+SELECT problem_id, status, notes, next_review_at, last_updated_at,
+       ease_factor, interval_days, repetition_count, last_quality
 FROM problem_review_states
 WHERE problem_id = ?`, problemID)
 
@@ -838,77 +810,9 @@ WHERE problem_id = ?`, problemID)
 		ProblemID:     problemID,
 		Status:        models.ReviewStatusTodo,
 		Notes:         "",
+		EaseFactor:    2.5,
 		LastUpdatedAt: time.Now().UTC(),
 	}, nil
-}
-
-// ProblemAnalysisData holds all data needed for single-problem AI analysis.
-type ProblemAnalysisData struct {
-	ProblemID         int64            `json:"problemId"`
-	ExternalProblemID string           `json:"externalProblemId"`
-	Title             string           `json:"title"`
-	Platform          string           `json:"platform"`
-	Tags              []string         `json:"tags"`
-	Notes             string           `json:"notes"`
-	Submissions       []map[string]any `json:"submissions"`
-}
-
-func (db *DB) GetProblemAnalysisData(problemID int64) (*ProblemAnalysisData, error) {
-	// 1. Problem metadata
-	row := db.conn.QueryRow(`
-SELECT id, COALESCE(external_problem_id,''), COALESCE(title,''), COALESCE(platform,'')
-FROM problems WHERE id = ?`, problemID)
-	var d ProblemAnalysisData
-	d.ProblemID = problemID
-	if err := row.Scan(&d.ProblemID, &d.ExternalProblemID, &d.Title, &d.Platform); err != nil {
-		return nil, fmt.Errorf("get problem analysis data: problem not found: %w", err)
-	}
-
-	// 2. Tags
-	tagRows, err := db.conn.Query(`SELECT tag_name FROM problem_tags WHERE problem_id = ?`, problemID)
-	if err != nil {
-		return nil, fmt.Errorf("get problem analysis data: tags: %w", err)
-	}
-	defer tagRows.Close()
-	d.Tags = make([]string, 0)
-	for tagRows.Next() {
-		var t string
-		if err := tagRows.Scan(&t); err != nil {
-			return nil, err
-		}
-		d.Tags = append(d.Tags, t)
-	}
-
-	// 3. Notes from review state
-	noteRow := db.conn.QueryRow(`SELECT COALESCE(notes,'') FROM problem_review_states WHERE problem_id = ?`, problemID)
-	_ = noteRow.Scan(&d.Notes) // ok if no row (notes stays "")
-
-	// 4. Submissions (all, ordered by time)
-	subRows, err := db.conn.Query(`
-SELECT verdict, COALESCE(language,''), submitted_at,
-     COALESCE(exec_time_ms, 0), COALESCE(memory_kb, 0)
-FROM submissions WHERE problem_id = ? ORDER BY submitted_at ASC`, problemID)
-	if err != nil {
-		return nil, fmt.Errorf("get problem analysis data: submissions: %w", err)
-	}
-	defer subRows.Close()
-	d.Submissions = make([]map[string]any, 0)
-	for subRows.Next() {
-		var verdict, lang, submittedAt string
-		var execMs, memKb int
-		if err := subRows.Scan(&verdict, &lang, &submittedAt, &execMs, &memKb); err != nil {
-			return nil, err
-		}
-		d.Submissions = append(d.Submissions, map[string]any{
-			"verdict":         verdict,
-			"language":        lang,
-			"submittedAt":     submittedAt,
-			"executionTimeMs": execMs,
-			"memoryKb":        memKb,
-		})
-	}
-
-	return &d, nil
 }
 
 func (db *DB) SaveProblemReviewState(state models.ProblemReviewState) (models.ProblemReviewState, error) {
@@ -923,18 +827,36 @@ func (db *DB) SaveProblemReviewState(state models.ProblemReviewState) (models.Pr
 		nextReviewAt = state.NextReviewAt.UTC().Format(time.RFC3339)
 	}
 
+	ef := state.EaseFactor
+	if ef < 1.3 {
+		ef = 2.5
+	}
+	var lastQuality any
+	if state.LastQuality != nil {
+		lastQuality = *state.LastQuality
+	}
+
 	_, err := db.conn.Exec(`
-INSERT INTO problem_review_states(problem_id, status, notes, next_review_at, last_updated_at)
-VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)
+INSERT INTO problem_review_states(problem_id, status, notes, next_review_at, last_updated_at,
+	ease_factor, interval_days, repetition_count, last_quality)
+VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, ?, ?, ?, ?)
 ON CONFLICT(problem_id) DO UPDATE SET
 	status = excluded.status,
 	notes = excluded.notes,
 	next_review_at = excluded.next_review_at,
-	last_updated_at = CURRENT_TIMESTAMP`,
+	last_updated_at = CURRENT_TIMESTAMP,
+	ease_factor = excluded.ease_factor,
+	interval_days = excluded.interval_days,
+	repetition_count = excluded.repetition_count,
+	last_quality = excluded.last_quality`,
 		state.ProblemID,
 		status,
 		notes,
 		nextReviewAt,
+		ef,
+		state.IntervalDays,
+		state.RepetitionCount,
+		lastQuality,
 	)
 	if err != nil {
 		return models.ProblemReviewState{}, err
@@ -972,20 +894,6 @@ func (db *DB) GetAnalysisTask(id int64) (models.AnalysisTask, error) {
 	row := db.conn.QueryRow(`
 SELECT id, status, provider, model, input_snapshot_id, COALESCE(result_text,''), COALESCE(result_json,''), COALESCE(error_message,''), retry_count, created_at, updated_at
 FROM analysis_tasks WHERE id = ?`, id)
-	return scanAnalysisTask(row)
-}
-
-// GetLatestGlobalAnalysisTask returns the most recent successful global analysis,
-// used by the Dashboard card. Returns sql.ErrNoRows if none found.
-func (db *DB) GetLatestGlobalAnalysisTask() (models.AnalysisTask, error) {
-	row := db.conn.QueryRow(`
-SELECT at.id, at.status, at.provider, at.model, at.input_snapshot_id,
-       COALESCE(at.result_text,''), COALESCE(at.result_json,''), COALESCE(at.error_message,''),
-       at.retry_count, at.created_at, at.updated_at
-FROM analysis_tasks at
-JOIN review_snapshots rs ON rs.id = at.input_snapshot_id
-WHERE rs.snapshot_type = 'global' AND at.status = ?
-ORDER BY at.created_at DESC LIMIT 1`, models.TaskSuccess)
 	return scanAnalysisTask(row)
 }
 
@@ -1277,7 +1185,11 @@ func scanProblemReviewState(scanner interface{ Scan(dest ...any) error }) (model
 	var state models.ProblemReviewState
 	var nextReviewAtRaw sql.NullString
 	var lastUpdatedAtRaw string
-	if err := scanner.Scan(&state.ProblemID, &state.Status, &state.Notes, &nextReviewAtRaw, &lastUpdatedAtRaw); err != nil {
+	var lastQuality sql.NullInt64
+	if err := scanner.Scan(
+		&state.ProblemID, &state.Status, &state.Notes, &nextReviewAtRaw, &lastUpdatedAtRaw,
+		&state.EaseFactor, &state.IntervalDays, &state.RepetitionCount, &lastQuality,
+	); err != nil {
 		return state, err
 	}
 
@@ -1293,6 +1205,11 @@ func scanProblemReviewState(scanner interface{ Scan(dest ...any) error }) (model
 			return state, fmt.Errorf("parse review state next_review_at: %w", err)
 		}
 		state.NextReviewAt = &parsed
+	}
+
+	if lastQuality.Valid {
+		q := int(lastQuality.Int64)
+		state.LastQuality = &q
 	}
 
 	return state, nil
@@ -1842,166 +1759,6 @@ func (db *DB) GetReviewSummary() (map[string]any, error) {
 		})
 	}
 	summary["contestGroups"] = contestGroups
-
-	return summary, nil
-}
-
-// GetReviewSummaryForPeriod is like GetReviewSummary but restricts
-// submission data to the half-open interval [start, end].
-func (db *DB) GetReviewSummaryForPeriod(start, end time.Time) (map[string]any, error) {
-	startStr := start.UTC().Format(time.RFC3339)
-	endStr := end.UTC().Format(time.RFC3339)
-
-	summary := map[string]any{
-		"totalSubmissions":     0,
-		"acRate":               0.0,
-		"weakTags":             []map[string]any{},
-		"repeatedFailures":     []map[string]any{},
-		"recentUnsolved":       []map[string]any{},
-		"problemSummaries":     []map[string]any{},
-		"contestGroups":        []map[string]any{},
-		"reviewStatusCounts":   map[string]int{},
-		"dueReviewCount":       0,
-		"scheduledReviewCount": 0,
-		"periodStart":          startStr,
-		"periodEnd":            endStr,
-	}
-
-	// 1. totalSubmissions + acRate (period-scoped)
-	var totalSubmissions int
-	var acCount int
-	if err := db.conn.QueryRow(`
-		SELECT
-			COUNT(*) AS total_submissions,
-			COALESCE(SUM(CASE WHEN verdict = ? THEN 1 ELSE 0 END), 0) AS ac_count
-		FROM submissions
-		WHERE submitted_at BETWEEN ? AND ?`,
-		models.VerdictAC, startStr, endStr).Scan(&totalSubmissions, &acCount); err != nil {
-		return nil, fmt.Errorf("get review summary period: query totals: %w", err)
-	}
-	summary["totalSubmissions"] = totalSubmissions
-	if totalSubmissions > 0 {
-		acRate := math.Round((float64(acCount)*100.0/float64(totalSubmissions))*10) / 10
-		summary["acRate"] = acRate
-	}
-
-	// 2. weakTags (period-scoped)
-	weakTagRows, err := db.conn.Query(`
-		SELECT
-			pt.tag_name,
-			COUNT(*) AS attempts,
-			SUM(CASE WHEN s.verdict = ? THEN 1 ELSE 0 END) AS ac_count
-		FROM problem_tags pt
-		JOIN submissions s ON s.problem_id = pt.problem_id
-		WHERE s.submitted_at BETWEEN ? AND ?
-		GROUP BY pt.tag_name
-		HAVING COUNT(*) >= 2
-		ORDER BY (SUM(CASE WHEN s.verdict = ? THEN 1 ELSE 0 END) * 1.0 / COUNT(*)) ASC
-		LIMIT 5`,
-		models.VerdictAC, startStr, endStr, models.VerdictAC)
-	if err != nil {
-		return nil, fmt.Errorf("get review summary period: query weak tags: %w", err)
-	}
-	defer weakTagRows.Close()
-
-	weakTags := make([]map[string]any, 0, 5)
-	for weakTagRows.Next() {
-		var tagName string
-		var attempts int
-		var tagAC int
-		if err := weakTagRows.Scan(&tagName, &attempts, &tagAC); err != nil {
-			return nil, fmt.Errorf("get review summary period: scan weak tags: %w", err)
-		}
-		acRate := 0.0
-		if attempts > 0 {
-			acRate = math.Round(float64(tagAC)*100.0/float64(attempts)*10) / 10
-		}
-		weakTags = append(weakTags, map[string]any{
-			"tag":      tagName,
-			"attempts": attempts,
-			"acCount":  tagAC,
-			"acRate":   acRate,
-		})
-	}
-	summary["weakTags"] = weakTags
-
-	// 3. repeatedFailures (period-scoped)
-	repeatedRows, err := db.conn.Query(`
-		SELECT
-			s.problem_id,
-			p.external_problem_id,
-			p.title,
-			COUNT(*) AS failed_count
-		FROM submissions s
-		JOIN problems p ON p.id = s.problem_id
-		WHERE s.verdict IN (?, ?, ?) AND s.submitted_at BETWEEN ? AND ?
-		GROUP BY s.problem_id, p.external_problem_id, p.title
-		HAVING COUNT(*) >= 2
-		AND NOT EXISTS (
-			SELECT 1 FROM submissions s2
-			WHERE s2.problem_id = s.problem_id AND s2.verdict = ?
-			  AND s2.submitted_at BETWEEN ? AND ?
-		)
-		ORDER BY failed_count DESC
-		LIMIT 10`,
-		models.VerdictWA, models.VerdictRE, models.VerdictTLE, startStr, endStr,
-		models.VerdictAC, startStr, endStr)
-	if err != nil {
-		return nil, fmt.Errorf("get review summary period: query repeated failures: %w", err)
-	}
-	defer repeatedRows.Close()
-
-	repeatedFailures := make([]map[string]any, 0)
-	for repeatedRows.Next() {
-		var problemID int64
-		var externalProblemID, title string
-		var failedCount int
-		if err := repeatedRows.Scan(&problemID, &externalProblemID, &title, &failedCount); err != nil {
-			return nil, fmt.Errorf("get review summary period: scan repeated failures: %w", err)
-		}
-		repeatedFailures = append(repeatedFailures, map[string]any{
-			"problemId":         problemID,
-			"externalProblemId": externalProblemID,
-			"title":             title,
-			"failedCount":       failedCount,
-		})
-	}
-	summary["repeatedFailures"] = repeatedFailures
-
-	// 4. recentUnsolved (period-scoped)
-	recentRows, err := db.conn.Query(`
-		SELECT
-			s.problem_id,
-			p.external_problem_id,
-			p.title,
-			MAX(s.submitted_at) AS last_submitted_at
-		FROM submissions s
-		JOIN problems p ON p.id = s.problem_id
-		WHERE s.verdict != ? AND s.submitted_at BETWEEN ? AND ?
-		GROUP BY s.problem_id, p.external_problem_id, p.title
-		ORDER BY last_submitted_at DESC
-		LIMIT 10`,
-		models.VerdictAC, startStr, endStr)
-	if err != nil {
-		return nil, fmt.Errorf("get review summary period: query recent unsolved: %w", err)
-	}
-	defer recentRows.Close()
-
-	recentUnsolved := make([]map[string]any, 0, 10)
-	for recentRows.Next() {
-		var problemID int64
-		var externalProblemID, title, lastSubmittedAt string
-		if err := recentRows.Scan(&problemID, &externalProblemID, &title, &lastSubmittedAt); err != nil {
-			return nil, fmt.Errorf("get review summary period: scan recent unsolved: %w", err)
-		}
-		recentUnsolved = append(recentUnsolved, map[string]any{
-			"problemId":         problemID,
-			"externalProblemId": externalProblemID,
-			"title":             title,
-			"lastSubmittedAt":   lastSubmittedAt,
-		})
-	}
-	summary["recentUnsolved"] = recentUnsolved
 
 	return summary, nil
 }

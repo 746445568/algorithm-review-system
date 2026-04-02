@@ -2,11 +2,9 @@
    方案 A「清冷蓝调」— 与 Web 版统一的蓝色主色调
    ═══════════════════════════════════════════════ */
 
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,500;0,9..40,700;1,9..40,400&display=swap');
-
 :root {
   color-scheme: light;
-  font-family: "DM Sans", "Noto Sans SC", "Microsoft YaHei", "PingFang SC", "Segoe UI Variable Text", sans-serif;
+  font-family: "Microsoft YaHei", "PingFang SC", "Noto Sans SC", "Segoe UI Variable Text", sans-serif;
   background: #f8fafc;
   color: #0f172a;
   --bg: #f8fafc;
@@ -1570,43 +1568,25 @@ textarea {
   flex-shrink: 0;
 }
 
-/* SM-2 rate buttons */
-.rd-rate-btns { display: flex; gap: 6px; flex-wrap: wrap; }
+/* Rating buttons (SM-2) */
+.rd-rate-btns { display: flex; gap: 8px; flex-wrap: wrap; }
 .rd-rate-btn {
   display: flex;
   align-items: center;
   gap: 7px;
-  padding: 8px 14px;
+  padding: 9px 18px;
   border: 1px solid var(--line-strong);
   border-radius: 10px;
   background: var(--panel-strong);
   font-size: 13px;
-  font-weight: 500;
-  color: var(--text-secondary);
+  font-weight: 600;
   cursor: pointer;
   transition: all 120ms ease;
+  flex: 1;
+  justify-content: center;
+  min-width: 72px;
 }
 .rd-rate-btn:disabled { opacity: 0.4; cursor: not-allowed; }
-.rd-rate-btn--forgot:hover:not(:disabled) {
-  border-color: var(--bad);
-  color: var(--bad);
-  background: var(--bad-soft);
-}
-.rd-rate-btn--hard:hover:not(:disabled) {
-  border-color: var(--warn);
-  color: var(--warn);
-  background: var(--warn-soft);
-}
-.rd-rate-btn--medium:hover:not(:disabled) {
-  border-color: var(--accent);
-  color: var(--accent);
-  background: var(--accent-soft);
-}
-.rd-rate-btn--easy:hover:not(:disabled) {
-  border-color: var(--good);
-  color: var(--good);
-  background: var(--good-soft);
-}
 .rd-rate-key {
   display: inline-flex;
   align-items: center;
@@ -1620,10 +1600,42 @@ textarea {
   opacity: 0.6;
   flex-shrink: 0;
 }
+.rd-rate-btn--forgot {
+  color: #dc2626;
+  border-color: rgba(220,38,38,0.25);
+}
+.rd-rate-btn--forgot:hover:not(:disabled) {
+  background: rgba(220,38,38,0.10);
+  border-color: #dc2626;
+}
+.rd-rate-btn--hard {
+  color: #d97706;
+  border-color: rgba(217,119,6,0.25);
+}
+.rd-rate-btn--hard:hover:not(:disabled) {
+  background: rgba(217,119,6,0.10);
+  border-color: #d97706;
+}
+.rd-rate-btn--medium {
+  color: var(--accent);
+  border-color: var(--accent-border);
+}
+.rd-rate-btn--medium:hover:not(:disabled) {
+  background: var(--accent-soft);
+  border-color: var(--accent);
+}
+.rd-rate-btn--easy {
+  color: #16a34a;
+  border-color: rgba(22,163,74,0.25);
+}
+.rd-rate-btn--easy:hover:not(:disabled) {
+  background: rgba(22,163,74,0.10);
+  border-color: #16a34a;
+}
 .rd-srs-hint {
   font-size: 12px;
   color: var(--muted);
-  margin-top: 4px;
+  margin: 0;
 }
 
 /* Notes */
@@ -1792,99 +1804,4 @@ textarea {
     grid-template-columns: 1fr;
   }
   .rl-list { max-height: 260px; }
-}
-
-/* ─── AI Analysis tab (rd-ai-*) ──────────────────────── */
-.rd-ai-panel {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-  min-height: 160px;
-}
-
-/* Empty / trigger state */
-.rd-ai-empty {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 14px;
-  padding: 36px 16px;
-  text-align: center;
-}
-.rd-ai-hint {
-  margin: 0;
-  font-size: 13px;
-  color: var(--muted);
-  max-width: 300px;
-  line-height: 1.6;
-}
-.rd-ai-error-msg {
-  margin: 0;
-  font-size: 13px;
-  color: var(--bad);
-}
-
-/* Progress state */
-.rd-ai-progress {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  padding: 36px 16px;
-  text-align: center;
-  font-size: 13px;
-  color: var(--muted);
-}
-.rd-ai-provider-hint { font-size: 11px; }
-
-/* Failed state */
-.rd-ai-failed {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 12px;
-  padding: 28px 16px;
-  text-align: center;
-}
-
-/* Success state */
-.rd-ai-result-area {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-.rd-ai-meta {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 12px;
-  flex-wrap: wrap;
-}
-.rd-ai-provider-badge {
-  display: inline-flex;
-  align-items: center;
-  padding: 2px 8px;
-  border-radius: 6px;
-  background: var(--accent-soft);
-  color: var(--accent);
-  font-size: 11px;
-  font-weight: 600;
-  text-transform: capitalize;
-}
-.rd-ai-regen-btn {
-  margin-left: auto;
-  font-size: 12px;
-  padding: 4px 10px;
-}
-.rd-ai-result {
-  padding: 16px;
-  border: 1px solid var(--line);
-  border-radius: 12px;
-  background: var(--bg);
-  font-size: 14px;
-  line-height: 1.7;
-  max-height: 480px;
-  overflow-y: auto;
 }

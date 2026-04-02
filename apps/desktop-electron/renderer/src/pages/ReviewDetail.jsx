@@ -10,6 +10,13 @@ const STATUS_OPTIONS = [
   { value: "DONE",      label: "已完成", chipClass: "rl-chip-good"    },
 ];
 
+const RATE_OPTIONS = [
+  { quality: 1, label: "忘了", key: "Q", className: "rd-rate-btn--forgot"  },
+  { quality: 2, label: "困难", key: "W", className: "rd-rate-btn--hard"    },
+  { quality: 3, label: "一般", key: "E", className: "rd-rate-btn--medium"  },
+  { quality: 5, label: "简单", key: "R", className: "rd-rate-btn--easy"    },
+];
+
 function isMissingReviewStateRoute(error) {
   return /\b404\b/.test(error?.message || "");
 }
@@ -107,13 +114,11 @@ export function ReviewDetail({
   const [supportMessage, setSupportMessage] = useState("");
   const [toast, setToast] = useState(null);
   const [activeTab, setActiveTab] = useState("state");
-  const [analysisTask, setAnalysisTask] = useState(null);
-  const [analysisLoading, setAnalysisLoading] = useState(false);
-  const [analysisError, setAnalysisError] = useState(null);
+  const [srsInfo, setSrsInfo] = useState({ easeFactor: 2.5, intervalDays: 0, repetitionCount: 0 });
+  const [rating, setRating] = useState(false);
 
   const seqRef = useRef(0);
   const autoAdvRef = useRef(null);
-  const analysisPollRef = useRef(null);
 
   const selectedProblemId = selectedProblem?.problemId ?? null;
   const serviceUnavailable = serviceStatus.state !== "healthy";
@@ -137,6 +142,11 @@ export function ReviewDetail({
         notes: state.notes || "",
         nextReviewAt: toDatetimeLocalValue(state.nextReviewAt),
         lastUpdatedAt: state.lastUpdatedAt || "",
+      });
+      setSrsInfo({
+        easeFactor: state.easeFactor ?? 2.5,
+        intervalDays: state.intervalDays ?? 0,
+        repetitionCount: state.repetitionCount ?? 0,
       });
       setReviewStateSupported(true);
       setSupportMessage("");
@@ -193,10 +203,53 @@ export function ReviewDetail({
     }
   }, [selectedProblemId, reviewStateSupported, reviewSaving, reviewState, onReviewSaved, filteredProblems, onSelect, serviceUrl]);
 
-  useEffect(() => () => {
-    clearTimeout(autoAdvRef.current);
-    clearTimeout(analysisPollRef.current);
-  }, []);
+  const handleRate = useCallback(async (quality) => {
+    if (!selectedProblemId || !reviewStateSupported || rating) return;
+    setRating(true);
+    try {
+      const result = await api.rateReview(selectedProblemId, quality);
+      setSrsInfo({
+        easeFactor: result.easeFactor ?? 2.5,
+        intervalDays: result.intervalDays ?? 0,
+        repetitionCount: result.repetitionCount ?? 0,
+      });
+      setReviewState((s) => ({
+        ...s,
+        status: result.status || "SCHEDULED",
+        nextReviewAt: toDatetimeLocalValue(result.nextReviewAt),
+        lastUpdatedAt: result.lastUpdatedAt || s.lastUpdatedAt,
+      }));
+      onReviewSaved(result);
+      const days = result.intervalDays ?? 0;
+      setToast({ message: `已评分，下次复习：${days} 天后`, isError: false });
+      const idx = filteredProblems.findIndex((p) => p.problemId === selectedProblemId);
+      if (idx < filteredProblems.length - 1) {
+        clearTimeout(autoAdvRef.current);
+        autoAdvRef.current = setTimeout(() => {
+          onSelect(filteredProblems[idx + 1].problemId);
+        }, 1200);
+      }
+    } catch (err) {
+      setToast({ message: `评分失败：${err.message}`, isError: true });
+    } finally {
+      setRating(false);
+    }
+  }, [selectedProblemId, reviewStateSupported, rating, onReviewSaved, filteredProblems, onSelect]);
+
+  useEffect(() => () => clearTimeout(autoAdvRef.current), []);
+
+  useEffect(() => {
+    if (!reviewStateSupported || serviceUnavailable) return;
+    const keyMap = { q: 1, w: 2, e: 3, r: 5 };
+    const onKey = (e) => {
+      if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") return;
+      if (activeTab !== "state") return;
+      const quality = keyMap[e.key.toLowerCase()];
+      if (quality) handleRate(quality);
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [reviewStateSupported, serviceUnavailable, activeTab, handleRate]);
 
   const { currentIndex, total, hasNext, hasPrev, goNext, goPrev } = useReviewFlow({
     problems: filteredProblems,
@@ -205,49 +258,6 @@ export function ReviewDetail({
     onSave: saveReviewState,
     onStatusChange: (status) => setReviewState((s) => ({ ...s, status })),
   });
-
-  // ── AI Analysis ──
-  function stopAnalysisPoll() {
-    if (analysisPollRef.current) { clearTimeout(analysisPollRef.current); analysisPollRef.current = null; }
-  }
-
-  function scheduleAnalysisPoll(taskId) {
-    stopAnalysisPoll();
-    analysisPollRef.current = setTimeout(async () => {
-      try {
-        const task = await api.getAnalysisTask(taskId);
-        setAnalysisTask(task);
-        if (task.status !== "SUCCESS" && task.status !== "FAILED") {
-          scheduleAnalysisPoll(taskId);
-        } else {
-          setAnalysisLoading(false);
-        }
-      } catch (err) {
-        setAnalysisLoading(false);
-        setAnalysisError(err.message);
-      }
-    }, 2000);
-  }
-
-  async function handleGenerateAnalysis() {
-    if (analysisLoading || !selectedProblemId) return;
-    stopAnalysisPoll();
-    setAnalysisLoading(true);
-    setAnalysisTask(null);
-    setAnalysisError(null);
-    try {
-      const { task } = await api.generateProblemAnalysis(selectedProblemId, {});
-      setAnalysisTask(task);
-      if (task.status === "SUCCESS" || task.status === "FAILED") {
-        setAnalysisLoading(false);
-      } else {
-        scheduleAnalysisPoll(task.id);
-      }
-    } catch (err) {
-      setAnalysisLoading(false);
-      setAnalysisError(err.message);
-    }
-  }
 
   // ── Empty state ──
   if (!selectedProblem) {
@@ -357,6 +367,14 @@ export function ReviewDetail({
                 {selectedProblem.latestVerdict || "—"}
               </strong>
             </article>
+            <article>
+              <span>复习间隔</span>
+              <strong>{srsInfo.intervalDays > 0 ? `${srsInfo.intervalDays} 天` : "—"}</strong>
+            </article>
+            <article>
+              <span>累计复习</span>
+              <strong>{srsInfo.repetitionCount > 0 ? `${srsInfo.repetitionCount} 次` : "—"}</strong>
+            </article>
           </div>
 
           {selectedTags.length > 0 && (
@@ -374,7 +392,6 @@ export function ReviewDetail({
             { id: "state",       label: "复习状态" },
             { id: "submissions", label: `提交记录${hasSubmissions ? ` (${selectedSubmissions.length})` : ""}` },
             { id: "raw",         label: "原始数据" },
-            { id: "analysis",    label: "AI 分析" },
           ].map((tab) => (
             <button
               key={tab.id}
@@ -413,7 +430,29 @@ export function ReviewDetail({
             </div>
 
             <div className="rd-field">
-              <label className="rd-label" htmlFor="rd-next-review">下次复习时间</label>
+              <span className="rd-label">间隔重复评分</span>
+              <div className="rd-rate-btns">
+                {RATE_OPTIONS.map((opt) => (
+                  <button
+                    key={opt.quality}
+                    type="button"
+                    className={`rd-rate-btn ${opt.className}`}
+                    disabled={!reviewStateSupported || rating || serviceUnavailable}
+                    onClick={() => handleRate(opt.quality)}
+                    title={`快捷键 ${opt.key}`}
+                  >
+                    <span className="rd-rate-key">{opt.key}</span>
+                    {opt.label}
+                  </button>
+                ))}
+              </div>
+              {srsInfo.intervalDays > 0 && (
+                <p className="rd-srs-hint">当前间隔 {srsInfo.intervalDays} 天 · 已复习 {srsInfo.repetitionCount} 次 · 熟练度 {srsInfo.easeFactor.toFixed(2)}</p>
+              )}
+            </div>
+
+            <div className="rd-field">
+              <label className="rd-label" htmlFor="rd-next-review">下次复习时间（手动调整）</label>
               <input
                 id="rd-next-review"
                 type="datetime-local"
@@ -514,91 +553,6 @@ export function ReviewDetail({
               <pre className="rd-raw-pre">{formatRawJSON(representativeSubmission.rawJson)}</pre>
             ) : (
               <p className="muted">无可用原始数据。</p>
-            )}
-          </div>
-        )}
-
-        {/* Tab: AI Analysis */}
-        {activeTab === "analysis" && (
-          <div className="panel rd-ai-panel">
-            {/* Empty / error state */}
-            {!analysisTask && !analysisLoading && (
-              <div className="rd-ai-empty">
-                <p className="rd-ai-hint">基于全部复习数据生成个性化弱点分析，帮助你找到最需要补强的知识点。</p>
-                {analysisError && (
-                  <p className="rd-ai-error-msg">
-                    {analysisError.includes("provider and model are required")
-                      ? "请先在设置页面配置 AI 服务（提供商 + 模型 + API Key）"
-                      : `分析失败：${analysisError}`}
-                  </p>
-                )}
-                <button
-                  type="button"
-                  className="primary-button"
-                  disabled={serviceUnavailable || !selectedProblemId}
-                  onClick={() => void handleGenerateAnalysis()}
-                >
-                  生成 AI 分析
-                </button>
-                {serviceUnavailable && <p className="muted" style={{ fontSize: 12 }}>等待本地服务就绪…</p>}
-              </div>
-            )}
-
-            {/* Submitting / polling progress */}
-            {(analysisLoading || (analysisTask && analysisTask.status !== "SUCCESS" && analysisTask.status !== "FAILED")) && (
-              <div className="rd-ai-progress">
-                <span className="rd-spinner" />
-                <span>
-                  {!analysisTask && "正在提交…"}
-                  {analysisTask?.status === "PENDING" && "排队等待中…"}
-                  {analysisTask?.status === "RUNNING" && "AI 分析中，请稍候…"}
-                </span>
-                {analysisTask && (
-                  <span className="rd-ai-provider-hint muted">
-                    {analysisTask.provider} · {analysisTask.model}
-                  </span>
-                )}
-              </div>
-            )}
-
-            {/* Failed state */}
-            {analysisTask?.status === "FAILED" && (
-              <div className="rd-ai-failed">
-                <p className="rd-ai-error-msg">
-                  {analysisTask.errorMessage || "分析任务失败，请重试"}
-                </p>
-                <button
-                  type="button"
-                  className="ghost-button"
-                  onClick={() => { setAnalysisTask(null); setAnalysisError(null); }}
-                >
-                  重试
-                </button>
-              </div>
-            )}
-
-            {/* Success state */}
-            {analysisTask?.status === "SUCCESS" && (
-              <div className="rd-ai-result-area">
-                <div className="rd-ai-meta">
-                  <span className="rd-ai-provider-badge">{analysisTask.provider}</span>
-                  <span className="muted">·</span>
-                  <span className="muted">{analysisTask.model}</span>
-                  <span className="muted">·</span>
-                  <span className="muted">{formatDate(analysisTask.updatedAt)}</span>
-                  <button
-                    type="button"
-                    className="ghost-button rd-ai-regen-btn"
-                    disabled={analysisLoading}
-                    onClick={() => void handleGenerateAnalysis()}
-                  >
-                    重新生成
-                  </button>
-                </div>
-                <div className="rd-ai-result">
-                  <SimpleMarkdown text={analysisTask.resultText} />
-                </div>
-              </div>
             )}
           </div>
         )}
