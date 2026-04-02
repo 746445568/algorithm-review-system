@@ -165,6 +165,17 @@ class ServiceManager {
     this.status.source = launch.source;
     this.status.pid = this.child.pid ?? null;
 
+    this.child.once("error", (err) => {
+      this.child = null;
+      this.startPromise = null;
+      this.updateStatus({
+        state: "error",
+        runtimeDir,
+        source: launch.source,
+        message: `failed to launch local service: ${String(err)}`,
+      });
+    });
+
     this.child.stdout?.on("data", (chunk) => {
       console.log(`[ojreviewd] ${chunk.toString().trimEnd()}`);
     });
