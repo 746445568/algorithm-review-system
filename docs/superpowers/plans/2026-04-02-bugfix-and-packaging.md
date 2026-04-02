@@ -933,10 +933,15 @@
   - "立即备份" → 调用 `api.backupData()` → 显示备份路径
   - "恢复备份" → 输入备份文件路径 → 调用 `api.restoreData(path)` → 成功后提示重启
 
-  在 `lib/api.js` 中添加：
+  在 `lib/api.js` 中添加（使用 `request()`，文件中不存在 `post()` helper）：
   ```js
-  backupData: () => post("/api/settings/data/backup", {}),
-  restoreData: (backupPath) => post("/api/settings/data/restore", { backupPath }),
+  backupData: () =>
+    request("/api/settings/data/backup", { method: "POST", body: JSON.stringify({}) }),
+  restoreData: (backupPath) =>
+    request("/api/settings/data/restore", {
+      method: "POST",
+      body: JSON.stringify({ backupPath }),
+    }),
   ```
 
 - [ ] **Step 3: 手动验证**
