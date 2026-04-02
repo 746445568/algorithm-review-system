@@ -20,6 +20,7 @@ type Job struct {
 }
 
 type Queue struct {
+	ctx              context.Context
 	db               *storage.DB
 	workerCh         chan Job
 	wg               sync.WaitGroup
@@ -34,6 +35,7 @@ type Queue struct {
 
 func NewQueue(db *storage.DB) *Queue {
 	return &Queue{
+		ctx:              context.Background(),
 		db:               db,
 		workerCh:         make(chan Job, 32),
 		analysisParallel: 2,
@@ -56,6 +58,10 @@ func (q *Queue) SetTaskRunners(syncRunner func(context.Context, int64) error, an
 }
 
 func (q *Queue) Start(ctx context.Context) {
+	q.mu.Lock()
+	q.ctx = ctx
+	q.mu.Unlock()
+
 	q.once.Do(func() {
 		workerCount := 1 + q.analysisParallel
 		for range workerCount {
@@ -86,11 +92,29 @@ func (q *Queue) Enqueue(job Job) bool {
 		return false
 	}
 	q.inflight[job.Key] = struct{}{}
+	ctx := q.ctx
 	q.mu.Unlock()
 
 	go func() {
-		time.Sleep(20 * time.Millisecond)
-		q.workerCh <- job
+		timer := time.NewTimer(20 * time.Millisecond)
+		defer timer.Stop()
+
+		select {
+		case <-timer.C:
+		case <-ctx.Done():
+			q.mu.Lock()
+			delete(q.inflight, job.Key)
+			q.mu.Unlock()
+			return
+		}
+
+		select {
+		case q.workerCh <- job:
+		case <-ctx.Done():
+			q.mu.Lock()
+			delete(q.inflight, job.Key)
+			q.mu.Unlock()
+		}
 	}()
 	return true
 }
