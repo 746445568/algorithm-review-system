@@ -50,6 +50,7 @@ function formatVersionMismatchHint(expectedMajor, actualVersion, source) {
 class ServiceManager {
   constructor() {
     this.child = null;
+    this.startPromise = null;  // 并发锁：in-flight 时非 null
     this.status = {
       state: "idle",
       url: SERVICE_URL,
@@ -79,6 +80,13 @@ class ServiceManager {
   }
 
   async ensureStarted() {
+    if (this.startPromise) return this.startPromise;
+    this.startPromise = this._startImpl();
+    return this.startPromise;
+  }
+
+  async _startImpl() {
+    // 注意：成功路径不清空 startPromise，后续调用直接返回已完成的 Promise
     const runtimeDir = this.getRuntimeDir();
     this.updateStatus({
       state: "starting",
@@ -90,6 +98,7 @@ class ServiceManager {
     if (existingHealth?.status === "ok") {
       const mismatchMessage = this.checkVersionCompatibility(existingHealth.version, "external-running-service");
       if (mismatchMessage) {
+        this.startPromise = null;
         this.updateStatus({
           state: "error",
           runtimeDir,
@@ -110,6 +119,7 @@ class ServiceManager {
 
     const launch = this.resolveLaunch();
     if (!launch) {
+      this.startPromise = null;
       this.updateStatus({
         state: "error",
         runtimeDir,
@@ -121,6 +131,7 @@ class ServiceManager {
 
     const preflightError = this.preflightVersionCheck(launch);
     if (preflightError) {
+      this.startPromise = null;
       this.updateStatus({
         state: "error",
         runtimeDir,
@@ -141,6 +152,7 @@ class ServiceManager {
         windowsHide: true,
       });
     } catch (error) {
+      this.startPromise = null;
       this.updateStatus({
         state: "error",
         runtimeDir,
@@ -174,6 +186,7 @@ class ServiceManager {
     const healthPayload = await this.waitForHealth(15000);
     if (!healthPayload) {
       await this.stop();
+      this.startPromise = null;
       this.updateStatus({
         state: "error",
         runtimeDir,
@@ -186,6 +199,7 @@ class ServiceManager {
     const mismatchMessage = this.checkVersionCompatibility(healthPayload.version, launch.source);
     if (mismatchMessage) {
       await this.stop();
+      this.startPromise = null;
       this.updateStatus({
         state: "error",
         runtimeDir,
@@ -206,6 +220,7 @@ class ServiceManager {
   }
 
   async restart() {
+    this.startPromise = null;
     await this.stop();
     return this.ensureStarted();
   }
