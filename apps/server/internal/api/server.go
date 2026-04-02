@@ -6,7 +6,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
@@ -90,6 +93,8 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("POST /api/settings/ai/test", s.handleTestAISettings)
 	s.mux.HandleFunc("GET /api/settings/theme", s.handleGetTheme)
 	s.mux.HandleFunc("PUT /api/settings/theme", s.handlePutTheme)
+	s.mux.HandleFunc("POST /api/settings/data/backup", s.handleBackup)
+	s.mux.HandleFunc("POST /api/settings/data/restore", s.handleRestore)
 	s.mux.HandleFunc("POST /api/settings/data/export-diagnostics", s.handleExportDiagnostics)
 }
 
@@ -809,6 +814,67 @@ func (s *Server) handleExportDiagnostics(w http.ResponseWriter, _ *http.Request)
 		return
 	}
 	writeJSON(w, http.StatusOK, map[string]string{"path": path})
+}
+
+func (s *Server) handleBackup(w http.ResponseWriter, _ *http.Request) {
+	backupPath := s.cfg.DBPath + ".bak." + time.Now().Format("20060102-150405")
+
+	src, err := os.Open(s.cfg.DBPath)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": err.Error()})
+		return
+	}
+	defer src.Close()
+
+	dst, err := os.Create(backupPath)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": err.Error()})
+		return
+	}
+	defer dst.Close()
+
+	if _, err := io.Copy(dst, src); err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": err.Error()})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]any{"backupPath": backupPath})
+}
+
+func (s *Server) handleRestore(w http.ResponseWriter, r *http.Request) {
+	var body struct {
+		BackupPath string `json:"backupPath"`
+	}
+
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil || body.BackupPath == "" {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "backupPath required"})
+		return
+	}
+	if filepath.Dir(body.BackupPath) != filepath.Dir(s.cfg.DBPath) {
+		writeJSON(w, http.StatusBadRequest, map[string]any{"error": "invalid backup path"})
+		return
+	}
+
+	src, err := os.Open(body.BackupPath)
+	if err != nil {
+		writeJSON(w, http.StatusNotFound, map[string]any{"error": err.Error()})
+		return
+	}
+	defer src.Close()
+
+	dst, err := os.Create(s.cfg.DBPath)
+	if err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": err.Error()})
+		return
+	}
+	defer dst.Close()
+
+	if _, err := io.Copy(dst, src); err != nil {
+		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": err.Error()})
+		return
+	}
+
+	writeJSON(w, http.StatusOK, map[string]any{"restored": true})
 }
 
 func (s *Server) notImplemented(feature string) http.HandlerFunc {
