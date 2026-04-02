@@ -25,23 +25,63 @@ function SimpleMarkdown({ text }) {
   const lines = text.split("\n");
   const elements = [];
   let listItems = [];
+  let listType = null;
+  let codeLines = [];
+  let inCode = false;
 
   function flushList() {
     if (listItems.length > 0) {
-      elements.push(<ul key={`ul-${elements.length}`} className="md-ul">{listItems}</ul>);
+      const Tag = listType === "ol" ? "ol" : "ul";
+      elements.push(<Tag key={`list-${elements.length}`} className={`md-${Tag}`}>{listItems}</Tag>);
       listItems = [];
+      listType = null;
+    }
+  }
+
+  function flushCode() {
+    if (codeLines.length > 0) {
+      elements.push(
+        <pre key={`pre-${elements.length}`} className="md-pre">
+          <code>{codeLines.join("\n")}</code>
+        </pre>
+      );
+      codeLines = [];
     }
   }
 
   lines.forEach((line, i) => {
-    if (line.startsWith("## ")) {
+    if (line.startsWith("```")) {
+      if (inCode) {
+        flushCode();
+        inCode = false;
+      } else {
+        flushList();
+        inCode = true;
+      }
+      return;
+    }
+    if (inCode) {
+      codeLines.push(line);
+      return;
+    }
+    if (line.startsWith("### ")) {
       flushList();
-      elements.push(<h4 key={i} className="md-h2">{line.slice(3)}</h4>);
+      elements.push(<h5 key={i} className="md-h3">{renderInline(line.slice(4))}</h5>);
+    } else if (line.startsWith("## ")) {
+      flushList();
+      elements.push(<h4 key={i} className="md-h2">{renderInline(line.slice(3))}</h4>);
     } else if (line.startsWith("# ")) {
       flushList();
-      elements.push(<h3 key={i} className="md-h1">{line.slice(2)}</h3>);
+      elements.push(<h3 key={i} className="md-h1">{renderInline(line.slice(2))}</h3>);
     } else if (line.startsWith("- ") || line.startsWith("* ")) {
+      if (listType !== "ul") { flushList(); listType = "ul"; }
       listItems.push(<li key={i}>{renderInline(line.slice(2))}</li>);
+    } else if (/^\d+\.\s/.test(line)) {
+      if (listType !== "ol") { flushList(); listType = "ol"; }
+      listItems.push(<li key={i}>{renderInline(line.replace(/^\d+\.\s/, ""))}</li>);
+    } else if (line.trim() === "---" || line.trim() === "***") {
+      flushList();
+      elements.push(<hr key={i} className="md-hr" />);
     } else if (line.trim() === "") {
       flushList();
       elements.push(<div key={i} className="md-gap" />);
@@ -51,6 +91,7 @@ function SimpleMarkdown({ text }) {
     }
   });
   flushList();
+  if (inCode) flushCode();
 
   return <div className="md-body">{elements}</div>;
 }
