@@ -86,7 +86,7 @@ function ProblemSearchSelector({ value, onChange, problems }) {
     p.externalProblemId?.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
-  const selectedProblem = problems.find((p) => p.problemId === value);
+  const selectedProblem = problems.find((p) => p.id === value);
 
   return (
     <div className="an-problem-selector" ref={wrapperRef}>
@@ -123,10 +123,10 @@ function ProblemSearchSelector({ value, onChange, problems }) {
             ) : (
               filteredProblems.map((problem) => (
                 <div
-                  key={problem.problemId}
-                  className={`an-dropdown-item${problem.problemId === value ? " an-dropdown-item--selected" : ""}`}
+                  key={problem.id}
+                  className={`an-dropdown-item${problem.id === value ? " an-dropdown-item--selected" : ""}`}
                   onClick={() => {
-                    onChange(problem.problemId);
+                    onChange(problem.id);
                     setIsOpen(false);
                     setSearchTerm("");
                   }}

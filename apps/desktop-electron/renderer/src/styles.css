@@ -1571,6 +1571,42 @@ textarea {
   flex-shrink: 0;
 }
 
+/* SM-2 Rate Buttons */
+.rd-rate-btns { display: flex; gap: 6px; flex-wrap: wrap; }
+.rd-rate-btn {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  padding: 8px 14px;
+  border: 1px solid var(--line-strong);
+  border-radius: 10px;
+  background: var(--panel-strong);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, border-color 0.15s, color 0.15s;
+  color: var(--text);
+}
+.rd-rate-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.rd-rate-btn--forgot:hover:not(:disabled)  { border-color: var(--bad);    color: var(--bad);    background: var(--bad-soft);  }
+.rd-rate-btn--hard:hover:not(:disabled)    { border-color: var(--warn);   color: var(--warn);   background: var(--warn-soft); }
+.rd-rate-btn--medium:hover:not(:disabled)  { border-color: var(--accent); color: var(--accent); background: var(--accent-soft); }
+.rd-rate-btn--easy:hover:not(:disabled)    { border-color: var(--good);   color: var(--good);   background: var(--good-soft); }
+.rd-rate-key {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border: 1px solid currentColor;
+  border-radius: 4px;
+  font-size: 10px;
+  font-weight: 700;
+  opacity: 0.6;
+  flex-shrink: 0;
+}
+.rd-srs-hint { font-size: 12px; color: var(--muted); margin-top: 4px; }
+
 /* Notes */
 .rd-notes-header {
   display: flex;
