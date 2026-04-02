@@ -103,7 +103,6 @@ export function ReviewDetail({
   filteredProblems,
   onSelect,
   onReviewSaved,
-  onNavigate,
 }) {
   const [reviewState, setReviewState] = useState({
     status: "TODO",
