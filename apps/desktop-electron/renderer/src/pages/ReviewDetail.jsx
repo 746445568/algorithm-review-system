@@ -292,13 +292,13 @@ export function ReviewDetail({
   }
 
   async function handleGenerateAnalysis() {
-    if (analysisLoading) return;
+    if (analysisLoading || !selectedProblemId) return;
     stopAnalysisPoll();
     setAnalysisLoading(true);
     setAnalysisTask(null);
     setAnalysisError(null);
     try {
-      const { task } = await api.generateAnalysis({});
+      const { task } = await api.generateProblemAnalysis(selectedProblemId, {});
       setAnalysisTask(task);
       if (task.status === "SUCCESS" || task.status === "FAILED") {
         setAnalysisLoading(false);
