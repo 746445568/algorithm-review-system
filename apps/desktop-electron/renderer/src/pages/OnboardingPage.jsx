@@ -6,8 +6,9 @@ const STEPS = ["欢迎", "AI 配置", "数据目录", "完成"];
 export function OnboardingPage({ onComplete }) {
   const [step, setStep] = useState(0);
   const [apiKey, setApiKey] = useState("");
-  const [apiBase, setApiBase] = useState("https://api.openai.com/v1");
+  const [baseUrl, setBaseUrl] = useState("https://api.openai.com/v1");
   const [model, setModel] = useState("gpt-4o-mini");
+  const [provider, setProvider] = useState("openai");
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
 
@@ -15,7 +16,7 @@ export function OnboardingPage({ onComplete }) {
     setSaving(true);
     setError(null);
     try {
-      await api.saveAISettings({ apiKey, apiBase, model });
+      await api.saveAISettings({ apiKey, baseUrl, model, provider });
       onComplete();
     } catch (e) {
       setError(e.message);
@@ -44,7 +45,8 @@ export function OnboardingPage({ onComplete }) {
         <div className="onboarding-content">
           <h2>配置 AI 分析</h2>
           <label>API Key<input type="password" value={apiKey} onChange={e => setApiKey(e.target.value)} placeholder="sk-..." /></label>
-          <label>API Base URL<input value={apiBase} onChange={e => setApiBase(e.target.value)} /></label>
+          <label>服务商（provider）<input value={provider} onChange={e => setProvider(e.target.value)} placeholder="openai" /></label>
+          <label>API Base URL<input value={baseUrl} onChange={e => setBaseUrl(e.target.value)} /></label>
           <label>模型<input value={model} onChange={e => setModel(e.target.value)} /></label>
           <div className="onboarding-actions">
             <button onClick={() => setStep(0)}>上一步</button>
