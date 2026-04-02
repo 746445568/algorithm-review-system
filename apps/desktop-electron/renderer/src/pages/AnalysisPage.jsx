@@ -306,6 +306,7 @@ export function AnalysisPage() {
           scheduleProblemPoll(taskId);
         } else {
           setProblemLoading(false);
+          problemSubmitRef.current = false;
         }
       } catch (err) {
         setProblemLoading(false);
