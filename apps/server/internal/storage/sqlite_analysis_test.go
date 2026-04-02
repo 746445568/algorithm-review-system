@@ -85,3 +85,22 @@ func TestCreateAnalysisTaskWithTypedSnapshot(t *testing.T) {
 		t.Fatalf("expected snapshot id, got %d", task.InputSnapshotID)
 	}
 }
+
+func TestFindReusableAnalysisTask_SkipsFailedTask(t *testing.T) {
+	db := openTestDB(t)
+
+	task, _, err := db.CreateAnalysisTaskWithTypedSnapshot("openai", "gpt-4o", "{\"summary\":\"test\"}", "problem", nil)
+	if err != nil {
+		t.Fatalf("create task: %v", err)
+	}
+
+	err = db.MarkAnalysisTaskFinished(task.ID, models.TaskFailed, "", "", "intentional failure")
+	if err != nil {
+		t.Fatalf("mark failed: %v", err)
+	}
+
+	_, err = db.findReusableAnalysisTask(task.InputSnapshotID, "openai", "gpt-4o")
+	if err == nil {
+		t.Error("expected no reusable task for FAILED status, but got one")
+	}
+}

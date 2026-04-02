@@ -1253,7 +1253,9 @@ func (db *DB) findReusableAnalysisTask(snapshotID int64, provider, model string)
 	row := db.conn.QueryRow(`
 SELECT id, status, provider, model, input_snapshot_id, COALESCE(result_text,''), COALESCE(result_json,''), COALESCE(error_message,''), retry_count, created_at, updated_at
 FROM analysis_tasks
-WHERE input_snapshot_id = ? AND provider = ? AND model = ? AND created_at >= datetime('now', '-10 minutes')
+WHERE input_snapshot_id = ? AND provider = ? AND model = ?
+	AND status IN ('PENDING', 'RUNNING', 'SUCCESS')
+	AND created_at >= datetime('now', '-10 minutes')
 ORDER BY created_at DESC LIMIT 1`, snapshotID, provider, model)
 	return scanAnalysisTask(row)
 }
