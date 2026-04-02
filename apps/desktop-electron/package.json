@@ -50,6 +50,11 @@
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true
     },
+    "publish": {
+      "provider": "github",
+      "owner": "YOUR_GITHUB_USERNAME",
+      "repo": "algorithm-review-system"
+    },
     "artifactName": "OJReviewDesktop-${version}-${os}-${arch}.${ext}"
   },
   "scripts": {
@@ -65,6 +70,7 @@
     "postinstall": "electron-builder install-app-deps"
   },
   "dependencies": {
+    "electron-updater": "^6.8.3",
     "idb": "^8.0.3",
     "react": "^19.1.1",
     "react-dom": "^19.1.1"
