@@ -71,12 +71,12 @@ type PlatformAccount struct {
 }
 
 type Goal struct {
-	ID           int64      `json:"id"`
-	Platform     Platform   `json:"platform"`
-	Title        string     `json:"title"`
-	TargetRating int        `json:"targetRating"`
-	Deadline     *time.Time `json:"deadline,omitempty"`
-	CreatedAt    time.Time  `json:"createdAt"`
+	ID           int64  `json:"id"`
+	Platform     string `json:"platform"`
+	Title        string `json:"title"`
+	TargetRating int    `json:"targetRating"`
+	Deadline     string `json:"deadline"`
+	CreatedAt    string `json:"createdAt"`
 }
 
 type Problem struct {

@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"context"
 	"database/sql"
 	"encoding/json"
 	"errors"
@@ -274,7 +275,7 @@ CREATE TABLE IF NOT EXISTS app_settings (
 	if _, err := db.conn.Exec(`INSERT OR IGNORE INTO owner_profile(id, name) VALUES (1, 'Owner')`); err != nil {
 		return err
 	}
-	currentVersion := schemaVersion
+	currentVersion := 0
 	if err := db.conn.QueryRow(`SELECT COALESCE(MAX(CAST(value AS INTEGER)), 0) FROM schema_meta WHERE key = 'schema_version'`).Scan(&currentVersion); err != nil {
 		return err
 	}
@@ -282,22 +283,21 @@ CREATE TABLE IF NOT EXISTS app_settings (
 	case 0:
 	case 1:
 	case 2:
-		stmts := []string{
-			`ALTER TABLE platform_accounts ADD COLUMN rating INTEGER`,
-			`ALTER TABLE platform_accounts ADD COLUMN max_rating INTEGER`,
-			`CREATE TABLE IF NOT EXISTS goals (
-				id INTEGER PRIMARY KEY AUTOINCREMENT,
-				platform TEXT NOT NULL,
-				title TEXT NOT NULL,
-				target_rating INTEGER NOT NULL,
-				deadline TEXT,
-				created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now'))
-			)`,
+		if _, err := db.conn.Exec(`ALTER TABLE platform_accounts ADD COLUMN rating INTEGER`); err != nil {
+			return fmt.Errorf("migrate v2->v3 add rating: %w", err)
 		}
-		for _, stmt := range stmts {
-			if _, err := db.conn.Exec(stmt); err != nil {
-				return fmt.Errorf("migrate v2->v3: %w", err)
-			}
+		if _, err := db.conn.Exec(`ALTER TABLE platform_accounts ADD COLUMN max_rating INTEGER`); err != nil {
+			return fmt.Errorf("migrate v2->v3 add max_rating: %w", err)
+		}
+		if _, err := db.conn.Exec(`CREATE TABLE IF NOT EXISTS goals (
+			id INTEGER PRIMARY KEY AUTOINCREMENT,
+			platform TEXT NOT NULL,
+			title TEXT NOT NULL,
+			target_rating INTEGER NOT NULL,
+			deadline TEXT,
+			created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now'))
+		)`); err != nil {
+			return fmt.Errorf("migrate v2->v3 create goals: %w", err)
 		}
 	}
 	_, err := db.conn.Exec(`
@@ -377,49 +377,57 @@ FROM platform_accounts WHERE platform = ? AND external_handle = ?`, platform, ha
 	return scanPlatformAccount(row)
 }
 
-func (db *DB) GetGoals() ([]models.Goal, error) {
-	rows, err := db.conn.Query(`SELECT id, platform, title, target_rating, deadline, created_at FROM goals ORDER BY created_at DESC`)
+func (db *DB) GetGoals(ctx context.Context) ([]models.Goal, error) {
+	rows, err := db.conn.QueryContext(ctx, `SELECT id, platform, title, target_rating, deadline, created_at FROM goals ORDER BY created_at DESC`)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	var goals []models.Goal
+	goals := make([]models.Goal, 0)
 	for rows.Next() {
 		var g models.Goal
 		var deadline sql.NullString
-		var createdAt string
-		if err := rows.Scan(&g.ID, &g.Platform, &g.Title, &g.TargetRating, &deadline, &createdAt); err != nil {
+		if err := rows.Scan(&g.ID, &g.Platform, &g.Title, &g.TargetRating, &deadline, &g.CreatedAt); err != nil {
 			return nil, err
 		}
 		if deadline.Valid {
-			t, _ := time.Parse(time.RFC3339, deadline.String)
-			g.Deadline = &t
+			g.Deadline = deadline.String
 		}
-		g.CreatedAt, _ = time.Parse(time.RFC3339, createdAt)
 		goals = append(goals, g)
 	}
 	return goals, rows.Err()
 }
 
-func (db *DB) CreateGoal(g models.Goal) (models.Goal, error) {
+func (db *DB) CreateGoal(ctx context.Context, g models.Goal) (models.Goal, error) {
 	db.writeMu.Lock()
 	defer db.writeMu.Unlock()
-	var deadlineStr interface{}
-	if g.Deadline != nil {
-		deadlineStr = g.Deadline.UTC().Format(time.RFC3339)
+
+	var deadline any
+	if strings.TrimSpace(g.Deadline) != "" {
+		deadline = g.Deadline
 	}
-	res, err := db.conn.Exec(`INSERT INTO goals(platform, title, target_rating, deadline) VALUES(?,?,?,?)`, g.Platform, g.Title, g.TargetRating, deadlineStr)
+
+	res, err := db.conn.ExecContext(ctx, `INSERT INTO goals (platform, title, target_rating, deadline) VALUES (?, ?, ?, ?)`, g.Platform, g.Title, g.TargetRating, deadline)
 	if err != nil {
 		return g, err
 	}
-	g.ID, _ = res.LastInsertId()
-	return g, nil
+	id, err := res.LastInsertId()
+	if err != nil {
+		return g, err
+	}
+
+	created := models.Goal{}
+	if err := db.conn.QueryRowContext(ctx, `SELECT id, platform, title, target_rating, COALESCE(deadline, ''), created_at FROM goals WHERE id = ?`, id).
+		Scan(&created.ID, &created.Platform, &created.Title, &created.TargetRating, &created.Deadline, &created.CreatedAt); err != nil {
+		return g, err
+	}
+	return created, nil
 }
 
-func (db *DB) DeleteGoal(id int64) error {
+func (db *DB) DeleteGoal(ctx context.Context, id int64) error {
 	db.writeMu.Lock()
 	defer db.writeMu.Unlock()
-	_, err := db.conn.Exec(`DELETE FROM goals WHERE id = ?`, id)
+	_, err := db.conn.ExecContext(ctx, `DELETE FROM goals WHERE id = ?`, id)
 	return err
 }
 
