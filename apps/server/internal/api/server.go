@@ -96,6 +96,12 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("POST /api/settings/data/backup", s.handleBackup)
 	s.mux.HandleFunc("POST /api/settings/data/restore", s.handleRestore)
 	s.mux.HandleFunc("POST /api/settings/data/export-diagnostics", s.handleExportDiagnostics)
+	s.mux.HandleFunc("POST /api/accounts/{id}/refresh-rating", s.handleRefreshRating)
+	s.mux.HandleFunc("GET /api/goals", s.handleGetGoals)
+	s.mux.HandleFunc("POST /api/goals", s.handleCreateGoal)
+	s.mux.HandleFunc("DELETE /api/goals/{id}", s.handleDeleteGoal)
+	s.mux.HandleFunc("GET /api/statistics/submissions", s.handleSubmissionStats)
+	s.mux.HandleFunc("GET /api/statistics/reviews", s.handleReviewStats)
 }
 
 func (s *Server) handleHealth(w http.ResponseWriter, _ *http.Request) {
@@ -1184,4 +1190,121 @@ func (s *Server) runAnalysisTask(_ context.Context, taskID int64) error {
 	}
 
 	return s.db.MarkAnalysisTaskFinished(taskID, models.TaskSuccess, resultText, resultJSON, "")
+}
+
+func (s *Server) handleRefreshRating(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid account id")
+		return
+	}
+	acc, err := s.db.GetAccount(id)
+	if err != nil {
+		writeError(w, http.StatusNotFound, "account not found")
+		return
+	}
+	account := &acc
+	adapter, ok := s.adapters[account.Platform]
+	if !ok {
+		writeError(w, http.StatusBadRequest, "unsupported platform")
+		return
+	}
+	profile, err := adapter.FetchProfile(account.ExternalHandle)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if err := s.db.UpdateAccountRating(id, profile.Rating, profile.MaxRating); err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"rating": profile.Rating, "maxRating": profile.MaxRating})
+}
+
+func (s *Server) handleGetGoals(w http.ResponseWriter, r *http.Request) {
+	goals, err := s.db.GetGoals(r.Context())
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if goals == nil {
+		goals = []models.Goal{}
+	}
+	writeJSON(w, http.StatusOK, goals)
+}
+
+func (s *Server) handleCreateGoal(w http.ResponseWriter, r *http.Request) {
+	var input struct {
+		Platform     string  `json:"platform"`
+		Title        string  `json:"title"`
+		TargetRating int     `json:"targetRating"`
+		Deadline     *string `json:"deadline"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&input); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	if input.Title == "" || input.TargetRating <= 0 {
+		writeError(w, http.StatusBadRequest, "title and targetRating are required")
+		return
+	}
+	g := models.Goal{
+		Platform:     input.Platform,
+		Title:        input.Title,
+		TargetRating: input.TargetRating,
+	}
+	if input.Deadline != nil {
+		g.Deadline = *input.Deadline
+	}
+	created, err := s.db.CreateGoal(r.Context(), g)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, created)
+}
+
+func (s *Server) handleDeleteGoal(w http.ResponseWriter, r *http.Request) {
+	id, err := strconv.ParseInt(r.PathValue("id"), 10, 64)
+	if err != nil {
+		writeError(w, http.StatusBadRequest, "invalid id")
+		return
+	}
+	if err := s.db.DeleteGoal(r.Context(), id); err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+func (s *Server) handleSubmissionStats(w http.ResponseWriter, _ *http.Request) {
+	byWeek, err := s.db.GetSubmissionStatsByWeek(12)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	tagStats, err := s.db.GetTagAccuracyStats()
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if byWeek == nil {
+		byWeek = []map[string]any{}
+	}
+	if tagStats == nil {
+		tagStats = []map[string]any{}
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"byWeek": byWeek, "byTag": tagStats})
+}
+
+func (s *Server) handleReviewStats(w http.ResponseWriter, _ *http.Request) {
+	daily, err := s.db.GetDailyReviewCounts()
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if daily == nil {
+		daily = []map[string]any{}
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"daily": daily})
 }
