@@ -132,6 +132,22 @@ func (a *CodeforcesAdapter) ValidateAccount(handle string) error {
 	return nil
 }
 
+func (a *CodeforcesAdapter) FetchProfile(handle string) (UserProfile, error) {
+	var users []struct {
+		Rating    int    `json:"rating"`
+		MaxRating int    `json:"maxRating"`
+		Rank      string `json:"rank"`
+	}
+	if err := a.getJSON("user.info", url.Values{"handles": []string{handle}}, &users); err != nil {
+		return UserProfile{}, fmt.Errorf("fetch cf profile %q: %w", handle, err)
+	}
+	if len(users) == 0 {
+		return UserProfile{}, fmt.Errorf("cf user not found: %s", handle)
+	}
+	u := users[0]
+	return UserProfile{Rating: &u.Rating, MaxRating: &u.MaxRating, Rank: u.Rank}, nil
+}
+
 func (a *CodeforcesAdapter) FetchSubmissions(handle string, cursor string) ([]models.Submission, string, error) {
 	handle = strings.TrimSpace(handle)
 	if handle == "" {

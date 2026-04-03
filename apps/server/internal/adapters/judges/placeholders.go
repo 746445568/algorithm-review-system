@@ -36,3 +36,7 @@ func (a *PlaceholderAdapter) NormalizeSubmission(raw any) (models.Submission, er
 func (a *PlaceholderAdapter) NextCursor(previous string, fetched []models.Submission) string {
 	return previous
 }
+
+func (a *PlaceholderAdapter) FetchProfile(handle string) (UserProfile, error) {
+	return UserProfile{}, nil
+}

@@ -126,6 +126,34 @@ func (a *AtCoderAdapter) ValidateAccount(handle string) error {
 	return nil
 }
 
+func (a *AtCoderAdapter) FetchProfile(handle string) (UserProfile, error) {
+	histURL := fmt.Sprintf("https://atcoder.jp/users/%s/history/json", handle)
+	req, _ := http.NewRequest(http.MethodGet, histURL, nil)
+	req.Header.Set("Accept", "application/json")
+	resp, err := a.client.Do(req)
+	if err != nil {
+		return UserProfile{}, fmt.Errorf("fetch atcoder profile: %w", err)
+	}
+	defer resp.Body.Close()
+	var history []struct {
+		NewRating int `json:"NewRating"`
+	}
+	if err := json.NewDecoder(resp.Body).Decode(&history); err != nil {
+		return UserProfile{}, fmt.Errorf("decode atcoder history: %w", err)
+	}
+	if len(history) == 0 {
+		return UserProfile{}, nil
+	}
+	latest := history[len(history)-1].NewRating
+	maxR := 0
+	for _, h := range history {
+		if h.NewRating > maxR {
+			maxR = h.NewRating
+		}
+	}
+	return UserProfile{Rating: &latest, MaxRating: &maxR}, nil
+}
+
 func (a *AtCoderAdapter) FetchSubmissions(handle string, cursor string) ([]models.Submission, string, error) {
 	handle = strings.TrimSpace(handle)
 	if handle == "" {
