@@ -204,6 +204,16 @@ export const api = {
     }),
   getLatestAnalysis: () => request("/api/analysis/latest"),
 
+  getContests: (query = {}) => request(withQuery("/api/contests", query)),
+  syncContests: () => request("/api/contests/sync", { method: "POST", body: JSON.stringify({}) }),
+  getGoals: () => request("/api/goals"),
+  createGoal: (payload) => request("/api/goals", { method: "POST", body: JSON.stringify(payload) }),
+  deleteGoal: (id) => request(`/api/goals/${id}`, { method: "DELETE" }),
+  refreshRating: (accountId) =>
+    request(`/api/accounts/${accountId}/refresh-rating`, { method: "POST", body: JSON.stringify({}) }),
+  getSubmissionStats: () => request("/api/statistics/submissions"),
+  getReviewStats: () => request("/api/statistics/reviews"),
+
   getProblems: async (query = {}) => {
     const cached = await getCachedProblems(query);
     if (cached.length > 0) {
