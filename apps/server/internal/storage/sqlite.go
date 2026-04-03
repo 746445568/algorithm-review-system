@@ -2223,6 +2223,87 @@ func solveRate(problemCount int, acCount int) float64 {
 	return math.Round(rate*10) / 10
 }
 
+func (db *DB) UpdateAccountRating(id int64, rating, maxRating *int) error {
+	db.writeMu.Lock()
+	defer db.writeMu.Unlock()
+	_, err := db.conn.Exec(
+		`UPDATE platform_accounts SET rating=?, max_rating=?, updated_at=CURRENT_TIMESTAMP WHERE id=?`,
+		rating, maxRating, id,
+	)
+	return err
+}
+
+func (db *DB) GetSubmissionStatsByWeek(weeks int) ([]map[string]any, error) {
+	rows, err := db.conn.Query(`
+        SELECT strftime('%Y-W%W', submitted_at) AS week,
+               COUNT(*) AS total,
+               SUM(CASE WHEN verdict='AC' THEN 1 ELSE 0 END) AS ac_count
+        FROM submissions
+        WHERE submitted_at >= date('now', ? || ' days')
+        GROUP BY week ORDER BY week ASC`,
+		fmt.Sprintf("-%d", weeks*7))
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var result []map[string]any
+	for rows.Next() {
+		var week string
+		var total, acCount int
+		if err := rows.Scan(&week, &total, &acCount); err != nil {
+			return nil, err
+		}
+		result = append(result, map[string]any{"week": week, "total": total, "acCount": acCount})
+	}
+	return result, rows.Err()
+}
+
+func (db *DB) GetTagAccuracyStats() ([]map[string]any, error) {
+	rows, err := db.conn.Query(`
+        SELECT pt.tag, COUNT(DISTINCT s.id) AS attempts,
+               SUM(CASE WHEN s.verdict='AC' THEN 1 ELSE 0 END) AS ac_count
+        FROM submissions s
+        JOIN problem_tags pt ON pt.problem_id = s.problem_id
+        GROUP BY pt.tag HAVING attempts >= 2
+        ORDER BY (CAST(ac_count AS REAL)/attempts) ASC LIMIT 15`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var result []map[string]any
+	for rows.Next() {
+		var tag string
+		var attempts, acCount int
+		if err := rows.Scan(&tag, &attempts, &acCount); err != nil {
+			return nil, err
+		}
+		result = append(result, map[string]any{"tag": tag, "attempts": attempts, "acCount": acCount})
+	}
+	return result, rows.Err()
+}
+
+func (db *DB) GetDailyReviewCounts() ([]map[string]any, error) {
+	rows, err := db.conn.Query(`
+        SELECT date(last_updated_at) AS day, COUNT(*) AS count
+        FROM problem_review_states
+        WHERE last_updated_at >= date('now', '-90 days')
+        GROUP BY day ORDER BY day ASC`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var result []map[string]any
+	for rows.Next() {
+		var day string
+		var count int
+		if err := rows.Scan(&day, &count); err != nil {
+			return nil, err
+		}
+		result = append(result, map[string]any{"day": day, "count": count})
+	}
+	return result, rows.Err()
+}
+
 func normalizeReviewStatus(status models.ReviewStatus) models.ReviewStatus {
 	switch strings.ToUpper(strings.TrimSpace(string(status))) {
 	case string(models.ReviewStatusReviewing):
