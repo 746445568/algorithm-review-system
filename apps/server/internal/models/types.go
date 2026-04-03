@@ -64,8 +64,19 @@ type PlatformAccount struct {
 	Status         string     `json:"status"`
 	LastSyncedAt   *time.Time `json:"lastSyncedAt"`
 	LastCursor     string     `json:"lastCursor,omitempty"`
+	Rating         *int       `json:"rating,omitempty"`
+	MaxRating      *int       `json:"maxRating,omitempty"`
 	CreatedAt      time.Time  `json:"createdAt"`
 	UpdatedAt      time.Time  `json:"updatedAt"`
+}
+
+type Goal struct {
+	ID           int64      `json:"id"`
+	Platform     Platform   `json:"platform"`
+	Title        string     `json:"title"`
+	TargetRating int        `json:"targetRating"`
+	Deadline     *time.Time `json:"deadline,omitempty"`
+	CreatedAt    time.Time  `json:"createdAt"`
 }
 
 type Problem struct {
@@ -82,20 +93,20 @@ type Problem struct {
 }
 
 type Submission struct {
-	ID                   int64      `json:"id"`
-	PlatformAccountID    *int64     `json:"platformAccountId,omitempty"`
-	Platform             Platform   `json:"platform"`
-	ExternalSubmissionID string     `json:"externalSubmissionId"`
-	ProblemID            int64      `json:"problemId"`
-	Verdict              Verdict    `json:"verdict"`
-	Language             string     `json:"language,omitempty"`
-	SubmittedAt          time.Time  `json:"submittedAt"`
-	ExecutionTimeMS      *int       `json:"executionTimeMs,omitempty"`
-	MemoryKB             *int       `json:"memoryKb,omitempty"`
-	SourceContestID      string     `json:"sourceContestId,omitempty"`
-	RawJSON              string     `json:"rawJson"`
-	CreatedAt            time.Time  `json:"createdAt"`
-	UpdatedAt            time.Time  `json:"updatedAt"`
+	ID                   int64     `json:"id"`
+	PlatformAccountID    *int64    `json:"platformAccountId,omitempty"`
+	Platform             Platform  `json:"platform"`
+	ExternalSubmissionID string    `json:"externalSubmissionId"`
+	ProblemID            int64     `json:"problemId"`
+	Verdict              Verdict   `json:"verdict"`
+	Language             string    `json:"language,omitempty"`
+	SubmittedAt          time.Time `json:"submittedAt"`
+	ExecutionTimeMS      *int      `json:"executionTimeMs,omitempty"`
+	MemoryKB             *int      `json:"memoryKb,omitempty"`
+	SourceContestID      string    `json:"sourceContestId,omitempty"`
+	RawJSON              string    `json:"rawJson"`
+	CreatedAt            time.Time `json:"createdAt"`
+	UpdatedAt            time.Time `json:"updatedAt"`
 }
 
 type SyncTask struct {

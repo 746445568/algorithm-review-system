@@ -18,7 +18,7 @@ import (
 	"ojreviewdesktop/internal/models"
 )
 
-const schemaVersion = 2
+const schemaVersion = 3
 
 type DB struct {
 	conn    *sql.DB
@@ -152,6 +152,8 @@ CREATE TABLE IF NOT EXISTS platform_accounts (
   last_cursor TEXT,
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  rating INTEGER,
+  max_rating INTEGER,
   UNIQUE(platform, external_handle)
 );
 CREATE TABLE IF NOT EXISTS problems (
@@ -253,6 +255,14 @@ CREATE TABLE IF NOT EXISTS contests (
   updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   UNIQUE(platform, external_contest_id)
 );
+CREATE TABLE IF NOT EXISTS goals (
+  id            INTEGER PRIMARY KEY AUTOINCREMENT,
+  platform      TEXT NOT NULL,
+  title         TEXT NOT NULL,
+  target_rating INTEGER NOT NULL,
+  deadline      TEXT,
+  created_at    TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now'))
+);
 CREATE TABLE IF NOT EXISTS app_settings (
   key TEXT PRIMARY KEY,
   value TEXT NOT NULL,
@@ -263,6 +273,32 @@ CREATE TABLE IF NOT EXISTS app_settings (
 	}
 	if _, err := db.conn.Exec(`INSERT OR IGNORE INTO owner_profile(id, name) VALUES (1, 'Owner')`); err != nil {
 		return err
+	}
+	currentVersion := schemaVersion
+	if err := db.conn.QueryRow(`SELECT COALESCE(MAX(CAST(value AS INTEGER)), 0) FROM schema_meta WHERE key = 'schema_version'`).Scan(&currentVersion); err != nil {
+		return err
+	}
+	switch currentVersion {
+	case 0:
+	case 1:
+	case 2:
+		stmts := []string{
+			`ALTER TABLE platform_accounts ADD COLUMN rating INTEGER`,
+			`ALTER TABLE platform_accounts ADD COLUMN max_rating INTEGER`,
+			`CREATE TABLE IF NOT EXISTS goals (
+				id INTEGER PRIMARY KEY AUTOINCREMENT,
+				platform TEXT NOT NULL,
+				title TEXT NOT NULL,
+				target_rating INTEGER NOT NULL,
+				deadline TEXT,
+				created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now'))
+			)`,
+		}
+		for _, stmt := range stmts {
+			if _, err := db.conn.Exec(stmt); err != nil {
+				return fmt.Errorf("migrate v2->v3: %w", err)
+			}
+		}
 	}
 	_, err := db.conn.Exec(`
 INSERT INTO schema_meta(key, value) VALUES ('schema_version', ?)
@@ -276,7 +312,7 @@ func (db *DB) Owner() (models.OwnerProfile, error) {
 }
 
 func (db *DB) ListAccounts() ([]models.PlatformAccount, error) {
-	rows, err := db.conn.Query(`SELECT id, platform, external_handle, status, last_synced_at, COALESCE(last_cursor,''), created_at, updated_at FROM platform_accounts ORDER BY platform, external_handle`)
+	rows, err := db.conn.Query(`SELECT id, platform, external_handle, status, last_synced_at, COALESCE(last_cursor,''), rating, max_rating, created_at, updated_at FROM platform_accounts ORDER BY platform, external_handle`)
 	if err != nil {
 		return nil, err
 	}
@@ -295,7 +331,7 @@ func (db *DB) ListAccounts() ([]models.PlatformAccount, error) {
 
 func (db *DB) GetAccount(id int64) (models.PlatformAccount, error) {
 	row := db.conn.QueryRow(`
-SELECT id, platform, external_handle, status, last_synced_at, COALESCE(last_cursor,''), created_at, updated_at
+SELECT id, platform, external_handle, status, last_synced_at, COALESCE(last_cursor,''), rating, max_rating, created_at, updated_at
 FROM platform_accounts WHERE id = ?`, id)
 	return scanPlatformAccount(row)
 }
@@ -336,9 +372,55 @@ ON CONFLICT(platform, external_handle) DO UPDATE SET updated_at = CURRENT_TIMEST
 		return models.PlatformAccount{}, err
 	}
 	row := db.conn.QueryRow(`
-SELECT id, platform, external_handle, status, last_synced_at, COALESCE(last_cursor,''), created_at, updated_at
+SELECT id, platform, external_handle, status, last_synced_at, COALESCE(last_cursor,''), rating, max_rating, created_at, updated_at
 FROM platform_accounts WHERE platform = ? AND external_handle = ?`, platform, handle)
 	return scanPlatformAccount(row)
+}
+
+func (db *DB) GetGoals() ([]models.Goal, error) {
+	rows, err := db.conn.Query(`SELECT id, platform, title, target_rating, deadline, created_at FROM goals ORDER BY created_at DESC`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var goals []models.Goal
+	for rows.Next() {
+		var g models.Goal
+		var deadline sql.NullString
+		var createdAt string
+		if err := rows.Scan(&g.ID, &g.Platform, &g.Title, &g.TargetRating, &deadline, &createdAt); err != nil {
+			return nil, err
+		}
+		if deadline.Valid {
+			t, _ := time.Parse(time.RFC3339, deadline.String)
+			g.Deadline = &t
+		}
+		g.CreatedAt, _ = time.Parse(time.RFC3339, createdAt)
+		goals = append(goals, g)
+	}
+	return goals, rows.Err()
+}
+
+func (db *DB) CreateGoal(g models.Goal) (models.Goal, error) {
+	db.writeMu.Lock()
+	defer db.writeMu.Unlock()
+	var deadlineStr interface{}
+	if g.Deadline != nil {
+		deadlineStr = g.Deadline.UTC().Format(time.RFC3339)
+	}
+	res, err := db.conn.Exec(`INSERT INTO goals(platform, title, target_rating, deadline) VALUES(?,?,?,?)`, g.Platform, g.Title, g.TargetRating, deadlineStr)
+	if err != nil {
+		return g, err
+	}
+	g.ID, _ = res.LastInsertId()
+	return g, nil
+}
+
+func (db *DB) DeleteGoal(id int64) error {
+	db.writeMu.Lock()
+	defer db.writeMu.Unlock()
+	_, err := db.conn.Exec(`DELETE FROM goals WHERE id = ?`, id)
+	return err
 }
 
 func (db *DB) UpsertProblem(p models.Problem) (models.Problem, error) {
@@ -1326,9 +1408,11 @@ func scanOwnerProfile(scanner interface{ Scan(dest ...any) error }) (models.Owne
 func scanPlatformAccount(scanner interface{ Scan(dest ...any) error }) (models.PlatformAccount, error) {
 	var item models.PlatformAccount
 	var lastSyncedAtRaw sql.NullString
+	var rating sql.NullInt64
+	var maxRating sql.NullInt64
 	var createdAtRaw string
 	var updatedAtRaw string
-	if err := scanner.Scan(&item.ID, &item.Platform, &item.ExternalHandle, &item.Status, &lastSyncedAtRaw, &item.LastCursor, &createdAtRaw, &updatedAtRaw); err != nil {
+	if err := scanner.Scan(&item.ID, &item.Platform, &item.ExternalHandle, &item.Status, &lastSyncedAtRaw, &item.LastCursor, &rating, &maxRating, &createdAtRaw, &updatedAtRaw); err != nil {
 		return item, err
 	}
 	if lastSyncedAtRaw.Valid && strings.TrimSpace(lastSyncedAtRaw.String) != "" {
@@ -1338,6 +1422,14 @@ func scanPlatformAccount(scanner interface{ Scan(dest ...any) error }) (models.P
 		}
 		value := parsed
 		item.LastSyncedAt = &value
+	}
+	if rating.Valid {
+		value := int(rating.Int64)
+		item.Rating = &value
+	}
+	if maxRating.Valid {
+		value := int(maxRating.Int64)
+		item.MaxRating = &value
 	}
 	createdAt, err := parseSQLiteTimestamp(createdAtRaw)
 	if err != nil {
