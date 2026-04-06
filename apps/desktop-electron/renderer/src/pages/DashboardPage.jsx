@@ -16,6 +16,7 @@ export function DashboardPage({ serviceStatus, runtimeInfo, cacheStatus = {}, co
     accounts: [],
     syncTasks: [],
     reviewSummary: null,
+    goals: [],
   });
   const { navigateTo } = useNavigation();
   const [latestAnalysis, setLatestAnalysis] = useState(null);
@@ -36,18 +37,19 @@ export function DashboardPage({ serviceStatus, runtimeInfo, cacheStatus = {}, co
     setError("");
 
     try {
-      const [owner, accounts, syncTasks, reviewSummary] = await Promise.all([
+      const [owner, accounts, syncTasks, reviewSummary, goals] = await Promise.all([
         api.getOwner(),
         api.getAccounts(),
         api.getSyncTasks(),
         api.getReviewSummary(),
+        api.getGoals(),
       ]);
 
       if (requestId !== refreshSequenceRef.current) {
         return;
       }
 
-      setData({ owner, accounts, syncTasks, reviewSummary });
+      setData({ owner, accounts, syncTasks, reviewSummary, goals });
     } catch (nextError) {
       if (requestId !== refreshSequenceRef.current) {
         return;
@@ -155,6 +157,36 @@ export function DashboardPage({ serviceStatus, runtimeInfo, cacheStatus = {}, co
           </div>
         </div>
       </section>
+
+      {data.goals.length > 0 ? (
+        <section className="panel">
+          <div className="panel-header">
+            <h3>目标进度</h3>
+          </div>
+          <div className="stack-list">
+            {data.goals.map((goal) => {
+              const account = data.accounts.find((a) => a.platform === goal.platform);
+              const current = account?.rating ?? 0;
+              const pct = Math.min(100, Math.round((current / goal.targetRating) * 100));
+              return (
+                <article key={goal.id} className="goal-card">
+                  <div className="goal-header">
+                    <strong>{goal.title}</strong>
+                    <span className="muted">{current} / {goal.targetRating}</span>
+                  </div>
+                  <div className="goal-bar-track">
+                    <div className="goal-bar-fill" style={{ width: `${pct}%` }} />
+                  </div>
+                  <p className="goal-footer muted">
+                    {pct}% 完成
+                    {goal.deadline ? ` · 截止 ${new Date(goal.deadline).toLocaleDateString("zh-CN")}` : ""}
+                  </p>
+                </article>
+              );
+            })}
+          </div>
+        </section>
+      ) : null}
 
       <section className="panel stats-strip full-span">
         <article>

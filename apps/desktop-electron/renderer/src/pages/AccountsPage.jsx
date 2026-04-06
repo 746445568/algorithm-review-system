@@ -14,6 +14,7 @@ export function AccountsPage({ serviceStatus, runtimeInfo }) {
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [refreshingIds, setRefreshingIds] = useState(new Set());
   const refreshSequenceRef = useRef(0);
 
   const refresh = useCallback(async () => {
@@ -97,6 +98,18 @@ export function AccountsPage({ serviceStatus, runtimeInfo }) {
       setError(nextError.message);
     }
   }
+
+  const handleRefreshRating = useCallback(async (account) => {
+    setRefreshingIds(prev => new Set(prev).add(account.id));
+    try {
+      await api.refreshRating(account.id);
+      await refresh();
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setRefreshingIds(prev => { const s = new Set(prev); s.delete(account.id); return s; });
+    }
+  }, [refresh]);
 
   async function triggerSync(account) {
     setError("");
@@ -226,8 +239,21 @@ export function AccountsPage({ serviceStatus, runtimeInfo }) {
                         {latestTask.fetchedCount} / 写入 {latestTask.insertedCount}
                       </p>
                     ) : null}
+                    {account.rating != null ? (
+                      <p className="muted">评分：{account.rating}（最高 {account.maxRating ?? account.rating}）</p>
+                    ) : (
+                      <p className="muted">评分：暂未获取</p>
+                    )}
                   </div>
                   <div className="account-actions">
+                    <button
+                      type="button"
+                      className="ghost-button"
+                      disabled={serviceUnavailable || refreshingIds.has(account.id)}
+                      onClick={() => void handleRefreshRating(account)}
+                    >
+                      {refreshingIds.has(account.id) ? "刷新中..." : "刷新评分"}
+                    </button>
                     <button
                       type="button"
                       className="ghost-button"

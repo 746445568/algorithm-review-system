@@ -1,10 +1,12 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { NavigationProvider, useNavigation } from "./lib/NavigationContext.jsx";
 import { AnalysisPage } from "./pages/AnalysisPage.jsx";
+import { ContestsPage } from "./pages/ContestsPage.jsx";
 import { DashboardPage } from "./pages/DashboardPage.jsx";
 import { AccountsPage } from "./pages/AccountsPage.jsx";
 import { ReviewPage } from "./pages/ReviewPage.jsx";
 import { SettingsPage } from "./pages/SettingsPage.jsx";
+import { StatisticsPage } from "./pages/StatisticsPage.jsx";
 import { OnboardingPage } from "./pages/OnboardingPage.jsx";
 import { api } from "./lib/api.js";
 import { formatDate } from "./lib/format.js";
@@ -66,6 +68,22 @@ const navItems = [
     icon: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/>
+      </svg>
+    ),
+  },
+  {
+    id: "contests", label: "比赛日历", kicker: "赛程",
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="3" y="4" width="18" height="18" rx="2" ry="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" />
+      </svg>
+    ),
+  },
+  {
+    id: "statistics", label: "统计", kicker: "数据",
+    icon: (
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+        <line x1="18" y1="20" x2="18" y2="10" /><line x1="12" y1="20" x2="12" y2="4" /><line x1="6" y1="20" x2="6" y2="14" />
       </svg>
     ),
   },
@@ -365,6 +383,14 @@ function AppShell() {
 
         {page === "analysis" ? (
           <AnalysisPage serviceStatus={serviceStatus} runtimeInfo={runtimeInfo} />
+        ) : null}
+
+        {page === "contests" ? (
+          <ContestsPage />
+        ) : null}
+
+        {page === "statistics" ? (
+          <StatisticsPage />
         ) : null}
 
         {page === "settings" ? (
