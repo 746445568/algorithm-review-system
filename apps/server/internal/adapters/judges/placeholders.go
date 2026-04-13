@@ -40,3 +40,11 @@ func (a *PlaceholderAdapter) NextCursor(previous string, fetched []models.Submis
 func (a *PlaceholderAdapter) FetchProfile(handle string) (UserProfile, error) {
 	return UserProfile{}, nil
 }
+
+func (a *PlaceholderAdapter) FetchStatement(problemID string) (string, error) {
+	return "", nil
+}
+
+func (a *PlaceholderAdapter) FetchEditorial(problemID string) (string, error) {
+	return "", nil
+}

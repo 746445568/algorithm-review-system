@@ -52,7 +52,7 @@
     },
     "publish": {
       "provider": "github",
-      "owner": "YOUR_GITHUB_USERNAME",
+      "owner": "746445568",
       "repo": "algorithm-review-system"
     },
     "artifactName": "OJReviewDesktop-${version}-${os}-${arch}.${ext}"

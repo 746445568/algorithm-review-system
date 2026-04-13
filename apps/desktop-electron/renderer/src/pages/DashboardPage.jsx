@@ -1,7 +1,12 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api } from "../lib/api.js";
 import { formatDate, platformLabel, statusLabel, tagLabel } from "../lib/format.js";
 import { useNavigation } from "../lib/NavigationContext.jsx";
+
+const platforms = [
+  { value: "CODEFORCES", label: "Codeforces" },
+  { value: "ATCODER", label: "AtCoder" },
+];
 
 function getFreshnessLabel(meta) {
   if (!meta?.lastSyncedAt) {
@@ -22,6 +27,10 @@ export function DashboardPage({ serviceStatus, runtimeInfo, cacheStatus = {}, co
   const [latestAnalysis, setLatestAnalysis] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+  const [form, setForm] = useState({ platform: "CODEFORCES", handle: "" });
+  const [submitting, setSubmitting] = useState(false);
+  const [refreshingIds, setRefreshingIds] = useState(new Set());
   const refreshSequenceRef = useRef(0);
 
   const refresh = useCallback(async () => {
@@ -79,6 +88,73 @@ export function DashboardPage({ serviceStatus, runtimeInfo, cacheStatus = {}, co
       .then((data) => setLatestAnalysis(data?.task ?? null))
       .catch((err) => console.error("getLatestAnalysis failed:", err));
   }, []);
+
+  const latestTaskByAccount = useMemo(() => {
+    const index = new Map();
+    for (const task of data.syncTasks) {
+      if (!index.has(task.platformAccountId)) {
+        index.set(task.platformAccountId, task);
+      }
+    }
+    return index;
+  }, [data.syncTasks]);
+
+  async function handleSubmit(event) {
+    event.preventDefault();
+    setSubmitting(true);
+    setError("");
+    setNotice("");
+
+    try {
+      await api.createAccount(form.platform, form.handle.trim());
+      setForm((current) => ({ ...current, handle: "" }));
+      setNotice("账号已保存。");
+      await refresh();
+    } catch (nextError) {
+      setError(nextError.message);
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function deleteAccount(account) {
+    setError("");
+    setNotice("");
+
+    try {
+      await api.deleteAccount(account.id);
+      setNotice(`已删除 ${account.externalHandle}。`);
+      await refresh();
+    } catch (nextError) {
+      setError(nextError.message);
+    }
+  }
+
+  const handleRefreshRating = useCallback(async (account) => {
+    setRefreshingIds(prev => new Set(prev).add(account.id));
+    setError("");
+    try {
+      await api.refreshRating(account.id);
+      await refresh();
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setRefreshingIds(prev => { const s = new Set(prev); s.delete(account.id); return s; });
+    }
+  }, [refresh]);
+
+  async function triggerSync(account) {
+    setError("");
+    setNotice("");
+
+    try {
+      await api.syncAccount(account.platform, account.id);
+      setNotice(`已将 ${account.externalHandle} 加入同步队列。`);
+      await refresh();
+    } catch (nextError) {
+      setError(nextError.message);
+    }
+  }
 
   const latestTask = data.syncTasks[0];
   const weakTags = data.reviewSummary?.weakTags ?? [];
@@ -228,22 +304,107 @@ export function DashboardPage({ serviceStatus, runtimeInfo, cacheStatus = {}, co
         ) : null}
         {loading ? <p className="muted">正在加载仪表盘数据...</p> : null}
         {error ? <p className="error-text">{error}</p> : null}
+        {notice ? <p className="success-text">{notice}</p> : null}
+
+        <form className="form-stack" onSubmit={handleSubmit} style={{ marginBottom: 16 }}>
+          <label>
+            <span>平台</span>
+            <select
+              value={form.platform}
+              onChange={(event) =>
+                setForm((current) => ({
+                  ...current,
+                  platform: event.target.value,
+                }))
+              }
+            >
+              {platforms.map((platform) => (
+                <option key={platform.value} value={platform.value}>
+                  {platform.label}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label>
+            <span>用户名</span>
+            <input
+              value={form.handle}
+              placeholder="输入你的用户名"
+              onChange={(event) =>
+                setForm((current) => ({
+                  ...current,
+                  handle: event.target.value,
+                }))
+              }
+            />
+          </label>
+
+          <button
+            type="submit"
+            className="primary-button"
+            disabled={submitting || !form.handle.trim() || serviceUnavailable}
+          >
+            {submitting ? "保存中..." : "保存账号"}
+          </button>
+        </form>
+
         <div className="stack-list">
           {data.accounts.length === 0 ? (
             <p className="muted">尚未绑定任何平台账号。</p>
           ) : (
-            data.accounts.map((account) => (
-              <article key={account.id} className="inline-card">
-                <div>
-                  <strong>{platformLabel(account.platform)}</strong>
-                  <p>{account.externalHandle}</p>
-                </div>
-                <div className="meta-pill">
-                  {statusLabel(account.status)}
-                  <span>{formatDate(account.lastSyncedAt)}</span>
-                </div>
-              </article>
-            ))
+            data.accounts.map((account) => {
+              const latestTask = latestTaskByAccount.get(account.id);
+              return (
+                <article key={account.id} className="account-card">
+                  <div className="account-main">
+                    <span className="section-label">{platformLabel(account.platform)}</span>
+                    <h4>{account.externalHandle}</h4>
+                    <p>
+                      {statusLabel(account.status)} / 上次同步{" "}
+                      {formatDate(account.lastSyncedAt)}
+                    </p>
+                    {latestTask ? (
+                      <p className="muted">
+                        最新任务: {statusLabel(latestTask.status)} / 拉取{" "}
+                        {latestTask.fetchedCount} / 写入 {latestTask.insertedCount}
+                      </p>
+                    ) : null}
+                    {account.rating != null ? (
+                      <p className="muted">评分：{account.rating}（最高 {account.maxRating ?? account.rating}）</p>
+                    ) : (
+                      <p className="muted">评分：暂未获取</p>
+                    )}
+                  </div>
+                  <div className="account-actions">
+                    <button
+                      type="button"
+                      className="ghost-button"
+                      disabled={serviceUnavailable || refreshingIds.has(account.id)}
+                      onClick={() => void handleRefreshRating(account)}
+                    >
+                      {refreshingIds.has(account.id) ? "刷新中..." : "刷新评分"}
+                    </button>
+                    <button
+                      type="button"
+                      className="ghost-button"
+                      disabled={serviceUnavailable}
+                      onClick={() => void triggerSync(account)}
+                    >
+                      立即同步
+                    </button>
+                    <button
+                      type="button"
+                      className="ghost-button danger"
+                      disabled={serviceUnavailable}
+                      onClick={() => void deleteAccount(account)}
+                    >
+                      删除
+                    </button>
+                  </div>
+                </article>
+              );
+            })
           )}
         </div>
       </section>

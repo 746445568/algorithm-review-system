@@ -1725,7 +1725,7 @@ textarea {
 
 /* ─── Toast ─────────────────────────────────────────────── */
 @keyframes rd-toast-in {
-  from { opacity: 0; transform: translateY(8px) scale(0.97); }
+  from { opacity: 0; transform: translateY(16px) scale(0.96); }
   to   { opacity: 1; transform: translateY(0) scale(1); }
 }
 .rd-toast {
@@ -1743,7 +1743,7 @@ textarea {
   font-size: 13px;
   font-weight: 600;
   box-shadow: 0 8px 24px rgba(59,130,246,0.35);
-  animation: rd-toast-in 180ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  animation: rd-toast-in 200ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
 }
 .rd-toast--error {
   background: var(--bad);
@@ -2741,4 +2741,135 @@ textarea {
 .heatmap-cell:hover {
   opacity: 1 !important;
   outline: 1px solid #6366f1;
+}
+
+/* ═══════════════════════════════════════════════
+   UI 流畅化补丁 — 动画 / 过渡 / 骨架屏
+   ═══════════════════════════════════════════════ */
+
+/* ─── 通用入场动画 ───────────────────────────── */
+@keyframes fadeSlideIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+.page-content {
+  animation: fadeSlideIn 180ms ease both;
+}
+
+/* panel 卡片入场（稍慢，层次感） */
+.panel {
+  animation: fadeSlideIn 220ms ease both;
+}
+
+/* chip/badge 入场 */
+.rl-chip,
+.rd-tag,
+.platform-badge,
+.status-badge {
+  animation: fadeSlideIn 160ms ease both;
+}
+
+/* ─── 按钮全局过渡 ───────────────────────────── */
+button {
+  transition: background-color 150ms ease, color 150ms ease,
+              border-color 150ms ease, opacity 150ms ease,
+              transform 80ms ease;
+}
+
+button:not(:disabled):active {
+  transform: scale(0.97);
+}
+
+/* nav-item 已有 transition: all 150ms ease，额外明确颜色/背景过渡 */
+.nav-item {
+  transition: background-color 150ms ease, color 150ms ease,
+              border-color 150ms ease;
+}
+
+/* ─── Service Banner 折叠/展开 ───────────────── */
+.service-banner--collapsed .service-banner-detail {
+  display: none;
+}
+
+.service-banner-summary {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  user-select: none;
+  font-size: 13px;
+}
+
+.service-banner-summary strong {
+  flex: 1;
+}
+
+.service-banner-toggle {
+  font-size: 11px;
+  color: var(--muted);
+  background: none;
+  border: none;
+  padding: 2px 6px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: color 120ms ease, background-color 120ms ease;
+}
+
+.service-banner-toggle:hover {
+  color: var(--accent);
+  background: var(--accent-soft);
+}
+
+/* ─── 骨架屏 ─────────────────────────────────── */
+@keyframes shimmer {
+  from { background-position: -400px 0; }
+  to   { background-position:  400px 0; }
+}
+
+.skeleton-line {
+  height: 12px;
+  border-radius: 4px;
+  background: linear-gradient(
+    90deg,
+    var(--line, #f0f0f0) 25%,
+    var(--line-strong, #e0e0e0) 50%,
+    var(--line, #f0f0f0) 75%
+  );
+  background-size: 400px 100%;
+  animation: shimmer 1.4s ease infinite;
+  margin-bottom: 6px;
+}
+
+.skeleton-line--wide   { width: 70%; }
+.skeleton-line--narrow { width: 40%; }
+
+.rl-card--skeleton {
+  pointer-events: none;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: transparent;
+}
+
+.skeleton-chart {
+  padding: 8px 0;
+}
+
+.skeleton-chart .skeleton-line {
+  height: 140px;
+  width: 100%;
+  border-radius: 8px;
+  margin-bottom: 0;
+}
+
+/* ─── 评分按钮按压反馈 ───────────────────────── */
+@keyframes ratePulse {
+  0%   { transform: scale(1); }
+  40%  { transform: scale(0.93); }
+  100% { transform: scale(1); }
+}
+
+.rd-rate-btn.is-pressed {
+  animation: ratePulse 280ms ease both;
 }

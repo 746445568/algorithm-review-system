@@ -13,27 +13,33 @@ function getISOWeek(date) {
 // Returns the Monday of the ISO week that contains `date`
 function getISOWeekMonday(date) {
   const d = new Date(date);
-  const dayNum = d.getDay() || 7; // 1=Mon ... 7=Sun
-  d.setDate(d.getDate() - dayNum + 1);
-  d.setHours(0, 0, 0, 0);
+  const dayNum = d.getUTCDay() || 7; // 1=Mon ... 7=Sun
+  d.setUTCDate(d.getUTCDate() - dayNum + 1);
+  d.setUTCHours(0, 0, 0, 0);
   return d;
 }
 
 function formatWeekHeader(monday) {
   const sunday = new Date(monday);
-  sunday.setDate(sunday.getDate() + 6);
+  sunday.setUTCDate(sunday.getUTCDate() + 6);
   const week = getISOWeek(monday);
-  const fmt = (d) => `${d.getMonth() + 1}/${d.getDate()}`;
+  const fmt = (d) => `${d.getUTCMonth() + 1}/${d.getUTCDate()}`;
   return `第${week}周 ${fmt(monday)} – ${fmt(sunday)}`;
 }
 
+// Convert any ISO timestamp to a Date object shifted to UTC+8 (Beijing)
+function toBeijingDate(isoStr) {
+  const utcMs = new Date(isoStr).getTime();
+  return new Date(utcMs + 8 * 60 * 60 * 1000);
+}
+
 function formatStartTime(isoStr) {
-  const d = new Date(isoStr);
-  const M = d.getMonth() + 1;
-  const D = d.getDate();
-  const hh = String(d.getHours()).padStart(2, "0");
-  const mm = String(d.getMinutes()).padStart(2, "0");
-  return `${M}/${D} ${hh}:${mm}`;
+  const d = toBeijingDate(isoStr);
+  const M = d.getUTCMonth() + 1;
+  const D = d.getUTCDate();
+  const hh = String(d.getUTCHours()).padStart(2, "0");
+  const mm = String(d.getUTCMinutes()).padStart(2, "0");
+  return `${M}/${D} ${hh}:${mm} (北京)`;
 }
 
 function formatDuration(minutes) {
@@ -48,7 +54,7 @@ function formatDuration(minutes) {
 function groupByWeek(contests) {
   const groups = new Map(); // key: "YYYY-WNN"
   for (const c of contests) {
-    const start = new Date(c.startTime);
+    const start = toBeijingDate(c.startTime);
     const monday = getISOWeekMonday(start);
     const year = monday.getFullYear();
     const week = getISOWeek(monday);
@@ -83,7 +89,6 @@ export function ContestsPage() {
   const [contests, setContests] = useState([]);
   const [filter, setFilter] = useState("upcoming"); // "upcoming" | "all"
   const [loading, setLoading] = useState(true);
-  const [syncing, setSyncing] = useState(false);
   const [error, setError] = useState(null);
 
   const loadContests = useCallback(async (currentFilter) => {
@@ -101,20 +106,9 @@ export function ContestsPage() {
   }, []);
 
   useEffect(() => {
+    // 进入页面时自动同步最新比赛
+    void api.syncContests().catch(() => {});
     void loadContests(filter);
-  }, [filter, loadContests]);
-
-  const handleSync = useCallback(async () => {
-    setSyncing(true);
-    setError(null);
-    try {
-      await api.syncContests();
-      await loadContests(filter);
-    } catch (err) {
-      setError(err?.message ?? "同步失败");
-    } finally {
-      setSyncing(false);
-    }
   }, [filter, loadContests]);
 
   const groups = groupByWeek(contests);
@@ -138,14 +132,6 @@ export function ContestsPage() {
             全部
           </button>
         </div>
-        <button
-          type="button"
-          className="ghost-button"
-          disabled={syncing}
-          onClick={handleSync}
-        >
-          {syncing ? "同步中..." : "同步比赛"}
-        </button>
       </div>
 
       {error ? <p className="error-text">{error}</p> : null}

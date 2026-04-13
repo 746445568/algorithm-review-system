@@ -1,4 +1,14 @@
+import { memo } from "react";
 import { formatDate, platformLabel, statusLabel, verdictTone } from "../lib/format.js";
+
+function SkeletonCard() {
+  return (
+    <div className="rl-card rl-card--skeleton">
+      <div className="skeleton-line skeleton-line--wide" />
+      <div className="skeleton-line skeleton-line--narrow" />
+    </div>
+  );
+}
 
 const STATUS_CHIP_CLASS = {
   TODO: "rl-chip-neutral",
@@ -101,11 +111,12 @@ export function ReviewList({
       </div>
 
       {serviceUnavailable && <p className="rl-state-msg">等待服务就绪…</p>}
-      {loading && <p className="rl-state-msg">加载中…</p>}
       {error && <p className="rl-state-msg rl-state-error">{error}</p>}
 
       <div className="rl-list">
-        {problems.length === 0 && !loading ? (
+        {loading ? (
+          Array.from({ length: 5 }, (_, i) => <SkeletonCard key={i} />)
+        ) : problems.length === 0 ? (
           <div className="rl-empty">
             <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
               <path d="M9 11l3 3L22 4" />
@@ -120,7 +131,7 @@ export function ReviewList({
               item={item}
               active={item.problemId === selectedProblemId}
               index={idx}
-              onClick={() => onSelect(item.problemId)}
+              onSelect={onSelect}
             />
           ))
         )}
@@ -137,7 +148,7 @@ export function ReviewList({
   );
 }
 
-function ProblemCard({ item, active, index, onClick }) {
+const ProblemCard = memo(function ProblemCard({ item, active, index, onSelect }) {
   const statusKey = (item.reviewStatus || "TODO").toUpperCase();
   const chipClass = STATUS_CHIP_CLASS[statusKey] || "rl-chip-neutral";
   const verdictClass = verdictTone(item.latestVerdict) === "good"
@@ -154,7 +165,7 @@ function ProblemCard({ item, active, index, onClick }) {
         active ? "rl-card--active" : "",
         item.reviewDue ? "rl-card--due" : "",
       ].filter(Boolean).join(" ")}
-      onClick={onClick}
+      onClick={() => onSelect(item.problemId)}
       style={{ animationDelay: `${Math.min(index * 18, 180)}ms` }}
     >
       <div className="rl-card-body">
@@ -176,4 +187,4 @@ function ProblemCard({ item, active, index, onClick }) {
       </div>
     </button>
   );
-}
+});

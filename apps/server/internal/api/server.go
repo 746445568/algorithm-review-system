@@ -102,6 +102,10 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("DELETE /api/goals/{id}", s.handleDeleteGoal)
 	s.mux.HandleFunc("GET /api/statistics/submissions", s.handleSubmissionStats)
 	s.mux.HandleFunc("GET /api/statistics/reviews", s.handleReviewStats)
+	s.mux.HandleFunc("GET /api/problems/{problemId}/chats", s.handleListChats)
+	s.mux.HandleFunc("POST /api/problems/{problemId}/chats", s.handleSendChat)
+	s.mux.HandleFunc("DELETE /api/problems/{problemId}/chats", s.handleDeleteChats)
+	s.mux.HandleFunc("GET /api/analysis/problem/{problemId}/history", s.handleAnalysisProblemHistory)
 }
 
 func (s *Server) handleHealth(w http.ResponseWriter, _ *http.Request) {
@@ -1200,7 +1204,11 @@ func (s *Server) handleRefreshRating(w http.ResponseWriter, r *http.Request) {
 	}
 	acc, err := s.db.GetAccount(id)
 	if err != nil {
-		writeError(w, http.StatusNotFound, "account not found")
+		if errors.Is(err, sql.ErrNoRows) {
+			writeError(w, http.StatusNotFound, "account not found")
+		} else {
+			writeError(w, http.StatusInternalServerError, err.Error())
+		}
 		return
 	}
 	account := &acc
@@ -1307,4 +1315,161 @@ func (s *Server) handleReviewStats(w http.ResponseWriter, _ *http.Request) {
 		daily = []map[string]any{}
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"daily": daily})
+}
+
+// handleListChats returns all chat messages for a problem.
+func (s *Server) handleListChats(w http.ResponseWriter, r *http.Request) {
+	problemID, err := strconv.ParseInt(r.PathValue("problemId"), 10, 64)
+	if err != nil || problemID <= 0 {
+		writeError(w, http.StatusBadRequest, "invalid problem id")
+		return
+	}
+	chats, err := s.db.ListProblemChats(problemID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, chats)
+}
+
+// handleSendChat saves a user message and returns an AI assistant reply.
+func (s *Server) handleSendChat(w http.ResponseWriter, r *http.Request) {
+	problemID, err := strconv.ParseInt(r.PathValue("problemId"), 10, 64)
+	if err != nil || problemID <= 0 {
+		writeError(w, http.StatusBadRequest, "invalid problem id")
+		return
+	}
+
+	var body struct {
+		Message string `json:"message"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid json body")
+		return
+	}
+	body.Message = strings.TrimSpace(body.Message)
+	if body.Message == "" {
+		writeError(w, http.StatusBadRequest, "message is required")
+		return
+	}
+
+	settings, err := s.db.LoadAISettings()
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if settings.Provider == "" || settings.Model == "" || settings.APIKey == "" {
+		writeError(w, http.StatusBadRequest, "请先配置 AI 服务")
+		return
+	}
+
+	// Save user message
+	userMsg, err := s.db.InsertProblemChat(models.ProblemChat{
+		ProblemID: problemID,
+		Role:      "user",
+		Content:   body.Message,
+	})
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	_ = userMsg
+
+	// Build context: review notes, latest analysis (statement fetching disabled)
+	notes := ""
+	if state, stateErr := s.db.GetProblemReviewState(problemID); stateErr == nil {
+		notes = state.Notes
+	}
+
+	latestAnalysis := ""
+	if task, taskErr := s.db.GetLatestProblemAnalysisTask(problemID); taskErr == nil && task.ResultText != "" {
+		latestAnalysis = task.ResultText
+	}
+
+	systemPrompt := "你是一位算法竞赛教练，请用中文回答用户的问题。"
+	var contextParts []string
+	if notes != "" {
+		contextParts = append(contextParts, "【用户笔记】"+notes)
+	}
+	if latestAnalysis != "" {
+		contextParts = append(contextParts, "【最新分析】"+latestAnalysis)
+	}
+
+	userPrompt := body.Message
+	if len(contextParts) > 0 {
+		userPrompt = strings.Join(contextParts, "\n\n") + "\n\n" + body.Message
+	}
+
+	aiSettings := ai.Settings{
+		Provider: settings.Provider,
+		Model:    settings.Model,
+		BaseURL:  settings.BaseURL,
+		APIKey:   settings.APIKey,
+	}
+
+	reply, err := ai.Complete(systemPrompt, userPrompt, aiSettings)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, "AI 回复失败: "+err.Error())
+		return
+	}
+
+	assistantMsg, err := s.db.InsertProblemChat(models.ProblemChat{
+		ProblemID: problemID,
+		Role:      "assistant",
+		Content:   reply,
+	})
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, assistantMsg)
+}
+
+// handleDeleteChats clears all chat messages for a problem.
+func (s *Server) handleDeleteChats(w http.ResponseWriter, r *http.Request) {
+	problemID, err := strconv.ParseInt(r.PathValue("problemId"), 10, 64)
+	if err != nil || problemID <= 0 {
+		writeError(w, http.StatusBadRequest, "invalid problem id")
+		return
+	}
+	if err := s.db.DeleteProblemChats(problemID); err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// handleAnalysisProblemHistory returns all analysis tasks for a problem (via review_snapshots.problem_id).
+func (s *Server) handleAnalysisProblemHistory(w http.ResponseWriter, r *http.Request) {
+	problemID, err := strconv.ParseInt(r.PathValue("problemId"), 10, 64)
+	if err != nil || problemID <= 0 {
+		writeError(w, http.StatusBadRequest, "invalid problem id")
+		return
+	}
+	tasks, err := s.db.ListProblemAnalysisTasks(problemID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, tasks)
+}
+
+// translateContent calls AI to translate content to Chinese.
+// Returns empty string on failure (best-effort, non-blocking).
+func (s *Server) translateContent(content string, settings models.AISettings) string {
+	provider, err := ai.NewProvider(settings.Provider)
+	if err != nil {
+		return ""
+	}
+	prompt := "将以下竞赛题面翻译为中文，保留数学公式 $...$ 格式，输出 Markdown，不要加任何解释：\n\n" + content
+	result, _, err := provider.Analyze(prompt, ai.Settings{
+		Provider: settings.Provider,
+		Model:    settings.Model,
+		BaseURL:  settings.BaseURL,
+		APIKey:   settings.APIKey,
+	})
+	if err != nil {
+		return ""
+	}
+	return result
 }

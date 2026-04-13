@@ -214,6 +214,17 @@ export const api = {
   getSubmissionStats: () => request("/api/statistics/submissions"),
   getReviewStats: () => request("/api/statistics/reviews"),
 
+  getProblemChats: (problemId) => request(`/api/problems/${problemId}/chats`),
+  sendProblemChat: (problemId, message) =>
+    request(`/api/problems/${problemId}/chats`, {
+      method: "POST",
+      body: JSON.stringify({ message }),
+    }),
+  clearProblemChats: (problemId) =>
+    request(`/api/problems/${problemId}/chats`, { method: "DELETE" }),
+  getProblemAnalysisHistory: (problemId) =>
+    request(`/api/analysis/problem/${problemId}/history`),
+
   getProblems: async (query = {}) => {
     const cached = await getCachedProblems(query);
     if (cached.length > 0) {

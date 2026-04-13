@@ -92,6 +92,14 @@ type Problem struct {
 	UpdatedAt         time.Time `json:"updatedAt"`
 }
 
+type ProblemChat struct {
+	ID        int64     `json:"id"`
+	ProblemID int64     `json:"problemId"`
+	Role      string    `json:"role"`
+	Content   string    `json:"content"`
+	CreatedAt time.Time `json:"createdAt"`
+}
+
 type Submission struct {
 	ID                   int64     `json:"id"`
 	PlatformAccountID    *int64    `json:"platformAccountId,omitempty"`

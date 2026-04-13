@@ -183,12 +183,12 @@ function ReviewHeatmap({ data }) {
   const COLS = 13;
   const ROWS = 7;
   const W = 780;
-  const H = 120;
   const padL = 28; // room for weekday labels
   const padT = 20; // room for week labels
   const cellSize = Math.floor((W - padL) / COLS);
   const gutter = 3;
   const cell = cellSize - gutter;
+  const H = padT + ROWS * (cell + gutter) + 16;
 
   const toDateStr = (d) => {
     const y = d.getFullYear();
@@ -306,8 +306,15 @@ export function StatisticsPage() {
 
   if (loading) {
     return (
-      <div className="page-content">
-        <p className="muted-text">加载中...</p>
+      <div className="page-content statistics-page">
+        {[1, 2, 3].map((i) => (
+          <section key={i} className="panel chart-wrap">
+            <div className="skeleton-line" style={{ width: "40%", height: 14, marginBottom: 12 }} />
+            <div className="skeleton-chart">
+              <div className="skeleton-line" style={{ width: "100%", height: 140 }} />
+            </div>
+          </section>
+        ))}
       </div>
     );
   }

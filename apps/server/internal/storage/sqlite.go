@@ -179,6 +179,14 @@ CREATE TABLE IF NOT EXISTS problem_tags (
   UNIQUE(problem_id, tag_name, tag_source),
   FOREIGN KEY(problem_id) REFERENCES problems(id) ON DELETE CASCADE
 );
+CREATE TABLE IF NOT EXISTS problem_chats (
+  id          INTEGER PRIMARY KEY AUTOINCREMENT,
+  problem_id  INTEGER NOT NULL REFERENCES problems(id) ON DELETE CASCADE,
+  role        TEXT    NOT NULL CHECK(role IN ('user', 'assistant')),
+  content     TEXT    NOT NULL,
+  created_at  TEXT    NOT NULL DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_problem_chats_problem_id ON problem_chats(problem_id);
 CREATE TABLE IF NOT EXISTS submissions (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   platform_account_id INTEGER,
@@ -279,14 +287,11 @@ CREATE TABLE IF NOT EXISTS app_settings (
 	if err := db.conn.QueryRow(`SELECT COALESCE(MAX(CAST(value AS INTEGER)), 0) FROM schema_meta WHERE key = 'schema_version'`).Scan(&currentVersion); err != nil {
 		return err
 	}
-	switch currentVersion {
-	case 0:
-	case 1:
-	case 2:
-		if _, err := db.conn.Exec(`ALTER TABLE platform_accounts ADD COLUMN rating INTEGER`); err != nil {
+	if currentVersion < 3 {
+		if err := db.addColumnIfMissing("platform_accounts", "rating", "INTEGER"); err != nil {
 			return fmt.Errorf("migrate v2->v3 add rating: %w", err)
 		}
-		if _, err := db.conn.Exec(`ALTER TABLE platform_accounts ADD COLUMN max_rating INTEGER`); err != nil {
+		if err := db.addColumnIfMissing("platform_accounts", "max_rating", "INTEGER"); err != nil {
 			return fmt.Errorf("migrate v2->v3 add max_rating: %w", err)
 		}
 		if _, err := db.conn.Exec(`CREATE TABLE IF NOT EXISTS goals (
@@ -1264,6 +1269,132 @@ func (db *DB) LoadThemeMode() (string, error) {
 	return mode, nil
 }
 
+// GetProblemByID returns a single problem by its primary key.
+func (db *DB) GetProblemByID(id int64) (models.Problem, error) {
+	row := db.conn.QueryRow(`
+SELECT id, platform, external_problem_id, COALESCE(external_contest_id,''), title,
+       COALESCE(url,''), COALESCE(difficulty,''), COALESCE(raw_tags_json,'[]'),
+       created_at, updated_at
+FROM problems WHERE id = ?`, id)
+	var p models.Problem
+	var createdAtRaw, updatedAtRaw string
+	err := row.Scan(
+		&p.ID, &p.Platform, &p.ExternalProblemID, &p.ExternalContestID, &p.Title,
+		&p.URL, &p.Difficulty, &p.RawTagsJSON,
+		&createdAtRaw, &updatedAtRaw,
+	)
+	if err != nil {
+		return p, err
+	}
+	p.CreatedAt, err = parseSQLiteTimestamp(createdAtRaw)
+	if err != nil {
+		return p, fmt.Errorf("parse problem created_at: %w", err)
+	}
+	p.UpdatedAt, err = parseSQLiteTimestamp(updatedAtRaw)
+	if err != nil {
+		return p, fmt.Errorf("parse problem updated_at: %w", err)
+	}
+	return p, nil
+}
+
+// ListProblemChats returns all chats for a problem ordered by created_at ASC.
+func (db *DB) ListProblemChats(problemID int64) ([]models.ProblemChat, error) {
+	rows, err := db.conn.Query(`
+SELECT id, problem_id, role, content, created_at
+FROM problem_chats WHERE problem_id = ? ORDER BY created_at ASC`, problemID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	chats := make([]models.ProblemChat, 0)
+	for rows.Next() {
+		c, err := scanProblemChat(rows)
+		if err != nil {
+			return nil, err
+		}
+		chats = append(chats, c)
+	}
+	return chats, rows.Err()
+}
+
+// InsertProblemChat inserts a new chat message and returns it with ID and CreatedAt populated.
+func (db *DB) InsertProblemChat(chat models.ProblemChat) (models.ProblemChat, error) {
+	db.writeMu.Lock()
+	defer db.writeMu.Unlock()
+	res, err := db.conn.Exec(`
+INSERT INTO problem_chats(problem_id, role, content) VALUES (?, ?, ?)`,
+		chat.ProblemID, chat.Role, chat.Content)
+	if err != nil {
+		return chat, err
+	}
+	id, err := res.LastInsertId()
+	if err != nil {
+		return chat, err
+	}
+	row := db.conn.QueryRow(`SELECT id, problem_id, role, content, created_at FROM problem_chats WHERE id = ?`, id)
+	return scanProblemChat(row)
+}
+
+// DeleteProblemChats removes all chat messages for a problem.
+func (db *DB) DeleteProblemChats(problemID int64) error {
+	db.writeMu.Lock()
+	defer db.writeMu.Unlock()
+	_, err := db.conn.Exec(`DELETE FROM problem_chats WHERE problem_id = ?`, problemID)
+	return err
+}
+
+// GetLatestProblemAnalysisTask returns the most recent successful analysis task for a problem.
+func (db *DB) GetLatestProblemAnalysisTask(problemID int64) (models.AnalysisTask, error) {
+	row := db.conn.QueryRow(`
+SELECT at.id, at.status, at.provider, at.model, at.input_snapshot_id,
+       COALESCE(at.result_text,''), COALESCE(at.result_json,''), COALESCE(at.error_message,''),
+       at.retry_count, at.created_at, at.updated_at
+FROM analysis_tasks at
+JOIN review_snapshots rs ON rs.id = at.input_snapshot_id
+WHERE rs.problem_id = ? AND at.status = ?
+ORDER BY at.created_at DESC LIMIT 1`, problemID, models.TaskSuccess)
+	return scanAnalysisTask(row)
+}
+
+// ListProblemAnalysisTasks returns all analysis tasks for a problem ordered by created_at DESC.
+func (db *DB) ListProblemAnalysisTasks(problemID int64) ([]models.AnalysisTask, error) {
+	rows, err := db.conn.Query(`
+SELECT at.id, at.status, at.provider, at.model, at.input_snapshot_id,
+       COALESCE(at.result_text,''), COALESCE(at.result_json,''), COALESCE(at.error_message,''),
+       at.retry_count, at.created_at, at.updated_at
+FROM analysis_tasks at
+JOIN review_snapshots rs ON rs.id = at.input_snapshot_id
+WHERE rs.problem_id = ?
+ORDER BY at.created_at DESC`, problemID)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	tasks := make([]models.AnalysisTask, 0)
+	for rows.Next() {
+		task, err := scanAnalysisTask(rows)
+		if err != nil {
+			return nil, err
+		}
+		tasks = append(tasks, task)
+	}
+	return tasks, rows.Err()
+}
+
+func scanProblemChat(scanner interface{ Scan(dest ...any) error }) (models.ProblemChat, error) {
+	var c models.ProblemChat
+	var createdAtRaw string
+	if err := scanner.Scan(&c.ID, &c.ProblemID, &c.Role, &c.Content, &createdAtRaw); err != nil {
+		return c, err
+	}
+	var err error
+	c.CreatedAt, err = parseSQLiteTimestamp(createdAtRaw)
+	if err != nil {
+		return c, fmt.Errorf("parse problem chat created_at: %w", err)
+	}
+	return c, nil
+}
+
 func (db *DB) ExportDiagnostics() (string, error) {
 	diagPath := filepath.Join(db.cfg.ExportDir, fmt.Sprintf("diagnostics-%s.json", time.Now().UTC().Format("20060102-150405")))
 	payload := map[string]any{
@@ -2239,9 +2370,9 @@ func (db *DB) GetSubmissionStatsByWeek(weeks int) ([]map[string]any, error) {
                COUNT(*) AS total,
                SUM(CASE WHEN verdict='AC' THEN 1 ELSE 0 END) AS ac_count
         FROM submissions
-        WHERE submitted_at >= date('now', ? || ' days')
+        WHERE submitted_at >= ?
         GROUP BY week ORDER BY week ASC`,
-		fmt.Sprintf("-%d", weeks*7))
+		time.Now().UTC().AddDate(0, 0, -weeks*7).Format("2006-01-02"))
 	if err != nil {
 		return nil, err
 	}
@@ -2260,11 +2391,11 @@ func (db *DB) GetSubmissionStatsByWeek(weeks int) ([]map[string]any, error) {
 
 func (db *DB) GetTagAccuracyStats() ([]map[string]any, error) {
 	rows, err := db.conn.Query(`
-        SELECT pt.tag, COUNT(DISTINCT s.id) AS attempts,
+        SELECT pt.tag_name, COUNT(DISTINCT s.id) AS attempts,
                SUM(CASE WHEN s.verdict='AC' THEN 1 ELSE 0 END) AS ac_count
         FROM submissions s
         JOIN problem_tags pt ON pt.problem_id = s.problem_id
-        GROUP BY pt.tag HAVING attempts >= 2
+        GROUP BY pt.tag_name HAVING COUNT(DISTINCT s.id) >= 2
         ORDER BY (CAST(ac_count AS REAL)/attempts) ASC LIMIT 15`)
 	if err != nil {
 		return nil, err

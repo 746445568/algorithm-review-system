@@ -101,6 +101,7 @@ export function AccountsPage({ serviceStatus, runtimeInfo }) {
 
   const handleRefreshRating = useCallback(async (account) => {
     setRefreshingIds(prev => new Set(prev).add(account.id));
+    setError("");
     try {
       await api.refreshRating(account.id);
       await refresh();

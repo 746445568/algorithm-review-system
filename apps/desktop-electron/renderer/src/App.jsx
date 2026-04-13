@@ -3,7 +3,6 @@ import { NavigationProvider, useNavigation } from "./lib/NavigationContext.jsx";
 import { AnalysisPage } from "./pages/AnalysisPage.jsx";
 import { ContestsPage } from "./pages/ContestsPage.jsx";
 import { DashboardPage } from "./pages/DashboardPage.jsx";
-import { AccountsPage } from "./pages/AccountsPage.jsx";
 import { ReviewPage } from "./pages/ReviewPage.jsx";
 import { SettingsPage } from "./pages/SettingsPage.jsx";
 import { StatisticsPage } from "./pages/StatisticsPage.jsx";
@@ -44,14 +43,6 @@ const navItems = [
     icon: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <rect x="3" y="3" width="7" height="9" rx="1" /><rect x="14" y="3" width="7" height="5" rx="1" /><rect x="14" y="12" width="7" height="9" rx="1" /><rect x="3" y="16" width="7" height="5" rx="1" />
-      </svg>
-    ),
-  },
-  {
-    id: "accounts", label: "账号管理", kicker: "同步",
-    icon: (
-      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M22 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" />
       </svg>
     ),
   },
@@ -108,6 +99,15 @@ const initialStatus = {
 
 function AppShell() {
   const { page, navigateTo } = useNavigation();
+  const [visitedPages, setVisitedPages] = useState(() => new Set([page]));
+  useEffect(() => {
+    setVisitedPages(prev => {
+      if (prev.has(page)) return prev;
+      const next = new Set(prev);
+      next.add(page);
+      return next;
+    });
+  }, [page]);
   const hasDesktopBridge = Boolean(window.desktopBridge);
   const [serviceStatus, setServiceStatus] = useState(initialStatus);
   const [runtimeInfo, setRuntimeInfo] = useState({
@@ -122,6 +122,7 @@ function AppShell() {
     () => localStorage.getItem("ojreview-theme") ?? "follow-system"
   );
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [bannerExpanded, setBannerExpanded] = useState(false);
 
   const handleThemeChange = useCallback((mode) => {
     localStorage.setItem("ojreview-theme", mode);
@@ -239,6 +240,39 @@ function AppShell() {
       window.clearInterval(intervalId);
     };
   }, [sync]);
+
+  // Phase 3: Auto sync accounts when service becomes healthy
+  useEffect(() => {
+    if (serviceStatus?.state !== "healthy") {
+      return undefined;
+    }
+
+    let cancelled = false;
+
+    async function syncAllAccounts() {
+      try {
+        const accounts = await api.getAccounts();
+        if (cancelled) return;
+        for (const account of accounts) {
+          await api.syncAccount(account.platform, account.id);
+          if (cancelled) return;
+        }
+      } catch (err) {
+        console.error("Auto sync accounts failed:", err);
+      }
+    }
+
+    void syncAllAccounts();
+
+    const syncIntervalId = window.setInterval(() => {
+      void syncAllAccounts();
+    }, 30 * 60 * 1000);
+
+    return () => {
+      cancelled = true;
+      window.clearInterval(syncIntervalId);
+    };
+  }, [serviceStatus?.state]);
 
   useEffect(() => {
     if (serviceStatus?.state === "healthy") {
@@ -358,9 +392,20 @@ function AppShell() {
           </div>
         </header>
 
-        <section className="service-banner">
-          <div>
+        <section className={`service-banner${bannerExpanded ? "" : " service-banner--collapsed"}`}>
+          <div className="service-banner-summary" onClick={() => setBannerExpanded((v) => !v)}>
             <strong>{serviceBannerMessage}</strong>
+            <span className="muted" style={{ fontSize: 12 }}>上次同步 {lastSyncLabel}</span>
+            <button
+              type="button"
+              className="service-banner-toggle"
+              aria-label={bannerExpanded ? "收起" : "展开"}
+              onClick={(e) => { e.stopPropagation(); setBannerExpanded((v) => !v); }}
+            >
+              {bannerExpanded ? "收起 ▲" : "详情 ▼"}
+            </button>
+          </div>
+          <div className="service-banner-detail">
             <p>
               来源：{serviceStatus.source}
               {serviceStatus.pid ? ` / 进程 ${serviceStatus.pid}` : ""}
@@ -369,38 +414,41 @@ function AppShell() {
           </div>
         </section>
 
-        {page === "dashboard" ? (
-          <DashboardPage serviceStatus={serviceStatus} runtimeInfo={runtimeInfo} cacheStatus={cacheStatus} connectivity={connectivity} syncQueue={syncQueue} onNavigate={navigateTo} />
-        ) : null}
+        {visitedPages.has("dashboard") && (
+          <div style={{ display: page === "dashboard" ? "" : "none" }}>
+            <DashboardPage serviceStatus={serviceStatus} runtimeInfo={runtimeInfo} cacheStatus={cacheStatus} connectivity={connectivity} syncQueue={syncQueue} onNavigate={navigateTo} />
+          </div>
+        )}
 
-        {page === "accounts" ? (
-          <AccountsPage serviceStatus={serviceStatus} runtimeInfo={runtimeInfo} />
-        ) : null}
+        {visitedPages.has("review") && (
+          <div style={{ display: page === "review" ? "" : "none" }}>
+            <ReviewPage serviceStatus={serviceStatus} runtimeInfo={runtimeInfo} onNavigate={navigateTo} />
+          </div>
+        )}
 
-        {page === "review" ? (
-          <ReviewPage serviceStatus={serviceStatus} runtimeInfo={runtimeInfo} onNavigate={navigateTo} />
-        ) : null}
+        {visitedPages.has("analysis") && (
+          <div style={{ display: page === "analysis" ? "" : "none" }}>
+            <AnalysisPage serviceStatus={serviceStatus} runtimeInfo={runtimeInfo} />
+          </div>
+        )}
 
-        {page === "analysis" ? (
-          <AnalysisPage serviceStatus={serviceStatus} runtimeInfo={runtimeInfo} />
-        ) : null}
+        {visitedPages.has("contests") && (
+          <div style={{ display: page === "contests" ? "" : "none" }}>
+            <ContestsPage />
+          </div>
+        )}
 
-        {page === "contests" ? (
-          <ContestsPage />
-        ) : null}
+        {visitedPages.has("statistics") && (
+          <div style={{ display: page === "statistics" ? "" : "none" }}>
+            <StatisticsPage />
+          </div>
+        )}
 
-        {page === "statistics" ? (
-          <StatisticsPage />
-        ) : null}
-
-        {page === "settings" ? (
-          <SettingsPage
-            runtimeInfo={runtimeInfo}
-            serviceStatus={serviceStatus}
-            themeMode={themeMode}
-            onThemeChange={handleThemeChange}
-          />
-        ) : null}
+        {visitedPages.has("settings") && (
+          <div style={{ display: page === "settings" ? "" : "none" }}>
+            <SettingsPage runtimeInfo={runtimeInfo} serviceStatus={serviceStatus} themeMode={themeMode} onThemeChange={handleThemeChange} />
+          </div>
+        )}
       </main>
     </div>
   );
