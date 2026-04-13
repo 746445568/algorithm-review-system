@@ -16,3 +16,4 @@ logs/
 .idea/
 .claude/.superpowers/
 .playwright-cli/
+.worktrees/
