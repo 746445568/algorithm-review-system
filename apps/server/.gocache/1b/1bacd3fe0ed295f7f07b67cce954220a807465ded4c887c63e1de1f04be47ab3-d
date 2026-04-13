@@ -1,0 +1,6 @@
+=== RUN   TestHealth_FirstRunTrue_WhenNoAIKey
+--- PASS: TestHealth_FirstRunTrue_WhenNoAIKey (0.03s)
+=== RUN   TestHealth_FirstRunFalse_WhenAIKeySet
+--- PASS: TestHealth_FirstRunFalse_WhenAIKeySet (0.03s)
+PASS
+ok  	ojreviewdesktop/internal/api	0.229s

@@ -1,0 +1,4 @@
+=== RUN   TestFindReusableAnalysisTask_SkipsFailedTask
+--- PASS: TestFindReusableAnalysisTask_SkipsFailedTask (0.03s)
+PASS
+ok  	ojreviewdesktop/internal/storage	0.719s

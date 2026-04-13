@@ -1,0 +1,18 @@
+# test log
+getenv GOTMPDIR
+stat C:\Users\ackun\AppData\Local\Temp\TestFindReusableAnalysisTask_SkipsFailedTask3404615275\001\data
+stat C:\Users\ackun\AppData\Local\Temp\TestFindReusableAnalysisTask_SkipsFailedTask3404615275\001
+stat C:\Users\ackun\AppData\Local\Temp\TestFindReusableAnalysisTask_SkipsFailedTask3404615275\001\logs
+stat C:\Users\ackun\AppData\Local\Temp\TestFindReusableAnalysisTask_SkipsFailedTask3404615275\001
+stat C:\Users\ackun\AppData\Local\Temp\TestFindReusableAnalysisTask_SkipsFailedTask3404615275\001\cache
+stat C:\Users\ackun\AppData\Local\Temp\TestFindReusableAnalysisTask_SkipsFailedTask3404615275\001
+stat C:\Users\ackun\AppData\Local\Temp\TestFindReusableAnalysisTask_SkipsFailedTask3404615275\001\exports
+stat C:\Users\ackun\AppData\Local\Temp\TestFindReusableAnalysisTask_SkipsFailedTask3404615275\001
+stat C:\Users\ackun\AppData\Local\Temp\TestFindReusableAnalysisTask_SkipsFailedTask3404615275\001\secure
+stat C:\Users\ackun\AppData\Local\Temp\TestFindReusableAnalysisTask_SkipsFailedTask3404615275\001
+open C:\Users\ackun\AppData\Local\Temp\TestFindReusableAnalysisTask_SkipsFailedTask3404615275\001\secure\master.key
+open C:\Users\ackun\AppData\Local\Temp\TestFindReusableAnalysisTask_SkipsFailedTask3404615275\001\secure\master.key
+stat C:\Users\ackun\AppData\Local\Temp\TestFindReusableAnalysisTask_SkipsFailedTask3404615275\001\data\ojreview.db
+open C:\Users\ackun\AppData\Local\Temp\TestFindReusableAnalysisTask_SkipsFailedTask3404615275\001\data\ojreview.db
+open C:\Users\ackun\AppData\Local\Temp\TestFindReusableAnalysisTask_SkipsFailedTask3404615275\001\data\ojreview.pre-migration.20260402-121506.db
+open C:\Users\ackun\AppData\Local\Temp

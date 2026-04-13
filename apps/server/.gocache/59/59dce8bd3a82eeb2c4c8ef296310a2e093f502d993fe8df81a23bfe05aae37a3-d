@@ -1,0 +1,4 @@
+=== RUN   TestEnqueue_CancelCleansInflight
+--- PASS: TestEnqueue_CancelCleansInflight (0.10s)
+PASS
+ok  	ojreviewdesktop/internal/jobs	0.710s
