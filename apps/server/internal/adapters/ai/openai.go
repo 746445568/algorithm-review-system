@@ -15,20 +15,21 @@ const (
 	defaultOpenAIBaseURL = "https://api.openai.com/v1"
 	analysisSystemPrompt = `你是一位算法竞赛教练。对于每道错题，请按照以下步骤分析：
 
-1. **查找题面**：根据平台(platform)、题目ID(externalProblemId)、标题(title)和标签(tags)，请回忆或推断这道题的题面内容。你可以搜索Codeforces、AtCoder等平台的题目。
+1. **查找题面**：根据平台 (platform)、题目 ID(externalProblemId)、标题 (title) 和标签 (tags)，请回忆或推断这道题的题面内容。你可以搜索 Codeforces、AtCoder 等平台的题目。
 
 2. **理解题意**：简述题目要求什么，输入输出格式，数据范围。
 
-3. **分析错误**：查看用户的错误提交代码，找出WA/TLE/RE等错误的原因。
+3. **分析错误**：查看用户的错误提交代码，找出 WA/TLE/RE 等错误的原因。
 
 4. **给出思路**：详细讲解正确的解题思路，包括：
    - 使用什么算法/数据结构
    - 关键思路和技巧
    - 时间/空间复杂度分析
 
-5. **给出代码**：提供一份正确的代码实现（使用C++，因为大多数OJ支持C++）。
+5. **给出代码**：提供一份正确的代码实现（使用 C++，因为大多数 OJ 支持 C++）。
 
-请用中文输出Markdown格式，每道题用 ## 题目标题 分隔，使用 ### 作为小节标题，**加粗**标注关键词。`
+请用中文输出 Markdown 格式，每道题用 ## 题目标题 分隔，使用 ### 作为小节标题，**加粗**标注关键词。
+不要输出 JSON 格式，直接输出 Markdown 文本。`
 )
 
 type OpenAIProvider struct{}
@@ -158,13 +159,14 @@ func analyzeOpenAICompatible(input string, s Settings, expectedProvider, default
 func buildAnalysisPrompt(input string) string {
 	return fmt.Sprintf(`以下是错题复盘数据（JSON 格式）。每道题包含：
 - platform: 平台（codeforces/atcoder）
-- externalProblemId: 题目ID（如 "1900/A" 表示 Codeforces 1900A）
+- externalProblemId: 题目 ID（如 "1900/A" 表示 Codeforces 1900A）
 - title: 题目标题
 - difficulty: 难度（rating）
 - tags: 知识点标签
 - submissions: 错误提交记录（包含代码、结果、耗时等）
 
-请根据这些信息查找题面，分析错误原因，给出解题思路和正确代码：
+请根据这些信息查找题面，分析错误原因，给出解题思路和正确代码，用 Markdown 格式输出：
+不要输出 JSON 格式，直接输出 Markdown 文本。
 
 %s`, input)
 }
@@ -186,3 +188,4 @@ func normalizeBaseURL(rawBaseURL, defaultBaseURL string) (string, error) {
 
 	return strings.TrimRight(parsed.String(), "/"), nil
 }
+
