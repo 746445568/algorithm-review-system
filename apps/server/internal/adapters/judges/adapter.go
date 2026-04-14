@@ -1,6 +1,9 @@
 package judges
 
-import "ojreviewdesktop/internal/models"
+import (
+	"context"
+	"ojreviewdesktop/internal/models"
+)
 
 type UserProfile struct {
 	Rating    *int
@@ -9,15 +12,15 @@ type UserProfile struct {
 }
 
 type Adapter interface {
-	ValidateAccount(handle string) error
-	FetchSubmissions(handle string, cursor string) ([]models.Submission, string, error)
-	FetchProblemMetadata(problemID string) (models.Problem, []string, error)
+	ValidateAccount(ctx context.Context, handle string) error
+	FetchSubmissions(ctx context.Context, handle string, cursor string) ([]models.Submission, string, error)
+	FetchProblemMetadata(ctx context.Context, problemID string) (models.Problem, []string, error)
 	NormalizeSubmission(raw any) (models.Submission, error)
 	NextCursor(previous string, fetched []models.Submission) string
-	FetchProfile(handle string) (UserProfile, error)
-	FetchStatement(problemID string) (string, error)
+	FetchProfile(ctx context.Context, handle string) (UserProfile, error)
+	FetchStatement(ctx context.Context, problemID string) (string, error)
 }
 
 type ContestAdapter interface {
-	FetchContests() ([]models.Contest, error)
+	FetchContests(ctx context.Context) ([]models.Contest, error)
 }

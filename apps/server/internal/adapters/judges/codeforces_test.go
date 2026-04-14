@@ -1,6 +1,7 @@
 package judges
 
 import (
+	"context"
 	"fmt"
 	"io"
 	"net/http"
@@ -42,7 +43,7 @@ func TestCodeforcesFetchStatementFallsBackToMirrorWhenMainSiteBlocked(t *testing
 		},
 	}
 
-	statement, err := adapter.FetchStatement("4/A")
+	statement, err := adapter.FetchStatement(context.Background(), "4/A")
 	if err != nil {
 		t.Fatalf("FetchStatement returned error: %v", err)
 	}
@@ -79,7 +80,7 @@ func TestCodeforcesFetchStatementFallsBackWhenMainSiteReturnsNonStatementPage(t 
 		},
 	}
 
-	statement, err := adapter.FetchStatement("4/A")
+	statement, err := adapter.FetchStatement(context.Background(), "4/A")
 	if err != nil {
 		t.Fatalf("FetchStatement returned error: %v", err)
 	}

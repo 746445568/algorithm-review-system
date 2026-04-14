@@ -2,6 +2,7 @@ package ai
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -28,7 +29,7 @@ const (
 
 5. **给出代码**：提供一份正确的代码实现（使用C++，因为大多数OJ支持C++）。
 
-请用中文输出Markdown格式，每道题用 ## 题目标题 分隔，使用 ### 作为小节标题，**加粗**标注关键词。`
+请用中文输出Markdown格式，每道题用 ## 题目标题 分隔，使用 ### 作为小节标题，**加粗**标注关键词。**不要输出 JSON**。`
 )
 
 type OpenAIProvider struct{}
@@ -54,8 +55,8 @@ func (p *OpenAIProvider) ValidateConfig(s Settings) error {
 	return validateOpenAICompatibleConfig(s, "openai", defaultOpenAIBaseURL)
 }
 
-func (p *OpenAIProvider) Analyze(input string, s Settings) (string, string, error) {
-	return analyzeOpenAICompatible(input, s, "openai", defaultOpenAIBaseURL)
+func (p *OpenAIProvider) Analyze(ctx context.Context, input string, s Settings) (string, string, error) {
+	return analyzeOpenAICompatible(ctx, input, s, "openai", defaultOpenAIBaseURL)
 }
 
 func validateOpenAICompatibleConfig(s Settings, expectedProvider, defaultBaseURL string) error {
@@ -79,7 +80,7 @@ func validateOpenAICompatibleConfig(s Settings, expectedProvider, defaultBaseURL
 	return nil
 }
 
-func analyzeOpenAICompatible(input string, s Settings, expectedProvider, defaultBaseURL string) (string, string, error) {
+func analyzeOpenAICompatible(ctx context.Context, input string, s Settings, expectedProvider, defaultBaseURL string) (string, string, error) {
 	if err := validateOpenAICompatibleConfig(s, expectedProvider, defaultBaseURL); err != nil {
 		return "", "", err
 	}
@@ -114,14 +115,14 @@ func analyzeOpenAICompatible(input string, s Settings, expectedProvider, default
 		return "", "", fmt.Errorf("marshal request body: %w", err)
 	}
 
-	req, err := http.NewRequest(http.MethodPost, endpoint, bytes.NewReader(payload))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bytes.NewReader(payload))
 	if err != nil {
 		return "", "", fmt.Errorf("create HTTP request: %w", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+strings.TrimSpace(s.APIKey))
 
-	client := &http.Client{Timeout: 300 * time.Second}
+	client := &http.Client{Timeout: 120 * time.Second}
 	resp, err := client.Do(req)
 	if err != nil {
 		return "", "", fmt.Errorf("perform API request: %w", err)
@@ -164,7 +165,7 @@ func buildAnalysisPrompt(input string) string {
 - tags: 知识点标签
 - submissions: 错误提交记录（包含代码、结果、耗时等）
 
-请根据这些信息查找题面，分析错误原因，给出解题思路和正确代码：
+请根据这些信息查找题面，分析错误原因，给出解题思路和正确代码。**请用中文 Markdown 格式输出，不要输出 JSON**：
 
 %s`, input)
 }

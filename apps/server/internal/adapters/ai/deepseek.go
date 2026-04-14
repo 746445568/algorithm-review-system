@@ -2,6 +2,7 @@ package ai
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -32,7 +33,7 @@ func (p *DeepSeekProvider) ValidateConfig(s Settings) error {
 	return nil
 }
 
-func (p *DeepSeekProvider) Analyze(input string, s Settings) (string, string, error) {
+func (p *DeepSeekProvider) Analyze(ctx context.Context, input string, s Settings) (string, string, error) {
 	if err := p.ValidateConfig(s); err != nil {
 		return "", "", err
 	}
@@ -63,14 +64,14 @@ func (p *DeepSeekProvider) Analyze(input string, s Settings) (string, string, er
 		return "", "", fmt.Errorf("marshal DeepSeek request: %w", err)
 	}
 
-	req, err := http.NewRequest(http.MethodPost, endpoint, bytes.NewReader(body))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bytes.NewReader(body))
 	if err != nil {
 		return "", "", fmt.Errorf("create DeepSeek request: %w", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+strings.TrimSpace(s.APIKey))
 
-	client := &http.Client{Timeout: 300 * time.Second}
+	client := &http.Client{Timeout: 120 * time.Second}
 	resp, err := client.Do(req)
 	if err != nil {
 		return "", "", fmt.Errorf("DeepSeek request failed: %w", err)

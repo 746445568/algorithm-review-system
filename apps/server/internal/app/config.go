@@ -6,15 +6,16 @@ import (
 )
 
 type Config struct {
-	AppDir        string
-	DataDir       string
-	LogDir        string
-	CacheDir      string
-	ExportDir     string
-	SecureDir     string
-	DBPath        string
-	ListenAddr    string
-	MasterKeyPath string
+	AppDir         string
+	DataDir        string
+	LogDir         string
+	CacheDir       string
+	ExportDir      string
+	SecureDir      string
+	DBPath         string
+	ListenAddr     string
+	MasterKeyPath  string
+	AllowedOrigins []string
 }
 
 func LoadConfig() (Config, error) {
@@ -28,15 +29,16 @@ func LoadConfig() (Config, error) {
 	}
 
 	cfg := Config{
-		AppDir:        base,
-		DataDir:       filepath.Join(base, "data"),
-		LogDir:        filepath.Join(base, "logs"),
-		CacheDir:      filepath.Join(base, "cache"),
-		ExportDir:     filepath.Join(base, "exports"),
-		SecureDir:     filepath.Join(base, "secure"),
-		DBPath:        filepath.Join(base, "data", "ojreview.db"),
-		ListenAddr:    "0.0.0.0:38473",
-		MasterKeyPath: filepath.Join(base, "secure", "master.key"),
+		AppDir:         base,
+		DataDir:        filepath.Join(base, "data"),
+		LogDir:         filepath.Join(base, "logs"),
+		CacheDir:       filepath.Join(base, "cache"),
+		ExportDir:      filepath.Join(base, "exports"),
+		SecureDir:      filepath.Join(base, "secure"),
+		DBPath:         filepath.Join(base, "data", "ojreview.db"),
+		ListenAddr:     "0.0.0.0:38473",
+		MasterKeyPath:  filepath.Join(base, "secure", "master.key"),
+		AllowedOrigins: []string{"*"},
 	}
 
 	for _, dir := range []string{cfg.AppDir, cfg.DataDir, cfg.LogDir, cfg.CacheDir, cfg.ExportDir, cfg.SecureDir} {

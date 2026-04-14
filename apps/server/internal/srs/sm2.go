@@ -6,15 +6,18 @@ import (
 )
 
 const (
-	DefaultEaseFactor  = 2.5
-	MinEaseFactor      = 1.3
-	InitialInterval    = 1
-	SecondInterval     = 3
-	QualityForgot      = 1
-	QualityHard        = 2
-	QualityMedium      = 3
-	QualityEasy        = 5
-	QualityResetThresh = 2
+	DefaultEaseFactor       = 2.5
+	MinEaseFactor           = 1.3
+	InitialInterval         = 1
+	SecondInterval          = 3
+	QualityForgot           = 1
+	QualityHard             = 2
+	QualityMedium           = 3
+	QualityEasy             = 5
+	QualityResetThresh      = 2
+	easeFactorBaseIncrement = 0.1
+	easeFactorQualityWeight = 0.08
+	easeFactorSquaredWeight = 0.02
 )
 
 type ReviewInput struct {
@@ -67,7 +70,7 @@ func Calculate(input ReviewInput) ReviewResult {
 		rep++
 	}
 
-	ef = ef + (0.1 - float64(5-quality)*(0.08+float64(5-quality)*0.02))
+	ef = ef + (easeFactorBaseIncrement - float64(5-quality)*(easeFactorQualityWeight+float64(5-quality)*easeFactorSquaredWeight))
 	if ef < MinEaseFactor {
 		ef = MinEaseFactor
 	}

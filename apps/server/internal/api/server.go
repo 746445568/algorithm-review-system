@@ -49,11 +49,21 @@ func NewServer(cfg app.Config, db *storage.DB, queue *jobs.Queue) *Server {
 	return s
 }
 
-func (s *Server) Router() http.Handler { return corsMiddleware(s.mux) }
+func (s *Server) Router() http.Handler { return s.corsMiddleware(s.mux) }
 
-func corsMiddleware(next http.Handler) http.Handler {
+func (s *Server) corsMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Access-Control-Allow-Origin", "*")
+		// Use configured allowed origins, default to "*" if not set
+		origins := s.cfg.AllowedOrigins
+		if len(origins) == 0 {
+			origins = []string{"*"}
+		}
+		// For simplicity, use the first origin in the list or "*"
+		origin := origins[0]
+		if origin == "" {
+			origin = "*"
+		}
+		w.Header().Set("Access-Control-Allow-Origin", origin)
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
 		if r.Method == http.MethodOptions {
@@ -184,7 +194,7 @@ func (s *Server) handleUpsertAccount(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if adapter, ok := s.adapters[platform]; ok {
-		if err := adapter.ValidateAccount(payload.Handle); err != nil {
+		if err := adapter.ValidateAccount(r.Context(), payload.Handle); err != nil {
 			writeError(w, http.StatusBadRequest, err.Error())
 			return
 		}
@@ -389,14 +399,15 @@ func (s *Server) handleContests(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, contests)
 }
 
-func (s *Server) handleSyncContests(w http.ResponseWriter, _ *http.Request) {
+func (s *Server) handleSyncContests(w http.ResponseWriter, r *http.Request) {
 	inserted := 0
+	ctx := r.Context()
 	for platform, adapter := range s.adapters {
 		contestAdapter, ok := adapter.(judges.ContestAdapter)
 		if !ok {
 			continue
 		}
-		contests, err := contestAdapter.FetchContests()
+		contests, err := contestAdapter.FetchContests(ctx)
 		if err != nil {
 			writeError(w, http.StatusBadGateway, fmt.Sprintf("sync contests for %s failed: %v", platform, err))
 			return
@@ -969,7 +980,7 @@ func (s *Server) runSyncTask(ctx context.Context, accountID, taskID int64, platf
 	cursor := account.LastCursor
 
 	for {
-		submissions, nextCursor, err := adapter.FetchSubmissions(account.ExternalHandle, cursor)
+		submissions, nextCursor, err := adapter.FetchSubmissions(ctx, account.ExternalHandle, cursor)
 		if err != nil {
 			return s.db.MarkSyncTaskFinished(taskID, models.TaskFailed, fetchedCount, insertedCount, "fetch failed: "+err.Error())
 		}
@@ -982,7 +993,7 @@ func (s *Server) runSyncTask(ctx context.Context, accountID, taskID int64, platf
 				continue
 			}
 
-			problem, tags, err := adapter.FetchProblemMetadata(problemExtID)
+			problem, tags, err := adapter.FetchProblemMetadata(ctx, problemExtID)
 			if err != nil {
 				continue
 			}
@@ -1161,7 +1172,7 @@ func parseQueryVerdict(r *http.Request) *models.Verdict {
 	return &v
 }
 
-func (s *Server) runAnalysisTask(_ context.Context, taskID int64) error {
+func (s *Server) runAnalysisTask(ctx context.Context, taskID int64) error {
 	task, err := s.db.GetAnalysisTask(taskID)
 	if err != nil {
 		return err
@@ -1183,7 +1194,7 @@ func (s *Server) runAnalysisTask(_ context.Context, taskID int64) error {
 		return s.db.MarkAnalysisTaskFinished(taskID, models.TaskFailed, "", "", err.Error())
 	}
 
-	resultText, resultJSON, err := provider.Analyze(snapshot.SummaryJSON, ai.Settings{
+	resultText, resultJSON, err := provider.Analyze(ctx, snapshot.SummaryJSON, ai.Settings{
 		Provider: settings.Provider,
 		Model:    settings.Model,
 		BaseURL:  settings.BaseURL,
@@ -1217,7 +1228,7 @@ func (s *Server) handleRefreshRating(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "unsupported platform")
 		return
 	}
-	profile, err := adapter.FetchProfile(account.ExternalHandle)
+	profile, err := adapter.FetchProfile(r.Context(), account.ExternalHandle)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
@@ -1456,13 +1467,13 @@ func (s *Server) handleAnalysisProblemHistory(w http.ResponseWriter, r *http.Req
 
 // translateContent calls AI to translate content to Chinese.
 // Returns empty string on failure (best-effort, non-blocking).
-func (s *Server) translateContent(content string, settings models.AISettings) string {
+func (s *Server) translateContent(ctx context.Context, content string, settings models.AISettings) string {
 	provider, err := ai.NewProvider(settings.Provider)
 	if err != nil {
 		return ""
 	}
 	prompt := "将以下竞赛题面翻译为中文，保留数学公式 $...$ 格式，输出 Markdown，不要加任何解释：\n\n" + content
-	result, _, err := provider.Analyze(prompt, ai.Settings{
+	result, _, err := provider.Analyze(ctx, prompt, ai.Settings{
 		Provider: settings.Provider,
 		Model:    settings.Model,
 		BaseURL:  settings.BaseURL,

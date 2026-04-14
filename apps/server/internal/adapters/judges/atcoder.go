@@ -2,6 +2,7 @@ package judges
 
 import (
 	"compress/gzip"
+	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -34,16 +35,16 @@ type AtCoderAdapter struct {
 }
 
 type atCoderSubmission struct {
-	ID            int64  `json:"id"`
-	EpochSecond   int64  `json:"epoch_second"`
-	ProblemID     string `json:"problem_id"`
-	ContestID     string `json:"contest_id"`
-	UserID        string `json:"user_id"`
-	Language      string `json:"language"`
+	ID            int64   `json:"id"`
+	EpochSecond   int64   `json:"epoch_second"`
+	ProblemID     string  `json:"problem_id"`
+	ContestID     string  `json:"contest_id"`
+	UserID        string  `json:"user_id"`
+	Language      string  `json:"language"`
 	Point         float64 `json:"point"`
-	Length        int64  `json:"length"`
-	Result        string `json:"result"`
-	ExecutionTime int    `json:"execution_time"`
+	Length        int64   `json:"length"`
+	Result        string  `json:"result"`
+	ExecutionTime int     `json:"execution_time"`
 }
 
 type atCoderProblem struct {
@@ -65,8 +66,8 @@ func NewAtCoderAdapter() Adapter {
 	}
 }
 
-func (a *AtCoderAdapter) FetchContests() ([]models.Contest, error) {
-	req, err := http.NewRequest( http.MethodGet, atCoderContestsURL, nil)
+func (a *AtCoderAdapter) FetchContests(ctx context.Context) ([]models.Contest, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, atCoderContestsURL, nil)
 	if err != nil {
 		return nil, fmt.Errorf("create atcoder contests request: %w", err)
 	}
@@ -112,13 +113,13 @@ func (a *AtCoderAdapter) FetchContests() ([]models.Contest, error) {
 	return items, nil
 }
 
-func (a *AtCoderAdapter) ValidateAccount(handle string) error {
+func (a *AtCoderAdapter) ValidateAccount(ctx context.Context, handle string) error {
 	handle = strings.TrimSpace(handle)
 	if handle == "" {
 		return errors.New("handle is required")
 	}
 
-	_, err := a.fetchSubmissionsRaw(handle, 0)
+	_, err := a.fetchSubmissionsRaw(ctx, handle, 0)
 	if err != nil {
 		return fmt.Errorf("validate atcoder account: %w", err)
 	}
@@ -126,9 +127,9 @@ func (a *AtCoderAdapter) ValidateAccount(handle string) error {
 	return nil
 }
 
-func (a *AtCoderAdapter) FetchProfile(handle string) (UserProfile, error) {
+func (a *AtCoderAdapter) FetchProfile(ctx context.Context, handle string) (UserProfile, error) {
 	histURL := fmt.Sprintf("https://atcoder.jp/users/%s/history/json", handle)
-	req, _ := http.NewRequest(http.MethodGet, histURL, nil)
+	req, _ := http.NewRequestWithContext(ctx, http.MethodGet, histURL, nil)
 	req.Header.Set("Accept", "application/json")
 	resp, err := a.client.Do(req)
 	if err != nil {
@@ -154,7 +155,7 @@ func (a *AtCoderAdapter) FetchProfile(handle string) (UserProfile, error) {
 	return UserProfile{Rating: &latest, MaxRating: &maxR}, nil
 }
 
-func (a *AtCoderAdapter) FetchSubmissions(handle string, cursor string) ([]models.Submission, string, error) {
+func (a *AtCoderAdapter) FetchSubmissions(ctx context.Context, handle string, cursor string) ([]models.Submission, string, error) {
 	handle = strings.TrimSpace(handle)
 	if handle == "" {
 		return nil, "", errors.New("handle is required")
@@ -165,7 +166,7 @@ func (a *AtCoderAdapter) FetchSubmissions(handle string, cursor string) ([]model
 		return nil, "", err
 	}
 
-	rawSubmissions, err := a.fetchSubmissionsRaw(handle, fromSecond)
+	rawSubmissions, err := a.fetchSubmissionsRaw(ctx, handle, fromSecond)
 	if err != nil {
 		return nil, "", fmt.Errorf("fetch atcoder submissions: %w", err)
 	}
@@ -186,14 +187,14 @@ func (a *AtCoderAdapter) FetchSubmissions(handle string, cursor string) ([]model
 	return submissions, a.NextCursor(cursor, submissions), nil
 }
 
-func (a *AtCoderAdapter) FetchProblemMetadata(problemID string) (models.Problem, []string, error) {
+func (a *AtCoderAdapter) FetchProblemMetadata(ctx context.Context, problemID string) (models.Problem, []string, error) {
 	problemID = strings.TrimSpace(problemID)
 	contestID, _, err := parseAtCoderProblemID(problemID)
 	if err != nil {
 		return models.Problem{}, nil, err
 	}
 
-	problemsByID, err := a.loadProblems()
+	problemsByID, err := a.loadProblems(ctx)
 	if err != nil {
 		return models.Problem{}, nil, fmt.Errorf("load atcoder problems: %w", err)
 	}
@@ -256,7 +257,7 @@ func (a *AtCoderAdapter) NextCursor(previous string, fetched []models.Submission
 	return strconv.FormatInt(maxEpoch+1, 10)
 }
 
-func (a *AtCoderAdapter) fetchSubmissionsRaw(handle string, fromSecond int64) ([]atCoderSubmission, error) {
+func (a *AtCoderAdapter) fetchSubmissionsRaw(ctx context.Context, handle string, fromSecond int64) ([]atCoderSubmission, error) {
 	resultsURL, err := url.Parse(atCoderBaseURL + atCoderResultsPath)
 	if err != nil {
 		return nil, fmt.Errorf("build atcoder results url: %w", err)
@@ -267,7 +268,7 @@ func (a *AtCoderAdapter) fetchSubmissionsRaw(handle string, fromSecond int64) ([
 	query.Set("from_second", strconv.FormatInt(fromSecond, 10))
 	resultsURL.RawQuery = query.Encode()
 
-	req, err := http.NewRequest(http.MethodGet, resultsURL.String(), nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, resultsURL.String(), nil)
 	if err != nil {
 		return nil, fmt.Errorf("create atcoder results request: %w", err)
 	}
@@ -301,7 +302,7 @@ func (a *AtCoderAdapter) fetchSubmissionsRaw(handle string, fromSecond int64) ([
 	return submissions, nil
 }
 
-func (a *AtCoderAdapter) FetchStatement(problemID string) (string, error) {
+func (a *AtCoderAdapter) FetchStatement(ctx context.Context, problemID string) (string, error) {
 	// AtCoder 题目原文需要从 atcoder.jp 获取
 	// 格式：https://atcoder.jp/contests/{contestID}/tasks/{problemID}
 	contestID, _, err := parseAtCoderProblemID(problemID)
@@ -312,7 +313,7 @@ func (a *AtCoderAdapter) FetchStatement(problemID string) (string, error) {
 	// 构造题目页面 URL
 	url := fmt.Sprintf("https://atcoder.jp/contests/%s/tasks/%s", contestID, problemID)
 
-	req, err := http.NewRequest(http.MethodGet, url, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return "", fmt.Errorf("create atcoder statement request: %w", err)
 	}
@@ -336,7 +337,7 @@ func (a *AtCoderAdapter) FetchStatement(problemID string) (string, error) {
 	return string(body), nil
 }
 
-func (a *AtCoderAdapter) loadProblems() (map[string]atCoderProblem, error) {
+func (a *AtCoderAdapter) loadProblems(ctx context.Context) (map[string]atCoderProblem, error) {
 	a.problemsMu.RLock()
 	if a.problemsLoaded {
 		cached := a.problemsByID
@@ -352,7 +353,7 @@ func (a *AtCoderAdapter) loadProblems() (map[string]atCoderProblem, error) {
 		return a.problemsByID, nil
 	}
 
-	req, err := http.NewRequest(http.MethodGet, atCoderProblemsURL, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, atCoderProblemsURL, nil)
 	if err != nil {
 		return nil, fmt.Errorf("create atcoder problems request: %w", err)
 	}

@@ -2,6 +2,7 @@ package ai
 
 import (
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -29,7 +30,7 @@ func (p *OllamaProvider) ValidateConfig(s Settings) error {
 	return nil
 }
 
-func (p *OllamaProvider) Analyze(input string, s Settings) (string, string, error) {
+func (p *OllamaProvider) Analyze(ctx context.Context, input string, s Settings) (string, string, error) {
 	if err := p.ValidateConfig(s); err != nil {
 		return "", "", err
 	}
@@ -51,13 +52,13 @@ func (p *OllamaProvider) Analyze(input string, s Settings) (string, string, erro
 		return "", "", fmt.Errorf("marshal Ollama request: %w", err)
 	}
 
-	req, err := http.NewRequest(http.MethodPost, endpoint, bytes.NewReader(body))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bytes.NewReader(body))
 	if err != nil {
 		return "", "", fmt.Errorf("create Ollama request: %w", err)
 	}
 	req.Header.Set("Content-Type", "application/json")
 
-	client := &http.Client{Timeout: 300 * time.Second}
+	client := &http.Client{Timeout: 120 * time.Second}
 	resp, err := client.Do(req)
 	if err != nil {
 		return "", "", fmt.Errorf("Ollama request failed: %w", err)
