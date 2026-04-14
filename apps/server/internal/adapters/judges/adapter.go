@@ -15,6 +15,7 @@ type Adapter interface {
 	NormalizeSubmission(raw any) (models.Submission, error)
 	NextCursor(previous string, fetched []models.Submission) string
 	FetchProfile(handle string) (UserProfile, error)
+	FetchStatement(problemID string) (string, error)
 }
 
 type ContestAdapter interface {

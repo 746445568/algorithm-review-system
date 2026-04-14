@@ -66,7 +66,7 @@ func NewAtCoderAdapter() Adapter {
 }
 
 func (a *AtCoderAdapter) FetchContests() ([]models.Contest, error) {
-	req, err := http.NewRequest(http.MethodGet, atCoderContestsURL, nil)
+	req, err := http.NewRequest( http.MethodGet, atCoderContestsURL, nil)
 	if err != nil {
 		return nil, fmt.Errorf("create atcoder contests request: %w", err)
 	}
@@ -299,6 +299,41 @@ func (a *AtCoderAdapter) fetchSubmissionsRaw(handle string, fromSecond int64) ([
 	}
 
 	return submissions, nil
+}
+
+func (a *AtCoderAdapter) FetchStatement(problemID string) (string, error) {
+	// AtCoder 题目原文需要从 atcoder.jp 获取
+	// 格式：https://atcoder.jp/contests/{contestID}/tasks/{problemID}
+	contestID, _, err := parseAtCoderProblemID(problemID)
+	if err != nil {
+		return "", err
+	}
+
+	// 构造题目页面 URL
+	url := fmt.Sprintf("https://atcoder.jp/contests/%s/tasks/%s", contestID, problemID)
+
+	req, err := http.NewRequest(http.MethodGet, url, nil)
+	if err != nil {
+		return "", fmt.Errorf("create atcoder statement request: %w", err)
+	}
+	req.Header.Set("Accept", "text/html")
+
+	resp, err := a.client.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("fetch atcoder statement: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("atcoder statement returned status %d", resp.StatusCode)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", fmt.Errorf("read atcoder statement response: %w", err)
+	}
+
+	return string(body), nil
 }
 
 func (a *AtCoderAdapter) loadProblems() (map[string]atCoderProblem, error) {
