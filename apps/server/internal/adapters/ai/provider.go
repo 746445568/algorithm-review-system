@@ -1,5 +1,7 @@
 package ai
 
+import "context"
+
 type Settings struct {
 	Provider string `json:"provider"`
 	Model    string `json:"model"`
@@ -9,5 +11,5 @@ type Settings struct {
 
 type Provider interface {
 	ValidateConfig(Settings) error
-	Analyze(input string, settings Settings) (string, string, error)
+	Analyze(ctx context.Context, input string, settings Settings) (string, string, error)
 }

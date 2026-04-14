@@ -21,6 +21,23 @@ import (
 
 const schemaVersion = 3
 
+// allowedTables is a whitelist of table names that can be modified by addColumnIfMissing.
+// This prevents SQL injection attacks through malicious table names.
+var allowedTables = map[string]bool{
+	"platform_accounts":     true,
+	"problems":              true,
+	"submissions":           true,
+	"problem_review_states": true,
+	"review_snapshots":      true,
+	"analysis_tasks":        true,
+	"sync_tasks":            true,
+	"owner_profile":         true,
+	"schema_meta":           true,
+	"problem_chats":         true,
+	"contests":              true,
+	"goals":                 true,
+}
+
 type DB struct {
 	conn    *sql.DB
 	cfg     app.Config
@@ -82,6 +99,11 @@ func (db *DB) Close() error { return db.conn.Close() }
 // addColumnIfMissing adds a column to table if it does not yet exist.
 // Safe to call on every startup (idempotent).
 func (db *DB) addColumnIfMissing(table, column, definition string) error {
+	// Validate table name against whitelist to prevent SQL injection
+	if !allowedTables[table] {
+		return fmt.Errorf("invalid table name: %s", table)
+	}
+
 	var count int
 	if err := db.conn.QueryRow(
 		fmt.Sprintf(`SELECT COUNT(*) FROM pragma_table_info('%s') WHERE name = ?`, table),
