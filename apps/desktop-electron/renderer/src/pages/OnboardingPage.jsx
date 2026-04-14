@@ -1,9 +1,9 @@
-import { useState } from "react";
+import { memo, useCallback, useState } from "react";
 import { api } from "../lib/api.js";
 
 const STEPS = ["欢迎", "AI 配置", "数据目录", "完成"];
 
-export function OnboardingPage({ onComplete }) {
+export const OnboardingPage = memo(function OnboardingPage({ onComplete }) {
   const [step, setStep] = useState(0);
   const [apiKey, setApiKey] = useState("");
   const [baseUrl, setBaseUrl] = useState("https://api.openai.com/v1");
@@ -12,7 +12,7 @@ export function OnboardingPage({ onComplete }) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState(null);
 
-  async function handleFinish() {
+  const handleFinish = useCallback(async () => {
     setSaving(true);
     setError(null);
     try {
@@ -23,7 +23,7 @@ export function OnboardingPage({ onComplete }) {
     } finally {
       setSaving(false);
     }
-  }
+  }, [apiKey, baseUrl, model, provider, onComplete]);
 
   return (
     <div className="onboarding-page">
@@ -78,4 +78,4 @@ export function OnboardingPage({ onComplete }) {
       )}
     </div>
   );
-}
+});

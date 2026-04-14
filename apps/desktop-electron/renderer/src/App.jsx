@@ -1,15 +1,11 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { SWRConfig } from "swr";
 import { NavigationProvider, useNavigation } from "./lib/NavigationContext.jsx";
-import { AnalysisPage } from "./pages/AnalysisPage.jsx";
-import { ContestsPage } from "./pages/ContestsPage.jsx";
-import { DashboardPage } from "./pages/DashboardPage.jsx";
-import { ReviewPage } from "./pages/ReviewPage.jsx";
-import { SettingsPage } from "./pages/SettingsPage.jsx";
-import { StatisticsPage } from "./pages/StatisticsPage.jsx";
-import { OnboardingPage } from "./pages/OnboardingPage.jsx";
 import { api } from "./lib/api.js";
 import { formatDate } from "./lib/format.js";
 import { useOfflineData } from "./hooks/useOfflineData.js";
+import { ErrorBoundary } from "./components/ErrorBoundary.jsx";
+import { ErrorPageFallback } from "./components/ErrorPageFallback.jsx";
 import {
   getBrowserRuntimeServiceUrl,
   getRenderedServiceIndicator,
@@ -17,6 +13,21 @@ import {
   getServiceStatusSnapshot,
   shouldShowRestartService,
 } from "./lib/runtimeStatus.js";
+
+// SWR 全局配置
+const swrConfig = {
+  // 请求去重间隔（毫秒）
+  dedupingInterval: 20,
+
+  // 超时时间（毫秒）
+  timeout: 10000,
+
+  // 错误重试次数
+  errorRetryCount: 3,
+
+  // 错误重试间隔（毫秒），指数退避
+  errorRetryInterval: (retryCount) => Math.min(1000 * Math.pow(2, retryCount), 8000),
+};
 
 function resolveEffectiveTheme(mode) {
   if (mode === "dark") return "dark";
@@ -37,7 +48,7 @@ function applyThemeToDOM(mode) {
 // Apply immediately at module load to prevent flash
 applyThemeToDOM(localStorage.getItem("ojreview-theme") ?? "follow-system");
 
-const navItems = [
+const navItemsBase = [
   {
     id: "dashboard", label: "仪表盘", kicker: "总览",
     icon: (
@@ -100,6 +111,7 @@ const initialStatus = {
 function AppShell() {
   const { page, navigateTo } = useNavigation();
   const [visitedPages, setVisitedPages] = useState(() => new Set([page]));
+
   useEffect(() => {
     setVisitedPages(prev => {
       if (prev.has(page)) return prev;
@@ -108,6 +120,7 @@ function AppShell() {
       return next;
     });
   }, [page]);
+
   const hasDesktopBridge = Boolean(window.desktopBridge);
   const [serviceStatus, setServiceStatus] = useState(initialStatus);
   const [runtimeInfo, setRuntimeInfo] = useState({
@@ -128,6 +141,18 @@ function AppShell() {
     localStorage.setItem("ojreview-theme", mode);
     setThemeMode(mode);
     applyThemeToDOM(mode);
+  }, []);
+
+  const handleSync = useCallback(() => {
+    void sync();
+  }, [sync]);
+
+  const handleNavigateTo = useCallback((id) => {
+    navigateTo(id);
+  }, [navigateTo]);
+
+  const handleBannerToggle = useCallback(() => {
+    setBannerExpanded(v => !v);
   }, []);
 
   // Re-apply theme on every render cycle to guard against external resets
@@ -283,7 +308,7 @@ function AppShell() {
   }, [serviceStatus?.state]);
 
   const activeNav = useMemo(
-    () => navItems.find((item) => item.id === page) ?? navItems[0],
+    () => navItemsBase.find((item) => item.id === page) ?? navItemsBase[0],
     [page]
   );
   const lastSyncLabel = lastSyncAt ? formatDate(lastSyncAt.toISOString()) : "尚未同步";
@@ -321,12 +346,12 @@ function AppShell() {
         </div>
 
         <nav className="nav-list" aria-label="Primary">
-          {navItems.map((item) => (
+          {navItemsBase.map((item) => (
             <button
               key={item.id}
               type="button"
               className={item.id === page ? "nav-item active" : "nav-item"}
-              onClick={() => navigateTo(item.id)}
+              onClick={() => handleNavigateTo(item.id)}
             >
               <span className="nav-icon">{item.icon}</span>
               <div className="nav-text">
@@ -373,7 +398,7 @@ function AppShell() {
               type="button"
               className="ghost-button"
               disabled={isSyncing}
-              onClick={() => void sync()}
+              onClick={handleSync}
             >
               {isSyncing ? "同步中..." : "立即同步"}
             </button>
@@ -393,7 +418,7 @@ function AppShell() {
         </header>
 
         <section className={`service-banner${bannerExpanded ? "" : " service-banner--collapsed"}`}>
-          <div className="service-banner-summary" onClick={() => setBannerExpanded((v) => !v)}>
+          <div className="service-banner-summary" onClick={handleBannerToggle}>
             <strong>{serviceBannerMessage}</strong>
             <span className="muted" style={{ fontSize: 12 }}>上次同步 {lastSyncLabel}</span>
             <button
@@ -416,37 +441,49 @@ function AppShell() {
 
         {visitedPages.has("dashboard") && (
           <div style={{ display: page === "dashboard" ? "" : "none" }}>
-            <DashboardPage serviceStatus={serviceStatus} runtimeInfo={runtimeInfo} cacheStatus={cacheStatus} connectivity={connectivity} syncQueue={syncQueue} onNavigate={navigateTo} />
+            <ErrorBoundary moduleName="DashboardPage" fallback={<ErrorPageFallback />}>
+              <DashboardPage serviceStatus={serviceStatus} runtimeInfo={runtimeInfo} cacheStatus={cacheStatus} connectivity={connectivity} syncQueue={syncQueue} onNavigate={navigateTo} />
+            </ErrorBoundary>
           </div>
         )}
 
         {visitedPages.has("review") && (
           <div style={{ display: page === "review" ? "" : "none" }}>
-            <ReviewPage serviceStatus={serviceStatus} runtimeInfo={runtimeInfo} onNavigate={navigateTo} />
+            <ErrorBoundary moduleName="ReviewPage" fallback={<ErrorPageFallback />}>
+              <ReviewPage serviceStatus={serviceStatus} runtimeInfo={runtimeInfo} onNavigate={navigateTo} />
+            </ErrorBoundary>
           </div>
         )}
 
         {visitedPages.has("analysis") && (
           <div style={{ display: page === "analysis" ? "" : "none" }}>
-            <AnalysisPage serviceStatus={serviceStatus} runtimeInfo={runtimeInfo} />
+            <ErrorBoundary moduleName="AnalysisPage" fallback={<ErrorPageFallback />}>
+              <AnalysisPage serviceStatus={serviceStatus} runtimeInfo={runtimeInfo} />
+            </ErrorBoundary>
           </div>
         )}
 
         {visitedPages.has("contests") && (
           <div style={{ display: page === "contests" ? "" : "none" }}>
-            <ContestsPage />
+            <ErrorBoundary moduleName="ContestsPage" fallback={<ErrorPageFallback />}>
+              <ContestsPage />
+            </ErrorBoundary>
           </div>
         )}
 
         {visitedPages.has("statistics") && (
           <div style={{ display: page === "statistics" ? "" : "none" }}>
-            <StatisticsPage />
+            <ErrorBoundary moduleName="StatisticsPage" fallback={<ErrorPageFallback />}>
+              <StatisticsPage />
+            </ErrorBoundary>
           </div>
         )}
 
         {visitedPages.has("settings") && (
           <div style={{ display: page === "settings" ? "" : "none" }}>
-            <SettingsPage runtimeInfo={runtimeInfo} serviceStatus={serviceStatus} themeMode={themeMode} onThemeChange={handleThemeChange} />
+            <ErrorBoundary moduleName="SettingsPage" fallback={<ErrorPageFallback />}>
+              <SettingsPage runtimeInfo={runtimeInfo} serviceStatus={serviceStatus} themeMode={themeMode} onThemeChange={handleThemeChange} />
+            </ErrorBoundary>
           </div>
         )}
       </main>
@@ -456,8 +493,10 @@ function AppShell() {
 
 export function App() {
   return (
-    <NavigationProvider>
-      <AppShell />
-    </NavigationProvider>
+    <SWRConfig value={swrConfig}>
+      <NavigationProvider>
+        <AppShell />
+      </NavigationProvider>
+    </SWRConfig>
   );
 }

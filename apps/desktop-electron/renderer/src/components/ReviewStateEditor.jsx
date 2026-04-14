@@ -1,6 +1,7 @@
+import { memo, useCallback } from "react";
 import { formatDate, statusLabel } from "../lib/format.js";
 
-export function ReviewStateEditor({
+export const ReviewStateEditor = memo(function ReviewStateEditor({
   reviewState,
   reviewSaving,
   reviewNotice,
@@ -11,6 +12,22 @@ export function ReviewStateEditor({
   onChange,
   onSave,
 }) {
+  const handleStatusChange = useCallback((event) => {
+    onChange({ status: event.target.value });
+  }, [onChange]);
+
+  const handleNextReviewAtChange = useCallback((event) => {
+    onChange({ nextReviewAt: event.target.value });
+  }, [onChange]);
+
+  const handleNotesChange = useCallback((event) => {
+    onChange({ notes: event.target.value });
+  }, [onChange]);
+
+  const handleSaveClick = useCallback(() => {
+    void onSave();
+  }, [onSave]);
+
   return (
     <div className="panel review-editor-panel">
       <div className="panel-header">
@@ -25,7 +42,7 @@ export function ReviewStateEditor({
             <select
               value={reviewState.status}
               disabled={!reviewStateSupported}
-              onChange={(event) => onChange({ status: event.target.value })}
+              onChange={handleStatusChange}
             >
               <option value="TODO">待复习</option>
               <option value="REVIEWING">复习中</option>
@@ -40,7 +57,7 @@ export function ReviewStateEditor({
               type="datetime-local"
               value={reviewState.nextReviewAt}
               disabled={!reviewStateSupported}
-              onChange={(event) => onChange({ nextReviewAt: event.target.value })}
+              onChange={handleNextReviewAtChange}
             />
           </label>
 
@@ -51,7 +68,7 @@ export function ReviewStateEditor({
               value={reviewState.notes}
               disabled={!reviewStateSupported}
               placeholder="记录错误原因、正确思路和下次注意事项。"
-              onChange={(event) => onChange({ notes: event.target.value })}
+              onChange={handleNotesChange}
             />
           </label>
 
@@ -64,7 +81,7 @@ export function ReviewStateEditor({
               type="button"
               className="primary-button"
               disabled={reviewSaving || serviceUnavailable || !reviewStateSupported}
-              onClick={() => void onSave()}
+              onClick={handleSaveClick}
             >
               {reviewSaving ? "保存中..." : "保存复习状态"}
             </button>
@@ -77,4 +94,4 @@ export function ReviewStateEditor({
       )}
     </div>
   );
-}
+});

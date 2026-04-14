@@ -2873,3 +2873,370 @@ button:not(:disabled):active {
 .rd-rate-btn.is-pressed {
   animation: ratePulse 280ms ease both;
 }
+
+/* ═══════════════════════════════════════════════
+   统计页面组件样式
+   ═══════════════════════════════════════════════ */
+
+/* ─── Summary Stats Grid ─────────────────────── */
+.stats-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+@media (max-width: 900px) {
+  .stats-summary-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 500px) {
+  .stats-summary-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ─── Stat Card ──────────────────────────────── */
+.stat-card {
+  padding: 20px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--panel);
+  box-shadow: var(--shadow-sm);
+  backdrop-filter: blur(12px);
+  transition: transform 150ms ease, box-shadow 150ms ease;
+}
+
+.stat-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow);
+}
+
+[data-theme="dark"] .stat-card {
+  background: rgba(30, 41, 59, 0.88);
+}
+
+.stat-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 12px;
+}
+
+.stat-card-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+[data-theme="dark"] .stat-card-icon {
+  background: rgba(96, 165, 250, 0.15);
+  color: #93c5fd;
+}
+
+.stat-trend {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.stat-trend.trend-up {
+  background: var(--good-soft);
+  color: var(--good);
+}
+
+.stat-trend.trend-down {
+  background: var(--warn-soft);
+  color: var(--warn);
+}
+
+[data-theme="dark"] .stat-trend.trend-up {
+  background: rgba(74, 222, 128, 0.15);
+  color: #4ade80;
+}
+
+[data-theme="dark"] .stat-trend.trend-down {
+  background: rgba(251, 191, 36, 0.15);
+  color: #fbbf24;
+}
+
+.stat-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.stat-card-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--muted);
+  letter-spacing: 0.01em;
+}
+
+.stat-card-value {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--text);
+  line-height: 1.2;
+  letter-spacing: -0.02em;
+}
+
+.stat-card-subtitle {
+  font-size: 12px;
+  color: var(--muted);
+}
+
+/* Skeleton stat card */
+.stat-card--skeleton {
+  pointer-events: none;
+}
+
+/* ─── Charts Row ─────────────────────────────── */
+.charts-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+@media (max-width: 800px) {
+  .charts-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ─── Chart Tooltip ──────────────────────────── */
+.chart-tooltip {
+  pointer-events: none;
+  z-index: 100;
+}
+
+.tooltip-content {
+  background: var(--panel-strong);
+  border: 1px solid var(--line-strong);
+  border-radius: 8px;
+  padding: 8px 12px;
+  box-shadow: var(--shadow);
+  font-size: 12px;
+  white-space: nowrap;
+}
+
+[data-theme="dark"] .tooltip-content {
+  background: #1e293b;
+  border-color: rgba(148, 163, 184, 0.20);
+}
+
+.tooltip-inner {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  text-align: center;
+}
+
+.tooltip-label {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.tooltip-value {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.tooltip-mini {
+  padding: 6px 10px;
+}
+
+.tooltip-inner-mini {
+  gap: 1px;
+}
+
+.tooltip-label-mini {
+  font-size: 10px;
+}
+
+/* ─── Chart Interaction Styles ───────────────── */
+.chart-data-point {
+  transition: transform 150ms ease;
+}
+
+.chart-svg:hover .chart-data-point {
+  cursor: pointer;
+}
+
+.chart-hit-area {
+  pointer-events: all;
+}
+
+.chart-bar {
+  transition: opacity 150ms ease, transform 150ms ease;
+  cursor: pointer;
+}
+
+.chart-bar:hover {
+  opacity: 0.85;
+  transform: scaleY(1.02);
+}
+
+/* ─── Submission Chart Enhancements ──────────── */
+.submission-chart .chart-data-point:hover {
+  transform: scale(1.3);
+  transform-origin: center;
+}
+
+/* ─── Tag Chart Enhancements ─────────────────── */
+.tag-chart .chart-bar:hover {
+  filter: brightness(1.1);
+}
+
+/* ─── Statistics Page Layout ─────────────────── */
+.statistics-page {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* ═══════════════════════════════════════════════
+   Error Boundary Styles
+   ═══════════════════════════════════════════════ */
+
+.error-boundary-fallback {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 2rem;
+  text-align: center;
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  min-height: 300px;
+}
+
+.error-boundary-icon {
+  margin-bottom: 1.5rem;
+  color: var(--bad);
+}
+
+.error-boundary-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: 0.75rem;
+  color: var(--text);
+}
+
+.error-boundary-message {
+  color: var(--muted);
+  margin-bottom: 1.5rem;
+  line-height: 1.6;
+  max-width: 400px;
+}
+
+.error-boundary-details {
+  width: 100%;
+  max-width: 500px;
+  margin-bottom: 1.5rem;
+  text-align: left;
+}
+
+.error-boundary-details summary {
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 0.875rem;
+  user-select: none;
+}
+
+.error-boundary-details summary:hover {
+  color: var(--text);
+}
+
+.error-boundary-error-message {
+  margin-top: 0.75rem;
+  padding: 0.75rem;
+  background: var(--bad-soft);
+  border-radius: 8px;
+  font-size: 0.875rem;
+  color: var(--bad);
+}
+
+.error-boundary-stack {
+  margin-top: 0.75rem;
+  padding: 0.75rem;
+  background: rgba(0, 0, 0, 0.04);
+  border-radius: 8px;
+  font-size: 0.75rem;
+  font-family: "Fira Code", "Cascadia Code", Consolas, monospace;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-word;
+  color: var(--muted);
+}
+
+[data-theme="dark"] .error-boundary-stack {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.error-boundary-actions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem 1rem;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border-radius: 8px;
+  border: 1px solid transparent;
+  cursor: pointer;
+  transition: all 150ms ease;
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--accent-hover);
+  border-color: var(--accent-hover);
+}
+
+.btn-secondary {
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--line);
+}
+
+.btn-secondary:hover {
+  background: var(--panel-strong);
+  border-color: var(--line-strong);
+}
+
+.btn-lg {
+  padding: 0.625rem 1.25rem;
+  font-size: 0.9375rem;
+}

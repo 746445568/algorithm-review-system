@@ -1,221 +1,56 @@
-import { useEffect, useRef, useState } from "react";
-import { api } from "../lib/api.js";
+import { useRef, useState } from "react";
 import { useNavigation } from "../lib/NavigationContext.jsx";
-import { formatDate } from "../lib/format.js";
 import { getAnalysisErrorMessage } from "../lib/runtimeStatus.js";
+import { useAnalysisTaskWithPoll } from "../hooks/useAnalysisTask.js";
+import { Toast } from "../components/Analysis/Toast.jsx";
+import { GlobalAnalysis } from "../components/Analysis/GlobalAnalysis.jsx";
+import { ProblemAnalysis } from "../components/Analysis/ProblemAnalysis.jsx";
+import { AnalysisColumn } from "../components/Analysis/AnalysisColumn.jsx";
+import { api } from "../lib/api.js";
 
-// ─── Minimal Markdown renderer (zero deps) ───────────────────────────────────
-
-function renderInline(text) {
-  const parts = text.split(/(\*\*[^*]+\*\*|`[^`]+`)/g);
-  return parts.map((part, i) => {
-    if (part.startsWith("**") && part.endsWith("**")) {
-      return <strong key={i}>{part.slice(2, -2)}</strong>;
-    }
-    if (part.startsWith("`") && part.endsWith("`")) {
-      return <code key={i} className="md-code">{part.slice(1, -1)}</code>;
-    }
-    return part;
-  });
-}
-
-function SimpleMarkdown({ text }) {
-  if (!text) return <p className="md-p-placeholder">暂无内容</p>;
-
-  const lines = text.split("\n");
-  const elements = [];
-  let listItems = [];
-  let listType = null;
-  let codeLines = [];
-  let inCode = false;
-
-  function flushList() {
-    if (listItems.length > 0) {
-      const Tag = listType === "ol" ? "ol" : "ul";
-      elements.push(<Tag key={`list-${elements.length}`} className={`md-${Tag}`}>{listItems}</Tag>);
-      listItems = [];
-      listType = null;
-    }
-  }
-
-  function flushCode() {
-    if (codeLines.length > 0) {
-      elements.push(
-        <pre key={`pre-${elements.length}`} className="md-pre">
-          <code>{codeLines.join("\n")}</code>
-        </pre>
-      );
-      codeLines = [];
-    }
-  }
-
-  lines.forEach((line, i) => {
-    if (line.startsWith("```")) {
-      if (inCode) {
-        flushCode();
-        inCode = false;
-      } else {
-        flushList();
-        inCode = true;
-      }
-      return;
-    }
-    if (inCode) {
-      codeLines.push(line);
-      return;
-    }
-    if (line.startsWith("### ")) {
-      flushList();
-      elements.push(<h5 key={i} className="md-h3">{renderInline(line.slice(4))}</h5>);
-    } else if (line.startsWith("## ")) {
-      flushList();
-      elements.push(<h4 key={i} className="md-h2">{renderInline(line.slice(3))}</h4>);
-    } else if (line.startsWith("# ")) {
-      flushList();
-      elements.push(<h3 key={i} className="md-h1">{renderInline(line.slice(2))}</h3>);
-    } else if (line.startsWith("- ") || line.startsWith("* ")) {
-      if (listType !== "ul") { flushList(); listType = "ul"; }
-      listItems.push(<li key={i}>{renderInline(line.slice(2))}</li>);
-    } else if (/^\d+\.\s/.test(line)) {
-      if (listType !== "ol") { flushList(); listType = "ol"; }
-      listItems.push(<li key={i}>{renderInline(line.replace(/^\d+\.\s/, ""))}</li>);
-    } else if (line.trim() === "---" || line.trim() === "***") {
-      flushList();
-      elements.push(<hr key={i} className="md-hr" />);
-    } else if (line.trim() === "") {
-      flushList();
-      elements.push(<div key={i} className="md-gap" />);
-    } else {
-      flushList();
-      elements.push(<p key={i} className="md-p">{renderInline(line)}</p>);
-    }
-  });
-  flushList();
-  if (inCode) flushCode();
-
-  return <div className="md-body">{elements}</div>;
-}
-
-// ─── Toast ────────────────────────────────────────────────────────────────────
-
-function Toast({ message, isError, onDone }) {
-  useEffect(() => {
-    const t = setTimeout(onDone, 2000);
-    return () => clearTimeout(t);
-  }, [onDone]);
-  return <div className={`an-toast ${isError ? "an-toast--error" : ""}`}>{message}</div>;
-}
-
-// ─── Problem Search Selectors ────────────────────────────────────────────────
-
-function ProblemSearchSelector({ value, onChange, problems }) {
-  const [searchTerm, setSearchTerm] = useState("");
-  const [isOpen, setIsOpen] = useState(false);
-  const wrapperRef = useRef(null);
-
-  useEffect(() => {
-    function handleClickOutside(event) {
-      if (wrapperRef.current && !wrapperRef.current.contains(event.target)) {
-        setIsOpen(false);
-      }
-    }
-    document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
-  }, []);
-
-  const filteredProblems = problems.filter((p) =>
-    p.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    p.externalProblemId?.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  const selectedProblem = problems.find((p) => p.id === value);
-
-  return (
-    <div className="an-problem-selector" ref={wrapperRef}>
-      <div
-        className="an-selector-trigger"
-        onClick={() => setIsOpen(!isOpen)}
-      >
-        {selectedProblem ? (
-          <span className="an-selected-label">
-            <span className="an-platform-badge">{selectedProblem.platform}</span>
-            {selectedProblem.title}
-          </span>
-        ) : (
-          <span className="an-placeholder">选择题目...</span>
-        )}
-        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <polyline points="6 9 12 15 18 9" />
-        </svg>
-      </div>
-
-      {isOpen && (
-        <div className="an-dropdown">
-          <input
-            type="text"
-            className="an-search-input"
-            placeholder="搜索题目..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            autoFocus
-          />
-          <div className="an-dropdown-list">
-            {filteredProblems.length === 0 ? (
-              <div className="an-dropdown-empty">未找到题目</div>
-            ) : (
-              filteredProblems.map((problem) => (
-                <div
-                  key={problem.id}
-                  className={`an-dropdown-item${problem.id === value ? " an-dropdown-item--selected" : ""}`}
-                  onClick={() => {
-                    onChange(problem.id);
-                    setIsOpen(false);
-                    setSearchTerm("");
-                  }}
-                >
-                  <span className="an-platform-badge">{problem.platform}</span>
-                  <span className="an-dropdown-title">{problem.title}</span>
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-// ─── AnalysisPage ─────────────────────────────────────────────────────────────
-
+/**
+ * AnalysisPage 主容器组件
+ * 使用 SWR 管理分析任务状态
+ */
 export function AnalysisPage() {
   const { navigateTo, navigationState } = useNavigation();
 
   // Global report state
   const [period, setPeriod] = useState("week");
-  const [globalTask, setGlobalTask] = useState(null);
-  const [globalLoading, setGlobalLoading] = useState(false);
+  const [globalTaskId, setGlobalTaskId] = useState(null);
   const [globalError, setGlobalError] = useState(null);
 
   // Comparison state
-  const [compTask, setCompTask] = useState(null);
-  const [compLoading, setCompLoading] = useState(false);
+  const [compTaskId, setCompTaskId] = useState(null);
   const [compError, setCompError] = useState(null);
 
   // Single problem state
   const [selectedProblemId, setSelectedProblemId] = useState(null);
-  const [problemTask, setProblemTask] = useState(null);
-  const [problemLoading, setProblemLoading] = useState(false);
+  const [problemTaskId, setProblemTaskId] = useState(null);
   const [problemError, setProblemError] = useState(null);
   const [problems, setProblems] = useState([]);
 
-  // Poll refs
-  const globalPollRef = useRef(null);
-  const compPollRef = useRef(null);
-  const problemPollRef = useRef(null);
-  const problemSubmitRef = useRef(false);
-
   // Toast state
   const [toast, setToast] = useState(null);
+
+  // Ref for problem submit flag (must be defined before hook calls)
+  const problemSubmitRef = useRef(false);
+
+  // 使用 SWR 轮询 hooks - 只在 taskId 存在时开始轮询
+  const {
+    task: globalTask,
+    isLoading: globalLoading,
+  } = useAnalysisTaskWithPoll(globalTaskId);
+
+  const {
+    task: compTask,
+    isLoading: compLoading,
+  } = useAnalysisTaskWithPoll(compTaskId);
+
+  const {
+    task: problemTask,
+    isLoading: problemLoading,
+  } = useAnalysisTaskWithPoll(problemTaskId);
 
   // Load problems for selector
   useEffect(() => {
@@ -223,162 +58,84 @@ export function AnalysisPage() {
   }, []);
 
   // Auto-trigger single problem analysis from navigation state
-  useEffect(() => {
+  React.useEffect(() => {
     if (navigationState?.problemId) {
       setSelectedProblemId(navigationState.problemId);
       handleGenerateProblemAnalysis(navigationState.problemId);
     }
   }, [navigationState?.problemId]);
 
-  // Cleanup polls on unmount
-  useEffect(() => () => {
-    stopGlobalPoll();
-    stopCompPoll();
-    stopProblemPoll();
-  }, []);
-
-  // ── Global Analysis Polling ──
-  function stopGlobalPoll() {
-    if (globalPollRef.current) {
-      clearTimeout(globalPollRef.current);
-      globalPollRef.current = null;
-    }
-  }
-
-  function scheduleGlobalPoll(taskId) {
-    stopGlobalPoll();
-    globalPollRef.current = setTimeout(async () => {
-      try {
-        const task = await api.getAnalysisTask(taskId);
-        setGlobalTask(task);
-        if (task.status !== "SUCCESS" && task.status !== "FAILED") {
-          scheduleGlobalPoll(taskId);
-        } else {
-          setGlobalLoading(false);
-        }
-      } catch (err) {
-        setGlobalLoading(false);
-        setGlobalError(getAnalysisErrorMessage(err.message));
-      }
-    }, 2000);
-  }
-
+  // ── Global Analysis ──
   async function handleGenerateGlobalAnalysis() {
-    if (globalLoading) return;
-    stopGlobalPoll();
-    setGlobalLoading(true);
-    setGlobalTask(null);
+    if (globalLoading || globalTaskId) return;
     setGlobalError(null);
     try {
       const { task } = await api.generateAnalysis({ period });
-      setGlobalTask(task);
+      setGlobalTaskId(task.id);
       if (task.status === "SUCCESS" || task.status === "FAILED") {
-        setGlobalLoading(false);
-      } else {
-        scheduleGlobalPoll(task.id);
+        // 任务已完成，清理 taskId
+        setTimeout(() => setGlobalTaskId(null), 5000);
       }
     } catch (err) {
-      setGlobalLoading(false);
       setGlobalError(getAnalysisErrorMessage(err.message));
     }
   }
 
-  // ── Comparison Analysis Polling ──
-  function stopCompPoll() {
-    if (compPollRef.current) {
-      clearTimeout(compPollRef.current);
-      compPollRef.current = null;
-    }
-  }
-
-  function scheduleCompPoll(taskId) {
-    stopCompPoll();
-    compPollRef.current = setTimeout(async () => {
-      try {
-        const task = await api.getAnalysisTask(taskId);
-        setCompTask(task);
-        if (task.status !== "SUCCESS" && task.status !== "FAILED") {
-          scheduleCompPoll(taskId);
-        } else {
-          setCompLoading(false);
-        }
-      } catch (err) {
-        setCompLoading(false);
-        setCompError(getAnalysisErrorMessage(err.message));
-      }
-    }, 2000);
-  }
-
+  // ── Comparison Analysis ──
   async function handleGenerateComparison() {
-    if (compLoading) return;
-    stopCompPoll();
-    setCompLoading(true);
-    setCompTask(null);
+    if (compLoading || compTaskId) return;
     setCompError(null);
     try {
       const { task } = await api.generateComparisonAnalysis({ period });
-      setCompTask(task);
+      setCompTaskId(task.id);
       if (task.status === "SUCCESS" || task.status === "FAILED") {
-        setCompLoading(false);
-      } else {
-        scheduleCompPoll(task.id);
+        setTimeout(() => setCompTaskId(null), 5000);
       }
     } catch (err) {
-      setCompLoading(false);
       setCompError(getAnalysisErrorMessage(err.message));
     }
   }
 
-  // ── Problem Analysis Polling ──
-  function stopProblemPoll() {
-    if (problemPollRef.current) {
-      clearTimeout(problemPollRef.current);
-      problemPollRef.current = null;
-    }
-  }
-
-  function scheduleProblemPoll(taskId) {
-    stopProblemPoll();
-    problemPollRef.current = setTimeout(async () => {
-      try {
-        const task = await api.getAnalysisTask(taskId);
-        setProblemTask(task);
-        if (task.status !== "SUCCESS" && task.status !== "FAILED") {
-          scheduleProblemPoll(taskId);
-        } else {
-          setProblemLoading(false);
-          problemSubmitRef.current = false;
-        }
-      } catch (err) {
-        setProblemLoading(false);
-        problemSubmitRef.current = false;
-        setProblemError(getAnalysisErrorMessage(err.message));
-      }
-    }, 2000);
-  }
-
+  // ── Problem Analysis ──
   async function handleGenerateProblemAnalysis(problemId) {
-    if (problemLoading || problemSubmitRef.current || !problemId) return;
+    if (problemLoading || problemSubmitRef.current || !problemId || problemTaskId) return;
     problemSubmitRef.current = true;
-    stopProblemPoll();
-    setProblemLoading(true);
-    setProblemTask(null);
     setProblemError(null);
     try {
       const { task } = await api.generateProblemAnalysis(problemId, {});
-      setProblemTask(task);
+      setProblemTaskId(task.id);
       if (task.status === "SUCCESS" || task.status === "FAILED") {
-        setProblemLoading(false);
         problemSubmitRef.current = false;
-      } else {
-        scheduleProblemPoll(task.id);
+        setTimeout(() => setProblemTaskId(null), 5000);
       }
     } catch (err) {
-      setProblemLoading(false);
       problemSubmitRef.current = false;
       setProblemError(getAnalysisErrorMessage(err.message));
     }
   }
+
+  // Cleanup task IDs after completion
+  React.useEffect(() => {
+    if (globalTask?.status === "SUCCESS" || globalTask?.status === "FAILED") {
+      const timer = setTimeout(() => setGlobalTaskId(null), 10000);
+      return () => clearTimeout(timer);
+    }
+  }, [globalTask?.status]);
+
+  React.useEffect(() => {
+    if (compTask?.status === "SUCCESS" || compTask?.status === "FAILED") {
+      const timer = setTimeout(() => setCompTaskId(null), 10000);
+      return () => clearTimeout(timer);
+    }
+  }, [compTask?.status]);
+
+  React.useEffect(() => {
+    if (problemTask?.status === "SUCCESS" || problemTask?.status === "FAILED") {
+      problemSubmitRef.current = false;
+      const timer = setTimeout(() => setProblemTaskId(null), 10000);
+      return () => clearTimeout(timer);
+    }
+  }, [problemTask?.status]);
 
   return (
     <div className="an-container">
@@ -400,220 +157,32 @@ export function AnalysisPage() {
 
       {/* Main content - two columns */}
       <div className="an-main">
-        {/* Left column - Global Report */}
-        <div className="an-column an-column--left">
-          <div className="an-panel">
-            <h3 className="an-panel-title">全局报告</h3>
+        <AnalysisColumn side="left">
+          <GlobalAnalysis
+            period={period}
+            setPeriod={setPeriod}
+            globalTask={globalTask}
+            globalLoading={globalLoading}
+            globalError={globalError}
+            onGenerateGlobal={handleGenerateGlobalAnalysis}
+            compTask={compTask}
+            compLoading={compLoading}
+            compError={compError}
+            onGenerateComparison={handleGenerateComparison}
+          />
+        </AnalysisColumn>
 
-            {/* Period toggle */}
-            <div className="an-period-toggle">
-              <button
-                type="button"
-                className={`an-period-btn${period === "week" ? " an-period-btn--active" : ""}`}
-                onClick={() => setPeriod("week")}
-              >
-                本周
-              </button>
-              <button
-                type="button"
-                className={`an-period-btn${period === "month" ? " an-period-btn--active" : ""}`}
-                onClick={() => setPeriod("month")}
-              >
-                本月
-              </button>
-            </div>
-
-            {/* Generate button */}
-            <button
-              type="button"
-              className="primary-button an-generate-btn"
-              disabled={globalLoading}
-              onClick={handleGenerateGlobalAnalysis}
-            >
-              {globalLoading ? (
-                <><span className="an-spinner" /> 生成中…</>
-              ) : (
-                "生成报告"
-              )}
-            </button>
-
-            {/* Global analysis result */}
-            {globalError && (
-              <div className="an-error-msg">
-                {globalError}
-              </div>
-            )}
-
-            {(globalLoading || (globalTask && globalTask.status !== "SUCCESS" && globalTask.status !== "FAILED")) && (
-              <div className="an-progress">
-                <span className="an-spinner" />
-                <span>
-                  {!globalTask && "正在提交…"}
-                  {globalTask?.status === "PENDING" && "排队等待中…"}
-                  {globalTask?.status === "RUNNING" && "AI 分析中，请稍候…"}
-                </span>
-              </div>
-            )}
-
-            {globalTask?.status === "FAILED" && (
-              <div className="an-failed">
-                <p className="an-error-msg">{globalTask.errorMessage || "分析任务失败，请重试"}</p>
-                <button
-                  type="button"
-                  className="ghost-button"
-                  onClick={() => { setGlobalTask(null); setGlobalError(null); }}
-                >
-                  重试
-                </button>
-              </div>
-            )}
-
-            {globalTask?.status === "SUCCESS" && (
-              <div className="an-result">
-                <div className="an-result-meta">
-                  <span className="an-provider-badge">{globalTask.provider}</span>
-                  <span className="muted">·</span>
-                  <span className="muted">{globalTask.model}</span>
-                  <span className="muted">·</span>
-                  <span className="muted">{formatDate(globalTask.updatedAt)}</span>
-                </div>
-                <div className="an-result-body">
-                  <SimpleMarkdown text={globalTask.resultText} />
-                </div>
-              </div>
-            )}
-
-            {/* Comparison section */}
-            <div className="an-comp-section">
-              <h4 className="an-comp-title">环比分析</h4>
-              <button
-                type="button"
-                className="ghost-button an-comp-btn"
-                disabled={compLoading}
-                onClick={handleGenerateComparison}
-              >
-                {compLoading ? (
-                  <><span className="an-spinner" /> 生成中…</>
-                ) : (
-                  "生成环比"
-                )}
-              </button>
-
-              {compError && (
-                <div className="an-error-msg an-error-msg--small">
-                  {compError}
-                </div>
-              )}
-
-              {(compLoading || (compTask && compTask.status !== "SUCCESS" && compTask.status !== "FAILED")) && (
-                <div className="an-progress an-progress--small">
-                  <span className="an-spinner" />
-                  <span>
-                    {!compTask && "正在提交…"}
-                    {compTask?.status === "PENDING" && "排队等待中…"}
-                    {compTask?.status === "RUNNING" && "AI 分析中…"}
-                  </span>
-                </div>
-              )}
-
-              {compTask?.status === "FAILED" && (
-                <div className="an-failed an-failed--small">
-                  <p className="an-error-msg">{compTask.errorMessage || "分析失败"}</p>
-                </div>
-              )}
-
-              {compTask?.status === "SUCCESS" && (
-                <div className="an-result an-result--compact">
-                  <div className="an-result-meta">
-                    <span className="an-provider-badge">{compTask.provider}</span>
-                    <span className="muted">·</span>
-                    <span className="muted">{formatDate(compTask.updatedAt)}</span>
-                  </div>
-                  <div className="an-result-body">
-                    <SimpleMarkdown text={compTask.resultText} />
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-
-        {/* Right column - Single Problem Analysis */}
-        <div className="an-column an-column--right">
-          <div className="an-panel">
-            <h3 className="an-panel-title">单题分析</h3>
-
-            {/* Problem selector */}
-            <div className="an-field">
-              <label className="an-label" htmlFor="ap-problem-select">选择题目</label>
-              <ProblemSearchSelector
-                value={selectedProblemId}
-                onChange={setSelectedProblemId}
-                problems={problems}
-              />
-            </div>
-
-            {/* Generate button */}
-            <button
-              type="button"
-              className="primary-button an-generate-btn"
-              disabled={problemLoading || !selectedProblemId}
-              onClick={() => handleGenerateProblemAnalysis(selectedProblemId)}
-            >
-              {problemLoading ? (
-                <><span className="an-spinner" /> 生成中…</>
-              ) : (
-                "生成分析"
-              )}
-            </button>
-
-            {/* Problem analysis result */}
-            {problemError && (
-              <div className="an-error-msg">
-                {problemError}
-              </div>
-            )}
-
-            {(problemLoading || (problemTask && problemTask.status !== "SUCCESS" && problemTask.status !== "FAILED")) && (
-              <div className="an-progress">
-                <span className="an-spinner" />
-                <span>
-                  {!problemTask && "正在提交…"}
-                  {problemTask?.status === "PENDING" && "排队等待中…"}
-                  {problemTask?.status === "RUNNING" && "AI 分析中，请稍候…"}
-                </span>
-              </div>
-            )}
-
-            {problemTask?.status === "FAILED" && (
-              <div className="an-failed">
-                <p className="an-error-msg">{problemTask.errorMessage || "分析任务失败，请重试"}</p>
-                <button
-                  type="button"
-                  className="ghost-button"
-                  onClick={() => { setProblemTask(null); setProblemError(null); }}
-                >
-                  重试
-                </button>
-              </div>
-            )}
-
-            {problemTask?.status === "SUCCESS" && (
-              <div className="an-result">
-                <div className="an-result-meta">
-                  <span className="an-provider-badge">{problemTask.provider}</span>
-                  <span className="muted">·</span>
-                  <span className="muted">{problemTask.model}</span>
-                  <span className="muted">·</span>
-                  <span className="muted">{formatDate(problemTask.updatedAt)}</span>
-                </div>
-                <div className="an-result-body">
-                  <SimpleMarkdown text={problemTask.resultText} />
-                </div>
-              </div>
-            )}
-          </div>
-        </div>
+        <AnalysisColumn side="right">
+          <ProblemAnalysis
+            selectedProblemId={selectedProblemId}
+            setSelectedProblemId={setSelectedProblemId}
+            problems={problems}
+            problemTask={problemTask}
+            problemLoading={problemLoading}
+            problemError={problemError}
+            onGenerateProblem={handleGenerateProblemAnalysis}
+          />
+        </AnalysisColumn>
       </div>
 
       {/* Toast */}

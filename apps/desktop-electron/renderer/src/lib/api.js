@@ -8,6 +8,8 @@ import {
 } from "./db.js";
 import { isOnline as checkOnline, setSyncBaseUrl } from "./sync.js";
 
+import { error as logError } from "./logger.js";
+
 const DEFAULT_API_BASE = "http://127.0.0.1:38473";
 const REQUEST_TIMEOUT_MS = 10000;
 let apiBase = DEFAULT_API_BASE;
@@ -63,7 +65,9 @@ async function request(pathOrUrl, options = {}) {
     try {
       const body = await response.json();
       message = body.error ?? message;
-    } catch {}
+    } catch (error) {
+      logError("响应体不是有效 JSON，保留原始 HTTP 状态消息", "api", error);
+    }
     throw new Error(message);
   }
 

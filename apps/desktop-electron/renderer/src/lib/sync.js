@@ -12,6 +12,8 @@ import {
 
 import { DEFAULT_BASE_URL, buildUrl, normalizeBaseUrl, requestJson } from "./http.js";
 
+import { error as logError } from "./logger.js";
+
 const DEFAULT_PAGE_SIZE = 200;
 
 let apiBase = DEFAULT_BASE_URL;
@@ -184,7 +186,9 @@ export async function syncReviewStates() {
             saved.push(state);
           }
           continue;
-        } catch {}
+        } catch (error) {
+          logError("同步问题 review state 失败，回退到基本状态", "sync", error);
+        }
 
         const state = await saveReviewState({
           problemId,
@@ -327,7 +331,9 @@ export function setupAutoSync(intervalMinutes = 5) {
       try {
         await processSyncQueue();
         await syncAll();
-      } catch {}
+      } catch (error) {
+        logError("自动同步周期任务失败", "sync", error);
+      }
     })();
   }, intervalMs);
 

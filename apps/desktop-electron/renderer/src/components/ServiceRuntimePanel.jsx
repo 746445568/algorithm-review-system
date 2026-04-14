@@ -1,4 +1,6 @@
-export function ServiceRuntimePanel({ runtimeInfo, serviceStatus }) {
+import { memo } from "react";
+
+export const ServiceRuntimePanel = memo(function ServiceRuntimePanel({ runtimeInfo, serviceStatus }) {
   return (
     <section className="sidebar-runtime">
       <span className="section-label">运行时</span>
@@ -18,4 +20,4 @@ export function ServiceRuntimePanel({ runtimeInfo, serviceStatus }) {
       </dl>
     </section>
   );
-}
+});

@@ -20,6 +20,9 @@
       "bin/**/*",
       "package.json"
     ],
+    "asarUnpack": [
+      "bin/**/*"
+    ],
     "extraResources": [
       {
         "from": "bin",
@@ -73,9 +76,11 @@
     "electron-updater": "^6.8.3",
     "idb": "^8.0.3",
     "react": "^19.1.1",
-    "react-dom": "^19.1.1"
+    "react-dom": "^19.1.1",
+    "swr": "^2.4.1"
   },
   "devDependencies": {
+    "@playwright/test": "^1.59.1",
     "@vitejs/plugin-react": "^5.0.2",
     "electron": "^37.2.6",
     "electron-builder": "^25.0.0",

@@ -1,11 +1,14 @@
+import { memo, useMemo } from "react";
 import { formatDate, parseTags, platformLabel, statusLabel } from "../lib/format.js";
 import { desktopBridge } from "../lib/desktopBridge.js";
 
-export function ProblemDetailPanel({ selectedProblem, selectedProblemRecord }) {
-  const selectedTags =
+export const ProblemDetailPanel = memo(function ProblemDetailPanel({ selectedProblem, selectedProblemRecord }) {
+  const selectedTags = useMemo(() =>
     selectedProblem?.tags?.length > 0
       ? selectedProblem.tags
-      : parseTags(selectedProblemRecord?.rawTagsJson);
+      : parseTags(selectedProblemRecord?.rawTagsJson),
+    [selectedProblem?.tags, selectedProblemRecord?.rawTagsJson]
+  );
 
   return (
     <div className="panel review-summary-panel">
@@ -64,4 +67,4 @@ export function ProblemDetailPanel({ selectedProblem, selectedProblemRecord }) {
       )}
     </div>
   );
-}
+});

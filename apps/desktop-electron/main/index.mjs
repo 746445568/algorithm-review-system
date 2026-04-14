@@ -468,7 +468,7 @@ function createWindow() {
   if (rendererUrl) {
     window.loadURL(rendererUrl);
   } else {
-    window.loadFile(path.join(app.getAppPath(), "renderer", "dist", "index.html"));
+    window.loadFile(path.join(__dirname, "..", "renderer", "dist", "index.html"));
   }
 
   return window;

@@ -1,282 +1,120 @@
 import { useEffect, useState } from "react";
 import { api } from "../lib/api.js";
+import { StatCard } from "../components/statistics/StatCard.jsx";
+import { SubmissionChart } from "../components/statistics/SubmissionChart.jsx";
+import { TagAccuracyChart } from "../components/statistics/TagAccuracyChart.jsx";
+import { ReviewHeatmap } from "../components/statistics/ReviewHeatmap.jsx";
 
-// ─── helpers ───────────────────────────────────────────────────
-
-function clamp(v, lo, hi) {
-  return Math.max(lo, Math.min(hi, v));
-}
-
-// Parse "2026-W01" → week label "W01"
-function weekLabel(weekStr) {
-  return weekStr?.split("-")[1] ?? weekStr;
-}
-
-// ─── Submission Trend Line Chart (SVG) ─────────────────────────
-
-function SubmissionChart({ data }) {
-  if (!data || data.length === 0) {
-    return <p className="muted-text">暂无提交数据</p>;
-  }
-
-  const W = 600;
-  const H = 180;
-  const padL = 40;
-  const padR = 16;
-  const padT = 16;
-  const padB = 40;
-  const chartW = W - padL - padR;
-  const chartH = H - padT - padB;
-
-  const counts = data.map((d) => d.count);
-  const maxCount = Math.max(...counts, 1);
-  const n = data.length;
-
-  const xOf = (i) => padL + (i / Math.max(n - 1, 1)) * chartW;
-  const yOf = (v) => padT + chartH - (v / maxCount) * chartH;
-
-  const points = data.map((d, i) => `${xOf(i)},${yOf(d.count)}`).join(" ");
-
-  // Y-axis ticks: 0, half, max
-  const yTicks = [0, Math.round(maxCount / 2), maxCount];
-
+// ─── Icon Components ─────────────────────────────────────────
+function SubmissionIcon() {
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="chart-svg" aria-label="提交趋势折线图">
-      {/* Y-axis grid lines and labels */}
-      {yTicks.map((v) => {
-        const y = yOf(v);
-        return (
-          <g key={v}>
-            <line x1={padL} y1={y} x2={W - padR} y2={y} stroke="var(--line)" strokeWidth="1" />
-            <text x={padL - 6} y={y + 4} textAnchor="end" fontSize="11" fill="var(--muted)">
-              {v}
-            </text>
-          </g>
-        );
-      })}
-
-      {/* Polyline */}
-      <polyline
-        points={points}
-        fill="none"
-        stroke="#6366f1"
-        strokeWidth="2"
-        strokeLinejoin="round"
-        strokeLinecap="round"
-      />
-
-      {/* Data points */}
-      {data.map((d, i) => (
-        <circle key={i} cx={xOf(i)} cy={yOf(d.count)} r="4" fill="#6366f1" />
-      ))}
-
-      {/* X-axis labels — show every other label to avoid crowding */}
-      {data.map((d, i) => {
-        if (n > 8 && i % 2 !== 0) return null;
-        return (
-          <text
-            key={i}
-            x={xOf(i)}
-            y={H - 8}
-            textAnchor="middle"
-            fontSize="10"
-            fill="var(--muted)"
-          >
-            {weekLabel(d.week)}
-          </text>
-        );
-      })}
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+      <polyline points="14 2 14 8 20 8" />
+      <line x1="16" y1="13" x2="8" y2="13" />
+      <line x1="16" y1="17" x2="8" y2="17" />
+      <polyline points="10 9 9 9 8 9" />
     </svg>
   );
 }
 
-// ─── Tag Accuracy Bar Chart (SVG) ──────────────────────────────
-
-function TagAccuracyChart({ data }) {
-  if (!data || data.length === 0) {
-    return <p className="muted-text">暂无标签数据</p>;
-  }
-
-  // Sort ascending by accuracy
-  const sorted = [...data].sort((a, b) => {
-    const ra = a.total > 0 ? a.correct / a.total : 0;
-    const rb = b.total > 0 ? b.correct / b.total : 0;
-    return ra - rb;
-  });
-
-  const W = 700;
-  const H = 240;
-  const padL = 16;
-  const padR = 16;
-  const padT = 16;
-  const padB = 72; // room for rotated labels
-  const chartW = W - padL - padR;
-  const chartH = H - padT - padB;
-  const n = sorted.length;
-  const barW = clamp(Math.floor(chartW / n) - 4, 8, 40);
-
-  const xCenter = (i) => padL + (i + 0.5) * (chartW / n);
-  const accuracy = (d) => (d.total > 0 ? d.correct / d.total : 0);
-
+function AccuracyIcon() {
   return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="chart-svg" aria-label="标签正确率柱状图">
-      {/* Horizontal grid at 0%, 50%, 100% */}
-      {[0, 0.5, 1].map((frac) => {
-        const y = padT + chartH - frac * chartH;
-        return (
-          <g key={frac}>
-            <line x1={padL} y1={y} x2={W - padR} y2={y} stroke="var(--line)" strokeWidth="1" />
-            <text x={padL - 2} y={y + 4} textAnchor="end" fontSize="10" fill="var(--muted)">
-              {Math.round(frac * 100)}%
-            </text>
-          </g>
-        );
-      })}
-
-      {/* Bars */}
-      {sorted.map((d, i) => {
-        const acc = accuracy(d);
-        const barH = acc * chartH;
-        const x = xCenter(i) - barW / 2;
-        const y = padT + chartH - barH;
-        const color = acc >= 0.7 ? "#22c55e" : acc >= 0.4 ? "#f59e0b" : "#ef4444";
-        return (
-          <g key={d.tag}>
-            <rect x={x} y={y} width={barW} height={Math.max(barH, 1)} fill={color} rx="3" />
-            {/* Rotated X-axis label */}
-            <text
-              x={xCenter(i)}
-              y={padT + chartH + 8}
-              textAnchor="end"
-              fontSize="10"
-              fill="var(--muted)"
-              transform={`rotate(-45, ${xCenter(i)}, ${padT + chartH + 8})`}
-            >
-              {d.tag}
-            </text>
-          </g>
-        );
-      })}
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" />
+      <polyline points="22 4 12 14.01 9 11.01" />
     </svg>
   );
 }
 
-// ─── Review Heatmap (SVG) ──────────────────────────────────────
+function ReviewIcon() {
+  return (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+      <line x1="16" y1="2" x2="16" y2="6" />
+      <line x1="8" y1="2" x2="8" y2="6" />
+      <line x1="3" y1="10" x2="21" y2="10" />
+      <path d="M8 14h.01" />
+      <path d="M12 14h.01" />
+      <path d="M16 14h.01" />
+      <path d="M8 18h.01" />
+      <path d="M12 18h.01" />
+      <path d="M16 18h.01" />
+    </svg>
+  );
+}
 
-function ReviewHeatmap({ data }) {
-  // data: [{date: "2026-04-01", count: 3}, ...]
-  // Build a map for O(1) lookup
-  const countMap = new Map((data ?? []).map((d) => [d.date, d.count]));
-  const maxCount = Math.max(...(data ?? []).map((d) => d.count), 1);
+function StreakIcon() {
+  return (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z" />
+    </svg>
+  );
+}
 
-  // Build 91 days ending today
+// ─── Helper Functions ───────────────────────────────────────
+
+function calculateStreak(dailyData) {
+  if (!dailyData || dailyData.length === 0) return 0;
+
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  const days = [];
-  for (let i = 90; i >= 0; i--) {
-    const d = new Date(today);
-    d.setDate(d.getDate() - i);
-    days.push(d);
+
+  const reviewDates = new Set(dailyData.map(d => d.date));
+  let streak = 0;
+  let checkDate = new Date(today);
+
+  // Check if today has a review, if not start from yesterday
+  const todayStr = formatDateStr(today);
+  if (!reviewDates.has(todayStr)) {
+    checkDate.setDate(checkDate.getDate() - 1);
   }
 
-  // Grid: 13 cols × 7 rows (7 days/week)
-  const COLS = 13;
-  const ROWS = 7;
-  const W = 780;
-  const padL = 28; // room for weekday labels
-  const padT = 20; // room for week labels
-  const cellSize = Math.floor((W - padL) / COLS);
-  const gutter = 3;
-  const cell = cellSize - gutter;
-  const H = padT + ROWS * (cell + gutter) + 16;
+  while (true) {
+    const dateStr = formatDateStr(checkDate);
+    if (reviewDates.has(dateStr)) {
+      streak++;
+      checkDate.setDate(checkDate.getDate() - 1);
+    } else {
+      break;
+    }
+  }
 
-  const toDateStr = (d) => {
-    const y = d.getFullYear();
-    const m = String(d.getMonth() + 1).padStart(2, "0");
-    const day = String(d.getDate()).padStart(2, "0");
-    return `${y}-${m}-${day}`;
-  };
-
-  // Pad front so day[0] lands on its weekday column
-  const firstDay = days[0];
-  const weekdayOfFirst = firstDay.getDay(); // 0=Sun
-  const paddedDays = Array(weekdayOfFirst).fill(null).concat(days);
-
-  const totalCols = Math.ceil(paddedDays.length / 7);
-  const weekdayLabels = ["日", "一", "二", "三", "四", "五", "六"];
-
-  return (
-    <svg viewBox={`0 0 ${W} ${H}`} className="chart-svg heatmap-svg" aria-label="复习热力图">
-      {/* Weekday labels */}
-      {weekdayLabels.map((label, i) => (
-        <text
-          key={i}
-          x={padL - 4}
-          y={padT + i * (cell + gutter) + cell / 2 + 4}
-          textAnchor="end"
-          fontSize="9"
-          fill="var(--muted)"
-        >
-          {label}
-        </text>
-      ))}
-
-      {/* Cells */}
-      {paddedDays.map((d, idx) => {
-        if (d === null) return null;
-        const col = Math.floor(idx / 7);
-        const row = idx % 7;
-        const dateStr = toDateStr(d);
-        const count = countMap.get(dateStr) ?? 0;
-        const opacity = count === 0 ? 0.08 : 0.2 + 0.8 * clamp(count / maxCount, 0, 1);
-        const x = padL + col * (cell + gutter);
-        const y = padT + row * (cell + gutter);
-        return (
-          <rect
-            key={dateStr}
-            x={x}
-            y={y}
-            width={cell}
-            height={cell}
-            rx="2"
-            fill="#6366f1"
-            opacity={opacity}
-            className="heatmap-cell"
-          >
-            <title>{`${dateStr}: ${count} 次复习`}</title>
-          </rect>
-        );
-      })}
-
-      {/* Column (week) labels: show month/day for first cell of each month */}
-      {Array.from({ length: totalCols }, (_, col) => {
-        const idx = col * 7;
-        const d = paddedDays[idx];
-        if (!d) return null;
-        if (d.getDate() > 7 && col !== 0) return null; // only show near start of month
-        const label = `${d.getMonth() + 1}/${d.getDate()}`;
-        return (
-          <text
-            key={col}
-            x={padL + col * (cell + gutter) + cell / 2}
-            y={padT - 5}
-            textAnchor="middle"
-            fontSize="9"
-            fill="var(--muted)"
-          >
-            {label}
-          </text>
-        );
-      })}
-    </svg>
-  );
+  return streak;
 }
 
-// ─── Page ──────────────────────────────────────────────────────
+function formatDateStr(d) {
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, "0");
+  const day = String(d.getDate()).padStart(2, "0");
+  return `${y}-${m}-${day}`;
+}
+
+function calculateStats(submissionStats, reviewStats, reviewSummary) {
+  // Total submissions
+  const totalSubmissions = (submissionStats?.weekly ?? []).reduce((sum, w) => sum + (w.count || 0), 0);
+
+  // AC rate
+  const acCount = (submissionStats?.weekly ?? []).reduce((sum, w) => sum + (w.acCount || 0), 0);
+  const acRate = totalSubmissions > 0 ? Math.round(100 * acCount / totalSubmissions) : 0;
+
+  // Review completion rate
+  const totalReviews = reviewSummary?.total ?? 0;
+  const completedReviews = reviewSummary?.completed ?? 0;
+  const reviewRate = totalReviews > 0 ? Math.round(100 * completedReviews / totalReviews) : 0;
+
+  // Streak
+  const streak = calculateStreak(reviewStats?.daily ?? []);
+
+  return { totalSubmissions, acRate, reviewRate, streak };
+}
+
+// ─── Page ───────────────────────────────────────────────────
 
 export function StatisticsPage() {
   const [submissionStats, setSubmissionStats] = useState(null);
   const [reviewStats, setReviewStats] = useState(null);
+  const [reviewSummary, setReviewSummary] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -285,11 +123,16 @@ export function StatisticsPage() {
     setLoading(true);
     setError(null);
 
-    Promise.all([api.getSubmissionStats(), api.getReviewStats()])
-      .then(([sub, rev]) => {
+    Promise.all([
+      api.getSubmissionStats(),
+      api.getReviewStats(),
+      api.getReviewSummary(),
+    ])
+      .then(([sub, rev, summary]) => {
         if (cancelled) return;
         setSubmissionStats(sub);
         setReviewStats(rev);
+        setReviewSummary(summary);
       })
       .catch((err) => {
         if (cancelled) return;
@@ -307,6 +150,15 @@ export function StatisticsPage() {
   if (loading) {
     return (
       <div className="page-content statistics-page">
+        <div className="stats-summary-grid">
+          {[1, 2, 3, 4].map((i) => (
+            <div key={i} className="stat-card stat-card--skeleton">
+              <div className="skeleton-line" style={{ width: "40%", height: 24, marginBottom: 8 }} />
+              <div className="skeleton-line" style={{ width: "60%", height: 32, marginBottom: 8 }} />
+              <div className="skeleton-line" style={{ width: "30%", height: 14 }} />
+            </div>
+          ))}
+        </div>
         {[1, 2, 3].map((i) => (
           <section key={i} className="panel chart-wrap">
             <div className="skeleton-line" style={{ width: "40%", height: 14, marginBottom: 12 }} />
@@ -327,22 +179,73 @@ export function StatisticsPage() {
     );
   }
 
+  const stats = calculateStats(submissionStats, reviewStats, reviewSummary);
+
+  // Transform weekly data for chart
+  const weeklyData = (submissionStats?.weekly ?? []).map(w => ({
+    week: w.week,
+    count: w.total || w.count || 0,
+    acCount: w.acCount || 0,
+  }));
+
+  // Transform tag accuracy data
+  const tagData = (reviewStats?.tagAccuracy ?? []).map(t => ({
+    tag: t.tag,
+    total: t.attempts || t.total || 0,
+    correct: t.acCount || t.correct || 0,
+  }));
+
   return (
     <div className="page-content statistics-page">
+      {/* Summary Cards */}
+      <div className="stats-summary-grid">
+        <StatCard
+          title="总提交数"
+          value={stats.totalSubmissions}
+          subtitle="近12周累计"
+          icon={<SubmissionIcon />}
+        />
+        <StatCard
+          title="AC 率"
+          value={`${stats.acRate}%`}
+          subtitle="通过提交占比"
+          icon={<AccuracyIcon />}
+          trend={stats.acRate >= 50 ? "良好" : "待提升"}
+          trendUp={stats.acRate >= 50}
+        />
+        <StatCard
+          title="复习完成率"
+          value={`${stats.reviewRate}%`}
+          subtitle={`${reviewSummary?.completed ?? 0}/${reviewSummary?.total ?? 0} 题`}
+          icon={<ReviewIcon />}
+        />
+        <StatCard
+          title="连续复习"
+          value={`${stats.streak} 天`}
+          subtitle={stats.streak > 0 ? "保持势头!" : "开始复习吧"}
+          icon={<StreakIcon />}
+          trend={stats.streak >= 7 ? "优秀" : null}
+          trendUp={stats.streak >= 7}
+        />
+      </div>
+
+      {/* Submission Trend Chart */}
       <section className="panel chart-wrap">
         <h3>提交趋势（近12周）</h3>
-        <SubmissionChart data={submissionStats?.weekly ?? []} />
+        <SubmissionChart data={weeklyData} />
       </section>
 
-      <section className="panel chart-wrap">
-        <h3>标签正确率</h3>
-        <TagAccuracyChart data={reviewStats?.tagAccuracy ?? []} />
-      </section>
-
-      <section className="panel chart-wrap">
-        <h3>复习热力图（近91天）</h3>
-        <ReviewHeatmap data={reviewStats?.daily ?? []} />
-      </section>
+      {/* Bottom Charts Row */}
+      <div className="charts-row">
+        <section className="panel chart-wrap">
+          <h3>标签正确率</h3>
+          <TagAccuracyChart data={tagData} />
+        </section>
+        <section className="panel chart-wrap">
+          <h3>复习热力图（近91天）</h3>
+          <ReviewHeatmap data={reviewStats?.daily ?? []} />
+        </section>
+      </div>
     </div>
   );
 }

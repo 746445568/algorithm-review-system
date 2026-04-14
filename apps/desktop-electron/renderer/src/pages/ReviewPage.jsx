@@ -1,58 +1,12 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { api } from "../lib/api.js";
-import { parseTags } from "../lib/format.js";
+import { useCallback, useMemo, useState } from "react";
+import { ErrorBoundary } from "../components/ErrorBoundary.jsx";
+import { ErrorPageFallback } from "../components/ErrorPageFallback.jsx";
 import { ReviewList } from "./ReviewList.jsx";
 import { ReviewDetail } from "./ReviewDetail.jsx";
-
-function buildReviewStats(problemSummaries = []) {
-  const counts = { TODO: 0, REVIEWING: 0, SCHEDULED: 0, DONE: 0 };
-  let dueReviewCount = 0;
-  let scheduledReviewCount = 0;
-  const now = Date.now();
-
-  for (const item of problemSummaries) {
-    const status = (item.reviewStatus || "TODO").toUpperCase();
-    if (counts[status] !== undefined) counts[status]++;
-    if (item.nextReviewAt) {
-      scheduledReviewCount++;
-      const t = new Date(item.nextReviewAt).getTime();
-      if (!Number.isNaN(t) && t <= now) dueReviewCount++;
-    }
-  }
-  return { counts, dueReviewCount, scheduledReviewCount };
-}
-
-function applyReviewState(summary, problemId, savedState) {
-  if (!summary?.problemSummaries?.length) return summary;
-  const now = Date.now();
-
-  const nextProblemSummaries = summary.problemSummaries.map((item) => {
-    if (item.problemId !== problemId) return item;
-    const nextReviewAt = savedState.nextReviewAt || null;
-    const nextReviewTime = nextReviewAt ? new Date(nextReviewAt).getTime() : Number.NaN;
-    return {
-      ...item,
-      reviewStatus: savedState.status || "TODO",
-      nextReviewAt,
-      lastReviewUpdatedAt: savedState.lastUpdatedAt || null,
-      reviewDue: !Number.isNaN(nextReviewTime) && nextReviewTime <= now,
-    };
-  });
-
-  const stats = buildReviewStats(nextProblemSummaries);
-  return {
-    ...summary,
-    problemSummaries: nextProblemSummaries,
-    reviewStatusCounts: stats.counts,
-    dueReviewCount: stats.dueReviewCount,
-    scheduledReviewCount: stats.scheduledReviewCount,
-  };
-}
+import { useReviewData } from "../hooks/useReviewData.js";
+import { parseTags } from "../lib/format.js";
 
 export function ReviewPage({ serviceStatus, runtimeInfo, onNavigate }) {
-  const [summary, setSummary] = useState(null);
-  const [problems, setProblems] = useState([]);
-  const [submissions, setSubmissions] = useState([]);
   const [filters, setFilters] = useState({
     search: "",
     platform: "",
@@ -62,40 +16,20 @@ export function ReviewPage({ serviceStatus, runtimeInfo, onNavigate }) {
     onlyUnsolved: true,
   });
   const [selectedProblemId, setSelectedProblemId] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const seqRef = useRef(0);
 
-  const refresh = useCallback(async () => {
-    const reqId = ++seqRef.current;
-    if (serviceStatus.state !== "healthy") { setLoading(false); return; }
-    setLoading(true);
-    setError("");
-    try {
-      const [reviewSummary, problemItems, submissionItems] = await Promise.all([
-        api.getReviewSummary(),
-        api.getProblems({ limit: 200 }),
-        api.getSubmissions({ limit: 300 }),
-      ]);
-      if (reqId !== seqRef.current) return;
-      setSummary(reviewSummary);
-      setProblems(problemItems);
-      setSubmissions(submissionItems);
-      setSelectedProblemId((cur) =>
-        cur ?? reviewSummary?.problemSummaries?.[0]?.problemId ?? null
-      );
-    } catch (err) {
-      if (reqId !== seqRef.current) return;
-      setError(err.message);
-    } finally {
-      if (reqId === seqRef.current) setLoading(false);
-    }
-  }, [serviceStatus.state]);
-
-  useEffect(() => { void refresh(); }, [refresh]);
+  // 使用 SWR 获取 Review 数据
+  const {
+    reviewSummary,
+    problems,
+    submissions,
+    error,
+    isLoading,
+    mutate,
+    updateReviewState,
+  } = useReviewData(serviceStatus);
 
   const filteredProblems = useMemo(() => {
-    const items = summary?.problemSummaries ?? [];
+    const items = reviewSummary?.problemSummaries ?? [];
     const needle = filters.search.trim().toLowerCase();
 
     return items
@@ -122,9 +56,9 @@ export function ReviewPage({ serviceStatus, runtimeInfo, onNavigate }) {
         const bt = b.lastSubmittedAt ? new Date(b.lastSubmittedAt).getTime() : 0;
         return bt - at;
       });
-  }, [summary, filters]);
+  }, [reviewSummary, filters]);
 
-  useEffect(() => {
+  React.useEffect(() => {
     setSelectedProblemId((cur) => {
       if (filteredProblems.some((item) => item.problemId === cur)) return cur;
       return filteredProblems[0]?.problemId ?? null;
@@ -139,13 +73,23 @@ export function ReviewPage({ serviceStatus, runtimeInfo, onNavigate }) {
       ? selectedProblem.tags
       : parseTags(selectedProblemRecord?.rawTagsJson);
 
-  const reviewCounts = summary?.reviewStatusCounts ?? {};
+  const reviewCounts = reviewSummary?.reviewStatusCounts ?? {};
   const doneCount = (reviewCounts.DONE ?? 0) + (reviewCounts.SCHEDULED ?? 0);
-  const totalCount = summary?.problemSummaries?.length ?? 0;
+  const totalCount = reviewSummary?.problemSummaries?.length ?? 0;
 
-  function handleReviewSaved(savedState) {
-    setSummary((cur) => applyReviewState(cur, selectedProblemId, savedState));
+  // 使用 SWR 的乐观更新
+  async function handleReviewSaved(savedState) {
+    try {
+      await updateReviewState(selectedProblemId, savedState);
+    } catch (err) {
+      console.error("updateReviewState failed:", err);
+    }
   }
+
+  // 手动刷新（用于 Refresh 按钮）
+  const refresh = useCallback(async () => {
+    await mutate();
+  }, [mutate]);
 
   return (
     <div className="review-layout">
@@ -155,26 +99,28 @@ export function ReviewPage({ serviceStatus, runtimeInfo, onNavigate }) {
         onSelect={setSelectedProblemId}
         filters={filters}
         onFiltersChange={setFilters}
-        loading={loading}
-        error={error}
+        loading={isLoading && !reviewSummary}
+        error={error?.message || ""}
         onRefresh={refresh}
         serviceUnavailable={serviceStatus.state !== "healthy"}
-        dueCount={summary?.dueReviewCount ?? 0}
+        dueCount={reviewSummary?.dueReviewCount ?? 0}
         doneCount={doneCount}
         totalCount={totalCount}
       />
-      <ReviewDetail
-        selectedProblem={selectedProblem}
-        selectedProblemRecord={selectedProblemRecord}
-        selectedSubmissions={selectedSubmissions}
-        selectedTags={selectedTags}
-        serviceStatus={serviceStatus}
-        runtimeInfo={runtimeInfo}
-        filteredProblems={filteredProblems}
-        onSelect={setSelectedProblemId}
-        onReviewSaved={handleReviewSaved}
-        onNavigate={onNavigate}
-      />
+      <ErrorBoundary moduleName="ReviewDetail" fallback={<ErrorPageFallback />}>
+        <ReviewDetail
+          selectedProblem={selectedProblem}
+          selectedProblemRecord={selectedProblemRecord}
+          selectedSubmissions={selectedSubmissions}
+          selectedTags={selectedTags}
+          serviceStatus={serviceStatus}
+          runtimeInfo={runtimeInfo}
+          filteredProblems={filteredProblems}
+          onSelect={setSelectedProblemId}
+          onReviewSaved={handleReviewSaved}
+          onNavigate={onNavigate}
+        />
+      </ErrorBoundary>
     </div>
   );
 }

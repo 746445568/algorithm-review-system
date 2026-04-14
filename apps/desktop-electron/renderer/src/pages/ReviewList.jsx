@@ -1,4 +1,4 @@
-import { memo } from "react";
+import { memo, useCallback } from "react";
 import { formatDate, platformLabel, statusLabel, verdictTone } from "../lib/format.js";
 
 function SkeletonCard() {
@@ -17,7 +17,7 @@ const STATUS_CHIP_CLASS = {
   DONE: "rl-chip-good",
 };
 
-export function ReviewList({
+export const ReviewList = memo(function ReviewList({
   problems,
   selectedProblemId,
   onSelect,
@@ -33,9 +33,33 @@ export function ReviewList({
 }) {
   const progress = totalCount > 0 ? Math.round((doneCount / totalCount) * 100) : 0;
 
-  function setFilter(key, value) {
+  const setFilter = useCallback((key, value) => {
     onFiltersChange((prev) => ({ ...prev, [key]: value }));
-  }
+  }, [onFiltersChange]);
+
+  const handleRefresh = useCallback(() => {
+    void onRefresh();
+  }, [onRefresh]);
+
+  const handleSearchChange = useCallback((e) => {
+    setFilter("search", e.target.value);
+  }, [setFilter]);
+
+  const handleReviewStatusChange = useCallback((e) => {
+    setFilter("reviewStatus", e.target.value);
+  }, [setFilter]);
+
+  const handlePlatformChange = useCallback((e) => {
+    setFilter("platform", e.target.value);
+  }, [setFilter]);
+
+  const handleSortByChange = useCallback((e) => {
+    setFilter("sortBy", e.target.value);
+  }, [setFilter]);
+
+  const handleOnlyUnsolvedChange = useCallback((e) => {
+    setFilter("onlyUnsolved", e.target.checked);
+  }, [setFilter]);
 
   return (
     <section className="panel rl-panel">
@@ -47,7 +71,7 @@ export function ReviewList({
         <button
           type="button"
           className="rl-refresh-btn"
-          onClick={() => void onRefresh()}
+          onClick={handleRefresh}
           disabled={serviceUnavailable}
           title="刷新"
         >
@@ -77,24 +101,24 @@ export function ReviewList({
             className="rl-search"
             value={filters.search}
             placeholder="搜索题目…"
-            onChange={(e) => setFilter("search", e.target.value)}
+            onChange={handleSearchChange}
           />
         </div>
 
         <div className="rl-selects">
-          <select className="rl-select" value={filters.reviewStatus} onChange={(e) => setFilter("reviewStatus", e.target.value)}>
+          <select className="rl-select" value={filters.reviewStatus} onChange={handleReviewStatusChange}>
             <option value="">全部状态</option>
             <option value="TODO">待复习</option>
             <option value="REVIEWING">复习中</option>
             <option value="SCHEDULED">已排期</option>
             <option value="DONE">已完成</option>
           </select>
-          <select className="rl-select" value={filters.platform} onChange={(e) => setFilter("platform", e.target.value)}>
+          <select className="rl-select" value={filters.platform} onChange={handlePlatformChange}>
             <option value="">全部平台</option>
             <option value="CODEFORCES">CF</option>
             <option value="ATCODER">AC</option>
           </select>
-          <select className="rl-select" value={filters.sortBy} onChange={(e) => setFilter("sortBy", e.target.value)}>
+          <select className="rl-select" value={filters.sortBy} onChange={handleSortByChange}>
             <option value="lastSubmitted">最近提交</option>
             <option value="nextReview">复习时间</option>
           </select>
@@ -104,7 +128,7 @@ export function ReviewList({
           <input
             type="checkbox"
             checked={filters.onlyUnsolved}
-            onChange={(e) => setFilter("onlyUnsolved", e.target.checked)}
+            onChange={handleOnlyUnsolvedChange}
           />
           <span>仅显示未通过</span>
         </label>
@@ -146,7 +170,7 @@ export function ReviewList({
       </div>
     </section>
   );
-}
+});
 
 const ProblemCard = memo(function ProblemCard({ item, active, index, onSelect }) {
   const statusKey = (item.reviewStatus || "TODO").toUpperCase();
