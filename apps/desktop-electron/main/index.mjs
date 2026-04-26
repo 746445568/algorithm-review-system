@@ -22,13 +22,10 @@ const SERVICE_URL = "http://127.0.0.1:38473";
 const SERVICE_NAME = process.platform === "win32" ? "ojreviewd.exe" : "ojreviewd";
 const isDev = !app.isPackaged;
 
-app.commandLine.appendSwitch("disable-gpu");
 app.commandLine.appendSwitch("no-sandbox");
-app.commandLine.appendSwitch("disable-software-rasterizer");
 app.commandLine.appendSwitch("in-process-gpu");
 app.commandLine.appendSwitch("disable-gpu-sandbox");
 app.setName("OJReviewDesktop");
-app.disableHardwareAcceleration();
 
 function parseMajorVersion(versionText) {
   if (!versionText || typeof versionText !== "string") {

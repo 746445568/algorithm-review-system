@@ -18,9 +18,7 @@ const bootstrapProbePrefix = "[ojreview-bootstrap]";
 const { strippedEntries } = createElectronProcessEnv();
 const electronArgs = [
   appRoot,
-  "--disable-gpu",
   "--no-sandbox",
-  "--disable-software-rasterizer",
   "--in-process-gpu",
   "--disable-gpu-sandbox",
 ];

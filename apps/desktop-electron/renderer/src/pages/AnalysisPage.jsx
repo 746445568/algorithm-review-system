@@ -1,18 +1,21 @@
-import { useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useNavigation } from "../lib/NavigationContext.jsx";
 import { getAnalysisErrorMessage } from "../lib/runtimeStatus.js";
 import { useAnalysisTaskWithPoll } from "../hooks/useAnalysisTask.js";
 import { Toast } from "../components/Analysis/Toast.jsx";
-import { GlobalAnalysis } from "../components/Analysis/GlobalAnalysis.jsx";
+import { AiHero } from "../components/Analysis/AiHero.jsx";
+import { DiagnosisReport } from "../components/Analysis/DiagnosisReport.jsx";
 import { ProblemAnalysis } from "../components/Analysis/ProblemAnalysis.jsx";
+import { RecommendedProblems } from "../components/Analysis/RecommendedProblems.jsx";
 import { AnalysisColumn } from "../components/Analysis/AnalysisColumn.jsx";
 import { api } from "../lib/api.js";
+import "../styles/ui-analysis.css";
 
 /**
- * AnalysisPage 主容器组件
- * 使用 SWR 管理分析任务状态
+ * AnalysisPage 主容器组件 (Design v2)
+ * 使用 SWR 管理分析任务状态，采用分栏卡片布局
  */
-export function AnalysisPage() {
+export function AnalysisPage({ serviceStatus, runtimeInfo }) {
   const { navigateTo, navigationState } = useNavigation();
 
   // Global report state
@@ -33,10 +36,10 @@ export function AnalysisPage() {
   // Toast state
   const [toast, setToast] = useState(null);
 
-  // Ref for problem submit flag (must be defined before hook calls)
+  // Ref for problem submit flag
   const problemSubmitRef = useRef(false);
 
-  // 使用 SWR 轮询 hooks - 只在 taskId 存在时开始轮询
+  // 使用 SWR 轮询 hooks
   const {
     task: globalTask,
     isLoading: globalLoading,
@@ -58,7 +61,7 @@ export function AnalysisPage() {
   }, []);
 
   // Auto-trigger single problem analysis from navigation state
-  React.useEffect(() => {
+  useEffect(() => {
     if (navigationState?.problemId) {
       setSelectedProblemId(navigationState.problemId);
       handleGenerateProblemAnalysis(navigationState.problemId);
@@ -72,10 +75,6 @@ export function AnalysisPage() {
     try {
       const { task } = await api.generateAnalysis({ period });
       setGlobalTaskId(task.id);
-      if (task.status === "SUCCESS" || task.status === "FAILED") {
-        // 任务已完成，清理 taskId
-        setTimeout(() => setGlobalTaskId(null), 5000);
-      }
     } catch (err) {
       setGlobalError(getAnalysisErrorMessage(err.message));
     }
@@ -88,9 +87,6 @@ export function AnalysisPage() {
     try {
       const { task } = await api.generateComparisonAnalysis({ period });
       setCompTaskId(task.id);
-      if (task.status === "SUCCESS" || task.status === "FAILED") {
-        setTimeout(() => setCompTaskId(null), 5000);
-      }
     } catch (err) {
       setCompError(getAnalysisErrorMessage(err.message));
     }
@@ -104,10 +100,6 @@ export function AnalysisPage() {
     try {
       const { task } = await api.generateProblemAnalysis(problemId, {});
       setProblemTaskId(task.id);
-      if (task.status === "SUCCESS" || task.status === "FAILED") {
-        problemSubmitRef.current = false;
-        setTimeout(() => setProblemTaskId(null), 5000);
-      }
     } catch (err) {
       problemSubmitRef.current = false;
       setProblemError(getAnalysisErrorMessage(err.message));
@@ -115,60 +107,71 @@ export function AnalysisPage() {
   }
 
   // Cleanup task IDs after completion
-  React.useEffect(() => {
+  useEffect(() => {
     if (globalTask?.status === "SUCCESS" || globalTask?.status === "FAILED") {
-      const timer = setTimeout(() => setGlobalTaskId(null), 10000);
+      const timer = setTimeout(() => setGlobalTaskId(null), 15000);
       return () => clearTimeout(timer);
     }
   }, [globalTask?.status]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (compTask?.status === "SUCCESS" || compTask?.status === "FAILED") {
-      const timer = setTimeout(() => setCompTaskId(null), 10000);
+      const timer = setTimeout(() => setCompTaskId(null), 15000);
       return () => clearTimeout(timer);
     }
   }, [compTask?.status]);
 
-  React.useEffect(() => {
+  useEffect(() => {
     if (problemTask?.status === "SUCCESS" || problemTask?.status === "FAILED") {
       problemSubmitRef.current = false;
-      const timer = setTimeout(() => setProblemTaskId(null), 10000);
+      const timer = setTimeout(() => setProblemTaskId(null), 15000);
       return () => clearTimeout(timer);
     }
   }, [problemTask?.status]);
 
   return (
-    <div className="an-container">
+    <div className="an-container page-content ai-page">
       {/* Header */}
-      <div className="an-header">
+      <header className="an-header">
         <button
           type="button"
           className="an-back-btn"
           onClick={() => navigateTo("dashboard")}
           title="返回仪表盘"
         >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <polyline points="15 18 9 12 15 6" />
           </svg>
-          返回
+          <span>仪表盘</span>
         </button>
-        <h2 className="an-title">AI 分析</h2>
-      </div>
+        <h2 className="an-title">AI 分析洞察</h2>
+      </header>
 
-      {/* Main content - two columns */}
-      <div className="an-main">
+      {/* Main content grid */}
+      <div className="an-main ai-layout">
         <AnalysisColumn side="left">
-          <GlobalAnalysis
+          <AiHero
             period={period}
             setPeriod={setPeriod}
             globalTask={globalTask}
             globalLoading={globalLoading}
-            globalError={globalError}
             onGenerateGlobal={handleGenerateGlobalAnalysis}
-            compTask={compTask}
-            compLoading={compLoading}
-            compError={compError}
-            onGenerateComparison={handleGenerateComparison}
+          />
+
+          <DiagnosisReport
+            title="本周诊断结论"
+            priority="high"
+            priorityLabel="优先处理"
+            type="diagnosis"
+            globalTask={globalTask}
+          />
+
+          <DiagnosisReport
+            title="下周训练建议"
+            priority="mid"
+            priorityLabel="建议执行"
+            type="suggestions"
+            globalTask={globalTask}
           />
         </AnalysisColumn>
 
@@ -182,6 +185,8 @@ export function AnalysisPage() {
             problemError={problemError}
             onGenerateProblem={handleGenerateProblemAnalysis}
           />
+
+          <RecommendedProblems globalTask={globalTask} />
         </AnalysisColumn>
       </div>
 

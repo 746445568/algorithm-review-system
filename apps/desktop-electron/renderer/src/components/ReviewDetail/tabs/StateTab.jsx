@@ -54,7 +54,7 @@ export const StateTab = React.memo(function StateTab({
         </div>
       </div>
 
-      <div className="rd-field">
+      <div className="rd-field rd-rating-field">
         <span className="rd-label">间隔重复评分</span>
         <div className="rd-rate-btns">
           {RATE_OPTIONS.map((opt) => (

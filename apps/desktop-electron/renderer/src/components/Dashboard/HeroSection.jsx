@@ -1,77 +1,49 @@
 import { memo } from "react";
-import { statusLabel } from "../../lib/format.js";
 
-export const HeroSection = memo(function HeroSection({ serviceStatus, connectivity, data, latestAnalysis, navigateTo }) {
+export const HeroSection = memo(function HeroSection({ data, navigateTo, loading }) {
+  const dueCount = data.reviewSummary?.dueReviewCount ?? 0;
+  const scheduledCount = data.reviewSummary?.scheduledReviewCount ?? 0;
+  const totalSubmissions = data.reviewSummary?.totalSubmissions ?? 0;
+  const totalToday = dueCount + scheduledCount;
+  const progress = totalToday > 0 ? Math.min(100, Math.round((scheduledCount / totalToday) * 100)) : 0;
+
   return (
-    <>
-      <section className="dash-ai-card">
-        <div className="dash-ai-header">
-          <span className="dash-ai-title">🤖 AI 分析</span>
-          {latestAnalysis ? (
-            <span className="muted">{latestAnalysis.period === "week" ? "本周" : "本月"} · {new Date(latestAnalysis.updatedAt).toLocaleString('zh-CN')}</span>
-          ) : (
-            <span className="muted">暂无历史记录</span>
-          )}
+    <div className="dash-hero">
+      <div className="dash-hero-content">
+        <div className="dash-hero-label">今日任务</div>
+        <div className="dash-hero-count">{loading ? "—" : dueCount}</div>
+        <div className="dash-hero-sub">题目待复盘</div>
+        <button
+          type="button"
+          className="dash-hero-cta"
+          onClick={() => navigateTo("reviews")}
+        >
+          ▷ 开始今日复习
+        </button>
+        <div className="dash-hero-progress">
+          <div className="dash-hero-progress-label">
+            <span>今日复习进度</span>
+            <span>{scheduledCount}/{totalToday} 题完成</span>
+          </div>
+          <div className="dash-hero-track">
+            <div className="dash-hero-fill" style={{ width: `${progress}%` }} />
+          </div>
         </div>
-        {latestAnalysis ? (
-          <>
-            <p className="dash-ai-preview">
-              {latestAnalysis.resultText?.slice(0, 80)}…
-            </p>
-            <button
-              type="button"
-              className="ghost-button"
-              onClick={() => navigateTo("analysis")}
-            >
-              进入分析页 →
-            </button>
-          </>
-        ) : (
-          <button
-            type="button"
-            className="primary-button"
-            onClick={() => navigateTo("analysis")}
-          >
-            生成首份分析
-          </button>
-        )}
-      </section>
-
-      <section className="panel hero-panel">
-        <div className="hero-copy">
-          <span className="section-label">
-            {serviceStatus.state === "healthy" ? "已连接" : "连接中"}
-          </span>
-          <h3>
-            {serviceStatus.state === "healthy"
-              ? `欢迎回来，${data.accounts[0]?.externalHandle || "开发者"}`
-              : "OJ 错题复盘 正在启动"}
-          </h3>
-          <p>
-            {serviceStatus.state === "healthy"
-              ? `当前有 ${data.reviewSummary?.dueReviewCount ?? 0} 道题目等待复习，${data.reviewSummary?.totalSubmissions ?? 0} 次提交记录已同步。`
-              : "正在连接本地 Go 服务..."}
-          </p>
-        </div>
-        <div className="hero-stats">
-          <div className={serviceStatus.state === "healthy" ? "stat-good" : ""}>
-            <span>服务状态</span>
-            <strong>{statusLabel(serviceStatus.state)}</strong>
+        <div className="dash-hero-stats">
+          <div>
+            <div className="dash-hero-stat-val">{totalSubmissions}</div>
+            <div className="dash-hero-stat-label">总提交数</div>
           </div>
           <div>
-            <span>网络判定</span>
-            <strong>{connectivity === "service-unreachable" ? "服务不可达" : connectivity === "offline" ? "离线" : "在线"}</strong>
-          </div>
-          <div className={data.reviewSummary?.dueReviewCount > 0 ? "stat-accent" : ""}>
-            <span>待复习</span>
-            <strong>{data.reviewSummary?.dueReviewCount ?? 0}</strong>
+            <div className="dash-hero-stat-val">{data.accounts?.length ?? 0}</div>
+            <div className="dash-hero-stat-label">已绑平台</div>
           </div>
           <div>
-            <span>待同步操作</span>
-            <strong>{data.syncTasks.length}</strong>
+            <div className="dash-hero-stat-val">{data.goals?.length ?? 0}</div>
+            <div className="dash-hero-stat-label">进行中目标</div>
           </div>
         </div>
-      </section>
-    </>
+      </div>
+    </div>
   );
 });

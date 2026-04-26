@@ -15,18 +15,11 @@ const providerOptions = [
   { value: "ollama", label: "Ollama" },
 ];
 
-const themeOptions = [
-  { value: "follow-system", label: "跟随系统" },
-  { value: "light", label: "浅色" },
-  { value: "dark", label: "深色" },
-];
-
-export function SettingsPage({ runtimeInfo, serviceStatus, themeMode, onThemeChange }) {
+export function SettingsPage({ runtimeInfo, serviceStatus }) {
   const [aiSettings, setAISettings] = useState(defaultAISettings);
   const [loading, setLoading] = useState(true);
   const [savingAI, setSavingAI] = useState(false);
   const [testingAI, setTestingAI] = useState(false);
-  const [savingTheme, setSavingTheme] = useState(false);
   const [diagExporting, setDiagExporting] = useState(false);
   const [diagPath, setDiagPath] = useState("");
   const [testResult, setTestResult] = useState(null);
@@ -125,24 +118,6 @@ export function SettingsPage({ runtimeInfo, serviceStatus, themeMode, onThemeCha
     }
   }
 
-  async function saveThemeSettings() {
-    setSavingTheme(true);
-    setError("");
-    setNotice("");
-
-    try {
-      onThemeChange(themeMode);
-      if (serviceStatus.state === "healthy") {
-        await api.saveThemeSettings(themeMode);
-      }
-      setNotice("主题偏好已保存。");
-    } catch (nextError) {
-      setError(nextError.message);
-    } finally {
-      setSavingTheme(false);
-    }
-  }
-
   async function exportDiagnostics() {
     setDiagExporting(true);
     setError("");
@@ -161,8 +136,8 @@ export function SettingsPage({ runtimeInfo, serviceStatus, themeMode, onThemeCha
   }
 
   return (
-    <div className="page-grid two-column">
-      <section className="panel">
+    <div className="settings-grid page-grid two-column">
+      <section className="panel settings-wide">
         <div className="panel-header">
           <h3>运行时信息</h3>
           <span className="caption">本地服务和存储布局</span>
@@ -378,39 +353,6 @@ export function SettingsPage({ runtimeInfo, serviceStatus, themeMode, onThemeCha
         </div>
       </section>
 
-      <section className="panel">
-        <div className="panel-header">
-          <h3>外观</h3>
-          <span className="caption">保存在本地应用设置中</span>
-        </div>
-        <div className="form-stack">
-          <label>
-            <span>主题模式</span>
-            <select value={themeMode} onChange={(event) => onThemeChange(event.target.value)}>
-              {themeOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <div className="editor-toolbar">
-            <span className="meta-pill review-state-pill">
-              主题
-              <span>{themeMode}</span>
-            </span>
-            <button
-              type="button"
-              className="primary-button"
-              disabled={savingTheme}
-              onClick={() => void saveThemeSettings()}
-            >
-              {savingTheme ? "保存中..." : "保存主题偏好"}
-            </button>
-          </div>
-        </div>
-      </section>
     </div>
   );
 }

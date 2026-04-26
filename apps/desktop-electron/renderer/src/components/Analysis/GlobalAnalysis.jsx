@@ -32,32 +32,33 @@ export const GlobalAnalysis = memo(function GlobalAnalysis({
     setPeriod(newPeriod);
   };
 
-  const handleGlobalRetry = () => {
-    // 重试逻辑由父组件处理
-  };
-
   const isLoading = globalLoading || (globalTask && globalTask.status !== "SUCCESS" && globalTask.status !== "FAILED");
 
   return (
-    <div className="an-panel">
-      <h3 className="an-panel-title">全局报告</h3>
+    <div className="an-panel page-content">
+      <div className="an-panel-header">
+        <h3 className="an-panel-title">全局复盘报告</h3>
+      </div>
 
       {/* Period toggle */}
-      <div className="an-period-toggle">
-        <button
-          type="button"
-          className={`an-period-btn${period === "week" ? " an-period-btn--active" : ""}`}
-          onClick={() => handlePeriodChange("week")}
-        >
-          本周
-        </button>
-        <button
-          type="button"
-          className={`an-period-btn${period === "month" ? " an-period-btn--active" : ""}`}
-          onClick={() => handlePeriodChange("month")}
-        >
-          本月
-        </button>
+      <div className="an-field">
+        <span className="an-label">分析时间范围</span>
+        <div className="an-period-toggle">
+          <button
+            type="button"
+            className={`an-period-btn${period === "week" ? " an-period-btn--active" : ""}`}
+            onClick={() => handlePeriodChange("week")}
+          >
+            本周
+          </button>
+          <button
+            type="button"
+            className={`an-period-btn${period === "month" ? " an-period-btn--active" : ""}`}
+            onClick={() => handlePeriodChange("month")}
+          >
+            本月
+          </button>
+        </div>
       </div>
 
       {/* Generate button */}
@@ -68,57 +69,62 @@ export const GlobalAnalysis = memo(function GlobalAnalysis({
         onClick={onGenerateGlobal}
       >
         {globalLoading ? (
-          <><span className="an-spinner" /> 生成中…</>
+          <><span className="an-spinner" /> AI 正在深度复盘中…</>
         ) : (
-          "生成报告"
+          "生成全局报告"
         )}
       </button>
 
-      {/* Global analysis result */}
-      {globalError && <ErrorMessage message={globalError} />}
+      {/* Global analysis result area */}
+      <div className="an-result-area">
+        {globalError && <ErrorMessage message={globalError} />}
 
-      {isLoading && <LoadingState task={globalTask} />}
+        {isLoading && <LoadingState task={globalTask} />}
 
-      {globalTask?.status === "FAILED" && (
-        <FailedState
-          task={globalTask}
-          onRetry={handleGlobalRetry}
-        />
-      )}
+        {globalTask?.status === "FAILED" && (
+          <FailedState
+            task={globalTask}
+            onRetry={onGenerateGlobal}
+          />
+        )}
 
-      {globalTask?.status === "SUCCESS" && (
-        <AnalysisResult task={globalTask} />
-      )}
+        {globalTask?.status === "SUCCESS" && (
+          <AnalysisResult task={globalTask} />
+        )}
+      </div>
 
       {/* Comparison section */}
       <div className="an-comp-section">
-        <h4 className="an-comp-title">环比分析</h4>
+        <h4 className="an-comp-title">进步趋势分析</h4>
         <button
           type="button"
           className="ghost-button an-comp-btn"
-          disabled={compLoading}
+          disabled={compLoading || !globalTask}
           onClick={onGenerateComparison}
+          title={!globalTask ? "请先生成全局报告" : ""}
         >
           {compLoading ? (
-            <><span className="an-spinner" /> 生成中…</>
+            <><span className="an-spinner" /> 计算趋势中…</>
           ) : (
-            "生成环比"
+            "生成环比分析"
           )}
         </button>
 
-        {compError && <ErrorMessage message={compError} isSmall />}
+        <div className="an-result-area">
+          {compError && <ErrorMessage message={compError} isSmall />}
 
-        {(compLoading || (compTask && compTask.status !== "SUCCESS" && compTask.status !== "FAILED")) && (
-          <LoadingState task={compTask} isSmall />
-        )}
+          {(compLoading || (compTask && compTask.status !== "SUCCESS" && compTask.status !== "FAILED")) && (
+            <LoadingState task={compTask} isSmall />
+          )}
 
-        {compTask?.status === "FAILED" && (
-          <FailedState task={compTask} isSmall />
-        )}
+          {compTask?.status === "FAILED" && (
+            <FailedState task={compTask} isSmall onRetry={onGenerateComparison} />
+          )}
 
-        {compTask?.status === "SUCCESS" && (
-          <AnalysisResult task={compTask} isCompact />
-        )}
+          {compTask?.status === "SUCCESS" && (
+            <AnalysisResult task={compTask} isCompact />
+          )}
+        </div>
       </div>
     </div>
   );

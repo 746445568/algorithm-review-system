@@ -1,10 +1,11 @@
-import { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import { ErrorBoundary } from "../components/ErrorBoundary.jsx";
 import { ErrorPageFallback } from "../components/ErrorPageFallback.jsx";
 import { ReviewList } from "./ReviewList.jsx";
 import { ReviewDetail } from "./ReviewDetail.jsx";
 import { useReviewData } from "../hooks/useReviewData.js";
 import { parseTags } from "../lib/format.js";
+import "../styles/ui-dashboard-review.css";
 
 export function ReviewPage({ serviceStatus, runtimeInfo, onNavigate }) {
   const [filters, setFilters] = useState({
@@ -92,7 +93,7 @@ export function ReviewPage({ serviceStatus, runtimeInfo, onNavigate }) {
   }, [mutate]);
 
   return (
-    <div className="review-layout">
+    <div className="review-layout review-shell-v2">
       <ReviewList
         problems={filteredProblems}
         selectedProblemId={selectedProblemId}
