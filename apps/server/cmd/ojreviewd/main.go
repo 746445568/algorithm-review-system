@@ -68,6 +68,9 @@ func main() {
 	if err := queue.ResumePending(ctx); err != nil {
 		log.Printf("resume pending tasks failed: %v", err)
 	}
+	autoSyncManager := api.NewAutoSyncManager(apiServer, 30*time.Minute)
+	apiServer.SetAutoSyncManager(autoSyncManager)
+	autoSyncManager.Start(ctx)
 
 	server := &http.Server{
 		Addr:              cfg.ListenAddr,

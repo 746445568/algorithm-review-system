@@ -65,12 +65,22 @@ func (db *DB) LoadAISettings() (models.AISettings, error) {
 	}, nil
 }
 
+func normalizeThemeMode(mode string) string {
+	switch strings.TrimSpace(strings.ToLower(mode)) {
+	case "dark":
+		return "dark"
+	case "warm":
+		return "warm"
+	case "light", "follow-system", "blue", "":
+		return "blue"
+	default:
+		return "blue"
+	}
+}
+
 // SaveThemeMode saves the theme mode setting
 func (db *DB) SaveThemeMode(mode string) error {
-	mode = strings.TrimSpace(strings.ToLower(mode))
-	if mode == "" {
-		mode = "follow-system"
-	}
+	mode = normalizeThemeMode(mode)
 	_, err := db.conn.Exec(`
 INSERT INTO app_settings(key, value) VALUES ('theme_mode', ?)
 ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = CURRENT_TIMESTAMP`, mode)
@@ -83,13 +93,9 @@ func (db *DB) LoadThemeMode() (string, error) {
 	var mode string
 	if err := row.Scan(&mode); err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			return "follow-system", nil
+			return "blue", nil
 		}
 		return "", err
 	}
-	mode = strings.TrimSpace(strings.ToLower(mode))
-	if mode == "" {
-		mode = "follow-system"
-	}
-	return mode, nil
+	return normalizeThemeMode(mode), nil
 }

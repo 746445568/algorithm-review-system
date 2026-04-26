@@ -29,9 +29,10 @@ const sqliteBusyUserMessage = "当前有并发分析或同步任务占用数据�
 type Server struct {
 	cfg      app.Config
 	db       *storage.DB
-	queue    *jobs.Queue
+	queue    jobEnqueuer
 	adapters map[models.Platform]judges.Adapter
 	mux      *http.ServeMux
+	autoSync *AutoSyncManager
 }
 
 func NewServer(cfg app.Config, db *storage.DB, queue *jobs.Queue) *Server {
@@ -85,6 +86,7 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("DELETE /api/accounts/{id}", s.handleDeleteAccount)
 	s.mux.HandleFunc("POST /api/accounts/{platform}/sync", s.handleSyncAccount)
 	s.mux.HandleFunc("GET /api/sync-tasks", s.handleSyncTasks)
+	s.mux.HandleFunc("GET /api/sync/status", s.handleSyncStatus)
 	s.mux.HandleFunc("GET /api/submissions", s.handleSubmissions)
 	s.mux.HandleFunc("GET /api/problems", s.handleProblems)
 	s.mux.HandleFunc("GET /api/review/summary", s.handleReviewSummary)
@@ -242,24 +244,13 @@ func (s *Server) handleSyncAccount(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	task, err := s.db.CreateSyncTask(payload.AccountID, account.LastCursor)
+	task, err := s.enqueueSyncTask(account)
 	if err != nil {
-		writeError(w, http.StatusConflict, err.Error())
-		return
-	}
-
-	taskID := task.ID
-	accountID := account.ID
-	enqueued := s.queue.Enqueue(jobs.Job{
-		Key:      jobs.SyncJobKey(accountID),
-		TaskType: models.TaskTypeSync,
-		TaskID:   taskID,
-		Run: func(ctx context.Context) error {
-			return s.runSyncTask(ctx, accountID, taskID, platform)
-		},
-	})
-	if !enqueued {
-		writeError(w, http.StatusConflict, "sync task already queued for this account")
+		if isSyncAlreadyQueuedError(err) {
+			writeError(w, http.StatusConflict, err.Error())
+			return
+		}
+		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
 	writeJSON(w, http.StatusAccepted, map[string]any{
@@ -1263,13 +1254,17 @@ func (s *Server) handleCreateGoal(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "invalid request body")
 		return
 	}
-	if input.Title == "" || input.TargetRating <= 0 {
-		writeError(w, http.StatusBadRequest, "title and targetRating are required")
+	if input.TargetRating <= 0 {
+		writeError(w, http.StatusBadRequest, "targetRating is required")
 		return
+	}
+	title := input.Title
+	if title == "" {
+		title = input.Platform + " 目标 " + strconv.Itoa(input.TargetRating)
 	}
 	g := models.Goal{
 		Platform:     input.Platform,
-		Title:        input.Title,
+		Title:        title,
 		TargetRating: input.TargetRating,
 	}
 	if input.Deadline != nil {

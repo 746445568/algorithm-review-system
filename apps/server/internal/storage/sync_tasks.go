@@ -6,9 +6,11 @@ import (
 	"ojreviewdesktop/internal/models"
 )
 
+const errSyncTaskAlreadyQueued = "sync task already queued for this account"
+
 // CreateSyncTask creates a new sync task for an account
 func (db *DB) CreateSyncTask(platformAccountID int64, cursorBefore string) (models.SyncTask, error) {
-	if err := db.ensureNoRunningSyncTask(platformAccountID); err != nil {
+	if err := db.ensureNoActiveSyncTask(platformAccountID); err != nil {
 		return models.SyncTask{}, err
 	}
 	_, err := db.conn.Exec(`
@@ -105,15 +107,23 @@ FROM sync_tasks WHERE status IN (?, ?) ORDER BY created_at ASC`, models.TaskPend
 	return items, rows.Err()
 }
 
-// ensureNoRunningSyncTask ensures no sync task is running for the account
-func (db *DB) ensureNoRunningSyncTask(platformAccountID int64) error {
-	row := db.conn.QueryRow(`SELECT COUNT(1) FROM sync_tasks WHERE platform_account_id = ? AND status = ?`, platformAccountID, models.TaskRunning)
+// ensureNoActiveSyncTask ensures no pending or running sync task exists for the account.
+func (db *DB) ensureNoActiveSyncTask(platformAccountID int64) error {
+	row := db.conn.QueryRow(`
+SELECT COUNT(1)
+FROM sync_tasks
+WHERE platform_account_id = ?
+  AND status IN (?, ?)`,
+		platformAccountID,
+		models.TaskPending,
+		models.TaskRunning,
+	)
 	var count int
 	if err := row.Scan(&count); err != nil {
 		return err
 	}
 	if count > 0 {
-		return errors.New("sync task already running for this account")
+		return errors.New(errSyncTaskAlreadyQueued)
 	}
 	return nil
 }
