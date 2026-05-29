@@ -43,5 +43,12 @@ apps/server/bin/
 .DS_Store
 .vscode/
 .idea/
-.claude/.superpowers/
 .worktrees/
+
+# Local agent/tool state
+.claude/
+.claudeignore
+.codex
+.kilo/
+.sisyphus/
+.superpowers/
