@@ -1,3 +1,10 @@
 dist
 renderer/dist
 node_modules
+.ojreview-runtime/
+artifacts/
+output/
+playwright-report/
+test-results/
+tempapp-asar-extract/
+playwright-results.xml

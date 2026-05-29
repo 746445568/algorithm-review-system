@@ -1,6 +1,8 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { api } from "../lib/api.js";
 import { statusLabel } from "../lib/format.js";
+import { useNavigation } from "../lib/NavigationContext.jsx";
+import { AccountsPage } from "./AccountsPage.jsx";
 
 const defaultAISettings = {
   provider: "",
@@ -9,41 +11,73 @@ const defaultAISettings = {
   apiKey: "",
 };
 
+const defaultGoalForm = {
+  platform: "CODEFORCES",
+  targetRating: "",
+  title: "",
+  deadline: "",
+};
+
 const providerOptions = [
   { value: "openai", label: "OpenAI 兼容" },
   { value: "deepseek", label: "DeepSeek" },
   { value: "ollama", label: "Ollama" },
 ];
 
-const themeOptions = [
-  { value: "follow-system", label: "跟随系统" },
-  { value: "light", label: "浅色" },
-  { value: "dark", label: "深色" },
+const goalPlatformOptions = [
+  { value: "CODEFORCES", label: "Codeforces" },
+  { value: "ATCODER", label: "AtCoder" },
 ];
 
-export function SettingsPage({ runtimeInfo, serviceStatus, themeMode, onThemeChange }) {
+function platformLabel(platform) {
+  return goalPlatformOptions.find((option) => option.value === platform)?.label ?? platform;
+}
+
+function formatGoalDeadline(deadline) {
+  if (!deadline) return "";
+  return new Date(deadline).toLocaleDateString("zh-CN");
+}
+
+export function SettingsPage({ runtimeInfo, serviceStatus }) {
+  const { navigationState } = useNavigation();
+  const goalsSectionRef = useRef(null);
+  const refreshSequenceRef = useRef(0);
+
   const [aiSettings, setAISettings] = useState(defaultAISettings);
+  const [goals, setGoals] = useState([]);
+  const [goalForm, setGoalForm] = useState(defaultGoalForm);
   const [loading, setLoading] = useState(true);
   const [savingAI, setSavingAI] = useState(false);
   const [testingAI, setTestingAI] = useState(false);
-  const [savingTheme, setSavingTheme] = useState(false);
+  const [savingGoal, setSavingGoal] = useState(false);
+  const [deletingGoalId, setDeletingGoalId] = useState(null);
   const [diagExporting, setDiagExporting] = useState(false);
   const [diagPath, setDiagPath] = useState("");
   const [testResult, setTestResult] = useState(null);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
-  const refreshSequenceRef = useRef(0);
   const [updateInfo, setUpdateInfo] = useState(null);
   const [updateDownloaded, setUpdateDownloaded] = useState(false);
   const [checking, setChecking] = useState(false);
 
   useEffect(() => {
     const bridge = window.desktopBridge?.updater;
-    if (!bridge) return;
+    if (!bridge) return undefined;
     const unsubAvailable = bridge.onUpdateAvailable((info) => setUpdateInfo(info));
     const unsubDownloaded = bridge.onUpdateDownloaded(() => setUpdateDownloaded(true));
-    return () => { unsubAvailable(); unsubDownloaded(); };
+    return () => {
+      unsubAvailable();
+      unsubDownloaded();
+    };
   }, []);
+
+  useEffect(() => {
+    if (navigationState?.focus !== "goals") return;
+    const timeoutId = window.setTimeout(() => {
+      goalsSectionRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 80);
+    return () => window.clearTimeout(timeoutId);
+  }, [navigationState?.focus]);
 
   function handleCheckUpdate() {
     setChecking(true);
@@ -62,7 +96,10 @@ export function SettingsPage({ runtimeInfo, serviceStatus, themeMode, onThemeCha
     setLoading(true);
     setError("");
     try {
-      const nextAISettings = await api.getAISettings();
+      const [nextAISettings, nextGoals] = await Promise.all([
+        api.getAISettings(),
+        api.getGoals(),
+      ]);
 
       if (requestId !== refreshSequenceRef.current) {
         return;
@@ -74,6 +111,7 @@ export function SettingsPage({ runtimeInfo, serviceStatus, themeMode, onThemeCha
         baseUrl: nextAISettings?.baseUrl ?? "",
         apiKey: nextAISettings?.apiKey ?? "",
       });
+      setGoals(Array.isArray(nextGoals) ? nextGoals : []);
     } catch (nextError) {
       if (requestId !== refreshSequenceRef.current) {
         return;
@@ -125,21 +163,52 @@ export function SettingsPage({ runtimeInfo, serviceStatus, themeMode, onThemeCha
     }
   }
 
-  async function saveThemeSettings() {
-    setSavingTheme(true);
+  async function createGoal(event) {
+    event.preventDefault();
+    setSavingGoal(true);
+    setError("");
+    setNotice("");
+
+    const targetRating = Number.parseInt(goalForm.targetRating, 10);
+    if (!Number.isFinite(targetRating) || targetRating <= 0) {
+      setError("目标分必须是大于 0 的数字。");
+      setSavingGoal(false);
+      return;
+    }
+
+    try {
+      await api.createGoal({
+        platform: goalForm.platform,
+        targetRating,
+        title: goalForm.title.trim() || undefined,
+        deadline: goalForm.deadline || undefined,
+      });
+      setGoalForm((current) => ({
+        ...defaultGoalForm,
+        platform: current.platform,
+      }));
+      setNotice("评分目标已创建。");
+      await refresh();
+    } catch (nextError) {
+      setError(nextError.message);
+    } finally {
+      setSavingGoal(false);
+    }
+  }
+
+  async function deleteGoal(goalId) {
+    setDeletingGoalId(goalId);
     setError("");
     setNotice("");
 
     try {
-      onThemeChange(themeMode);
-      if (serviceStatus.state === "healthy") {
-        await api.saveThemeSettings(themeMode);
-      }
-      setNotice("主题偏好已保存。");
+      await api.deleteGoal(goalId);
+      setNotice("评分目标已删除。");
+      await refresh();
     } catch (nextError) {
       setError(nextError.message);
     } finally {
-      setSavingTheme(false);
+      setDeletingGoalId(null);
     }
   }
 
@@ -161,8 +230,10 @@ export function SettingsPage({ runtimeInfo, serviceStatus, themeMode, onThemeCha
   }
 
   return (
-    <div className="page-grid two-column">
-      <section className="panel">
+    <div className="settings-page-root">
+      <AccountsPage serviceStatus={serviceStatus} runtimeInfo={runtimeInfo} />
+    <div className="settings-grid page-grid two-column">
+      <section className="panel settings-wide">
         <div className="panel-header">
           <h3>运行时信息</h3>
           <span className="caption">本地服务和存储布局</span>
@@ -212,6 +283,109 @@ export function SettingsPage({ runtimeInfo, serviceStatus, themeMode, onThemeCha
               打开路径
             </button>
           </article>
+        </div>
+      </section>
+
+      <section className="panel" ref={goalsSectionRef}>
+        <div className="panel-header">
+          <h3>评分目标</h3>
+          <span className="caption">管理仪表盘里的目标进度</span>
+        </div>
+        <form className="form-stack" onSubmit={createGoal}>
+          {serviceUnavailable ? (
+            <p className="muted">
+              本地服务 {runtimeInfo.serviceUrl || serviceStatus.url} 未就绪，评分目标暂不可用。
+            </p>
+          ) : null}
+          <label>
+            <span>平台</span>
+            <select
+              value={goalForm.platform}
+              disabled={serviceUnavailable || savingGoal}
+              onChange={(event) =>
+                setGoalForm((current) => ({ ...current, platform: event.target.value }))
+              }
+            >
+              {goalPlatformOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label>
+            <span>目标分</span>
+            <input
+              type="number"
+              min="1"
+              max="9999"
+              value={goalForm.targetRating}
+              disabled={serviceUnavailable || savingGoal}
+              placeholder="例如 1800"
+              onChange={(event) =>
+                setGoalForm((current) => ({ ...current, targetRating: event.target.value }))
+              }
+            />
+          </label>
+
+          <label>
+            <span>标题（可选）</span>
+            <input
+              value={goalForm.title}
+              disabled={serviceUnavailable || savingGoal}
+              placeholder="例如 Codeforces 蓝名目标"
+              onChange={(event) =>
+                setGoalForm((current) => ({ ...current, title: event.target.value }))
+              }
+            />
+          </label>
+
+          <label>
+            <span>截止日期（可选）</span>
+            <input
+              type="date"
+              value={goalForm.deadline}
+              disabled={serviceUnavailable || savingGoal}
+              onChange={(event) =>
+                setGoalForm((current) => ({ ...current, deadline: event.target.value }))
+              }
+            />
+          </label>
+
+          <button
+            type="submit"
+            className="primary-button"
+            disabled={serviceUnavailable || savingGoal}
+          >
+            {savingGoal ? "创建中..." : "创建目标"}
+          </button>
+        </form>
+
+        <div className="settings-goal-list">
+          {goals.length === 0 ? (
+            <p className="muted">暂未设置评分目标。</p>
+          ) : (
+            goals.map((goal) => (
+              <article className="inline-card" key={goal.id}>
+                <div>
+                  <strong>{goal.title || `${platformLabel(goal.platform)} 目标`}</strong>
+                  <p>
+                    {platformLabel(goal.platform)} · {goal.targetRating} 分
+                    {goal.deadline ? ` · 截止 ${formatGoalDeadline(goal.deadline)}` : ""}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  className="ghost-button danger"
+                  disabled={deletingGoalId === goal.id || serviceUnavailable}
+                  onClick={() => void deleteGoal(goal.id)}
+                >
+                  {deletingGoalId === goal.id ? "删除中..." : "删除"}
+                </button>
+              </article>
+            ))
+          )}
         </div>
       </section>
 
@@ -363,12 +537,16 @@ export function SettingsPage({ runtimeInfo, serviceStatus, themeMode, onThemeCha
           {updateDownloaded ? (
             <div>
               <p>新版本已下载，重启后生效。</p>
-              <button className="btn-primary" onClick={() => window.desktopBridge?.updater?.install?.()}>立即重启安装</button>
+              <button className="btn-primary" onClick={() => window.desktopBridge?.updater?.install?.()}>
+                立即重启安装
+              </button>
             </div>
           ) : updateInfo ? (
             <div>
               <p>发现新版本：{updateInfo.version}</p>
-              <button className="btn-primary" onClick={() => window.desktopBridge?.updater?.download?.()}>下载更新</button>
+              <button className="btn-primary" onClick={() => window.desktopBridge?.updater?.download?.()}>
+                下载更新
+              </button>
             </div>
           ) : (
             <button className="ghost-button" onClick={handleCheckUpdate} disabled={checking}>
@@ -377,40 +555,7 @@ export function SettingsPage({ runtimeInfo, serviceStatus, themeMode, onThemeCha
           )}
         </div>
       </section>
-
-      <section className="panel">
-        <div className="panel-header">
-          <h3>外观</h3>
-          <span className="caption">保存在本地应用设置中</span>
-        </div>
-        <div className="form-stack">
-          <label>
-            <span>主题模式</span>
-            <select value={themeMode} onChange={(event) => onThemeChange(event.target.value)}>
-              {themeOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </label>
-
-          <div className="editor-toolbar">
-            <span className="meta-pill review-state-pill">
-              主题
-              <span>{themeMode}</span>
-            </span>
-            <button
-              type="button"
-              className="primary-button"
-              disabled={savingTheme}
-              onClick={() => void saveThemeSettings()}
-            >
-              {savingTheme ? "保存中..." : "保存主题偏好"}
-            </button>
-          </div>
-        </div>
-      </section>
+    </div>
     </div>
   );
 }

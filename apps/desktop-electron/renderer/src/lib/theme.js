@@ -1,5 +1,5 @@
 const THEME_STORAGE_KEY = "ojreview-theme";
-const DEFAULT_THEME_MODE = "follow-system";
+const DEFAULT_THEME_MODE = "dark";
 
 export function getStoredThemeMode() {
   return localStorage.getItem(THEME_STORAGE_KEY) ?? DEFAULT_THEME_MODE;
@@ -13,11 +13,7 @@ export function resolveEffectiveTheme(mode) {
 
 export function applyThemeToDOM(mode) {
   const effective = resolveEffectiveTheme(mode);
-  if (effective === "dark") {
-    document.documentElement.setAttribute("data-theme", "dark");
-    return;
-  }
-  document.documentElement.removeAttribute("data-theme");
+  document.documentElement.setAttribute("data-theme", effective);
 }
 
 export function persistThemeMode(mode) {

@@ -1,5 +1,5 @@
 import React from "react";
-import { statusLabel, tagLabel, verdictTone } from "../../lib/format.js";
+import { formatDate, statusLabel, tagLabel, verdictTone } from "../../lib/format.js";
 import { useNavigation } from "../../lib/NavigationContext.jsx";
 
 export const ReviewHeader = React.memo(function ReviewHeader({
