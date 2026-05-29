@@ -16,7 +16,7 @@ export const HeroSection = memo(function HeroSection({ data, navigateTo, loading
         <button
           type="button"
           className="dash-hero-cta"
-          onClick={() => navigateTo("reviews")}
+          onClick={() => navigateTo("review")}
         >
           ▷ 开始今日复习
         </button>

@@ -1,13 +1,14 @@
-import { useCallback, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import useSWR from "swr";
 import { api } from "../../lib/api.js";
 import { useNavigation } from "../../lib/NavigationContext.jsx";
 import { useDashboardData } from "../../hooks/useDashboardData.js";
 import { HeroSection } from "./HeroSection.jsx";
 import { GoalProgress } from "./GoalProgress.jsx";
-import { AccountManager } from "./AccountManager.jsx";
 import { SubmissionChart } from "../statistics/SubmissionChart.jsx";
 import "../../styles/ui-dashboard-review.css";
+
+const DUE_PREVIEW_LIMIT = 4;
 
 const DEFAULT_DASHBOARD_DATA = {
   accounts: [],
@@ -34,7 +35,11 @@ function platformShortLabel(platform) {
   const v = String(platform ?? "").toUpperCase();
   if (v === "CODEFORCES") return "CF";
   if (v === "ATCODER") return "AT";
-  return platform ?? "?";
+  return "";
+}
+
+function problemPlatformLabel(platform) {
+  return platformShortLabel(platform) || "题目";
 }
 
 function formatContestTime(isoStr) {
@@ -59,17 +64,9 @@ function formatDuration(minutes) {
 
 export function DashboardPage({ serviceStatus }) {
   const { navigateTo } = useNavigation();
-  const [notice, setNotice] = useState("");
-  const [form, setForm] = useState({ platform: "CODEFORCES", handle: "" });
-  const [submitting, setSubmitting] = useState(false);
-  const [refreshingIds, setRefreshingIds] = useState(new Set());
+  const [showAllDue, setShowAllDue] = useState(false);
 
-  const {
-    data,
-    error,
-    isLoading,
-    mutate: mutateDashboard,
-  } = useDashboardData(serviceStatus);
+  const { data, isLoading } = useDashboardData(serviceStatus);
   const dashboardData = data ?? DEFAULT_DASHBOARD_DATA;
 
   const { data: contestsRaw } = useSWR(
@@ -83,19 +80,10 @@ export function DashboardPage({ serviceStatus }) {
     () => api.getSubmissionStats(),
     { refreshInterval: 300000, keepPreviousData: true }
   );
+
   const upcomingContests = (
     Array.isArray(contestsRaw) ? contestsRaw : contestsRaw?.contests ?? []
   ).slice(0, 3);
-
-  const latestTaskByAccount = useMemo(() => {
-    const index = new Map();
-    for (const task of dashboardData.syncTasks) {
-      if (!index.has(task.platformAccountId)) {
-        index.set(task.platformAccountId, task);
-      }
-    }
-    return index;
-  }, [dashboardData.syncTasks]);
 
   const weeklyData = useMemo(() => {
     const raw = submissionStatsRaw?.byWeek ?? [];
@@ -106,67 +94,11 @@ export function DashboardPage({ serviceStatus }) {
     }));
   }, [submissionStatsRaw]);
 
-  const refresh = useCallback(async () => {
-    await mutateDashboard();
-  }, [mutateDashboard]);
-
-  async function handleSubmit(event) {
-    event.preventDefault();
-    setSubmitting(true);
-    setNotice("");
-    try {
-      await api.createAccount(form.platform, form.handle.trim());
-      setForm((current) => ({ ...current, handle: "" }));
-      setNotice("账号已保存。");
-      await refresh();
-    } catch (nextError) {
-      console.error("createAccount failed:", nextError);
-    } finally {
-      setSubmitting(false);
-    }
-  }
-
-  async function deleteAccount(account) {
-    setNotice("");
-    try {
-      await api.deleteAccount(account.id);
-      setNotice(`已删除 ${account.externalHandle}。`);
-      await refresh();
-    } catch (nextError) {
-      console.error("deleteAccount failed:", nextError);
-    }
-  }
-
-  const handleRefreshRating = useCallback(async (account) => {
-    setRefreshingIds((prev) => new Set(prev).add(account.id));
-    try {
-      await api.refreshRating(account.id);
-      await mutateDashboard();
-    } catch (e) {
-      console.error("refreshRating failed:", e);
-    } finally {
-      setRefreshingIds((prev) => {
-        const s = new Set(prev);
-        s.delete(account.id);
-        return s;
-      });
-    }
-  }, [mutateDashboard]);
-
-  async function triggerSync(account) {
-    setNotice("");
-    try {
-      await api.syncAccount(account.platform, account.id);
-      setNotice(`已将 ${account.externalHandle} 加入同步队列。`);
-      await refresh();
-    } catch (nextError) {
-      console.error("syncAccount failed:", nextError);
-    }
-  }
-
   const recentUnsolved = dashboardData.reviewSummary?.recentUnsolved ?? [];
-  const combinedError = error?.message ?? "";
-  const serviceUnavailable = serviceStatus.state !== "healthy";
+  const hasMoreDue = recentUnsolved.length > DUE_PREVIEW_LIMIT;
+  const visibleDueItems = showAllDue
+    ? recentUnsolved
+    : recentUnsolved.slice(0, DUE_PREVIEW_LIMIT);
 
   return (
     <div className="dash-page">
@@ -177,28 +109,44 @@ export function DashboardPage({ serviceStatus }) {
         loading={isLoading}
       />
 
-      {/* 今日到期 */}
       <section className="panel">
         <div className="dash-panel-head">
-          <div className="dash-panel-title">今日到期</div>
-          <div className="dash-panel-sub">{recentUnsolved.length} 题</div>
+          <div>
+            <div className="dash-panel-title">今日到期</div>
+            <div className="dash-panel-sub">
+              {hasMoreDue && !showAllDue
+                ? `显示 ${visibleDueItems.length} / ${recentUnsolved.length} 题`
+                : `${recentUnsolved.length} 题`}
+            </div>
+          </div>
+          {hasMoreDue ? (
+            <button
+              type="button"
+              className="dash-btn-ghost dash-btn-compact"
+              onClick={() => setShowAllDue((current) => !current)}
+            >
+              {showAllDue ? "收起" : "展开全部"}
+            </button>
+          ) : null}
         </div>
         {recentUnsolved.length === 0 ? (
           <p className="dash-muted">
-            {isLoading ? "加载中…" : "今天没有到期的复盘题，保持节奏！"}
+            {isLoading ? "加载中..." : "今天没有到期的复盘题，保持节奏。"}
           </p>
         ) : (
           <div className="dash-due-list">
-            {recentUnsolved.map((p) => (
+            {visibleDueItems.map((p) => (
               <div key={p.id} className="dash-due-row">
                 <span className={`dash-chip ${platformChipClass(p.platform)}`}>
-                  {platformShortLabel(p.platform)}
+                  {problemPlatformLabel(p.platform)}
                 </span>
                 <span className="dash-due-title">{p.title}</span>
-                <span className="dash-due-eid">{p.externalId}</span>
+                {p.externalId ? (
+                  <span className="dash-due-eid">{p.externalId}</span>
+                ) : null}
                 {p.lastVerdict || p.verdict ? (
                   <span className={`dash-chip ${verdictClass(p.lastVerdict ?? p.verdict)}`}>
-                    {(p.lastVerdict ?? p.verdict)}
+                    {p.lastVerdict ?? p.verdict}
                   </span>
                 ) : null}
                 <span className="dash-chip chip-red">到期</span>
@@ -208,7 +156,6 @@ export function DashboardPage({ serviceStatus }) {
         )}
       </section>
 
-      {/* 评分目标 + 近期比赛 */}
       <div className="dash-grid2">
         <GoalProgress goals={dashboardData.goals} accounts={dashboardData.accounts} />
 
@@ -228,9 +175,11 @@ export function DashboardPage({ serviceStatus }) {
           ) : (
             upcomingContests.map((c) => (
               <div key={c.id} className="dash-contest-card">
-                <span className={`dash-chip ${platformChipClass(c.platform)}`}>
-                  {platformShortLabel(c.platform)}
-                </span>
+                {platformShortLabel(c.platform) ? (
+                  <span className={`dash-chip ${platformChipClass(c.platform)}`}>
+                    {platformShortLabel(c.platform)}
+                  </span>
+                ) : null}
                 <div className="dash-contest-main">
                   <div className="dash-contest-name">{c.name}</div>
                   <div className="dash-contest-meta">
@@ -244,7 +193,6 @@ export function DashboardPage({ serviceStatus }) {
         </section>
       </div>
 
-      {/* 近期提交 */}
       <section className="panel">
         <div className="dash-panel-head">
           <div className="dash-panel-title">近期提交</div>
@@ -261,25 +209,6 @@ export function DashboardPage({ serviceStatus }) {
           </div>
         </div>
       </section>
-
-      {/* 已绑定账号（账号管理保留在底部）*/}
-      <AccountManager
-        serviceUnavailable={serviceUnavailable}
-        loading={isLoading}
-        error={combinedError}
-        notice={notice}
-        form={form}
-        submitting={submitting}
-        setForm={setForm}
-        handleSubmit={handleSubmit}
-        accounts={dashboardData.accounts}
-        latestTaskByAccount={latestTaskByAccount}
-        refreshingIds={refreshingIds}
-        handleRefreshRating={handleRefreshRating}
-        triggerSync={triggerSync}
-        deleteAccount={deleteAccount}
-        refresh={refresh}
-      />
     </div>
   );
 }

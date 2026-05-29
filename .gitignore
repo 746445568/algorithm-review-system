@@ -1,19 +1,47 @@
+# Dependencies
 node_modules/
-.next/
+
+# Build output
 dist/
 build/
+!.github/
 !apps/desktop-electron/build/
 !apps/desktop-electron/build/icon.ico
+apps/desktop-electron/renderer/dist/
+apps/desktop-electron/dist/
+
+# Runtime data
 *.db
 *.db-journal
+*.db-shm
+*.db-wal
+apps/desktop-electron/.ojreview-runtime/
+.ojreview-runtime-test/
+
+# Environment and logs
 .env
 .env.local
 .env.*.local
-.DS_Store
 *.log
 logs/
+
+# Tool caches and reports
+.tmp.drive*/
+.playwright-cli/
+.playwright-mcp/
+output/
+apps/desktop-electron/artifacts/
+apps/desktop-electron/output/
+apps/desktop-electron/playwright-report/
+apps/desktop-electron/test-results/
+apps/desktop-electron/tempapp-asar-extract/
+apps/desktop-electron/playwright-results.xml
+apps/server/.gocache/
+apps/server/bin/
+
+# Editor and OS files
+.DS_Store
 .vscode/
 .idea/
 .claude/.superpowers/
-.playwright-cli/
 .worktrees/

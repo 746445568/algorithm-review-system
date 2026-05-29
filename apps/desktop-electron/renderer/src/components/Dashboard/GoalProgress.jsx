@@ -1,18 +1,30 @@
 import { memo } from "react";
+import { useNavigation } from "../../lib/NavigationContext.jsx";
 
 const PLATFORM_CONFIG = {
   CODEFORCES: { chip: "CF", cls: "chip-cf", color: "#818cf8" },
-  ATCODER:    { chip: "AT", cls: "chip-at", color: "#FDBA74" },
+  ATCODER: { chip: "AT", cls: "chip-at", color: "#FDBA74" },
 };
 
-export const GoalProgress = memo(function GoalProgress({ goals, accounts }) {
+export const GoalProgress = memo(function GoalProgress({ goals = [], accounts = [] }) {
+  const { navigateTo } = useNavigation();
+
   if (goals.length === 0) {
     return (
       <section className="panel">
         <div className="dash-panel-head">
           <div className="dash-panel-title">评分目标</div>
         </div>
-        <p className="dash-muted">暂未设置目标，前往设置页添加。</p>
+        <div className="dash-empty-action">
+          <p className="dash-muted">暂未设置目标，前往设置页添加。</p>
+          <button
+            type="button"
+            className="dash-btn-ghost"
+            onClick={() => navigateTo("settings", { focus: "goals" })}
+          >
+            去设置目标
+          </button>
+        </div>
       </section>
     );
   }
@@ -28,7 +40,11 @@ export const GoalProgress = memo(function GoalProgress({ goals, accounts }) {
         const pct = goal.targetRating > 0
           ? Math.min(100, Math.round((current / goal.targetRating) * 100))
           : 0;
-        const cfg = PLATFORM_CONFIG[goal.platform] ?? { chip: goal.platform, cls: "", color: "var(--ojdr-accent)" };
+        const cfg = PLATFORM_CONFIG[goal.platform] ?? {
+          chip: goal.platform || "目标",
+          cls: "",
+          color: "var(--ojdr-accent)",
+        };
 
         return (
           <div key={goal.id} className="dash-goal-row">

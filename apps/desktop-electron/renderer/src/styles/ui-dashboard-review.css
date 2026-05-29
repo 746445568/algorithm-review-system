@@ -241,11 +241,23 @@
 .dash-panel-sub {
   font-size: 12px;
   color: var(--ojdr-text-3);
+  margin-top: 2px;
 }
 
 .dash-muted {
   font-size: 13px;
   color: var(--ojdr-text-3);
+}
+
+.dash-empty-action {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.dash-empty-action .dash-muted {
+  margin: 0;
 }
 
 /* ── Platform / verdict chips ── */
@@ -430,11 +442,43 @@
   color: var(--ojdr-text);
 }
 
+.dash-btn-compact {
+  min-height: 30px;
+  padding: 5px 10px;
+  white-space: nowrap;
+}
+
+.settings-goal-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.settings-goal-list .inline-card {
+  min-width: 0;
+}
+
 /* ── Responsive ── */
 
 @media (max-width: 960px) {
   .dash-grid2 {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .dash-empty-action {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .dash-due-row {
+    flex-wrap: wrap;
+  }
+
+  .dash-due-title {
+    min-width: 160px;
   }
 }
 
