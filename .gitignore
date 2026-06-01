@@ -52,3 +52,16 @@ apps/server/bin/
 .kilo/
 .sisyphus/
 .superpowers/
+
+# Non-product repository material
+/.github/
+/_deprecated/
+/docs/
+/packaging/
+/scripts/
+/AGENTS.md
+/CLAUDE.md
+/build-all.ps1
+/start-app.bat
+/start-app.ps1
+/start-oj.sh

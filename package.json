@@ -10,14 +10,10 @@
     "desktop:dist": "npm run dist --prefix apps/desktop-electron",
     "desktop:start": "npm run start --prefix apps/desktop-electron",
     "server:dev": "cd apps/server && go run ./cmd/ojreviewd",
-    "server:test": "cd apps/server && go test ./...",
-    "ports:clean": "bash ./scripts/kill-ports.sh"
+    "server:test": "cd apps/server && go test ./..."
   },
   "engines": {
     "node": ">=20.0.0"
-  },
-  "directories": {
-    "doc": "docs"
   },
   "keywords": [
     "electron",
