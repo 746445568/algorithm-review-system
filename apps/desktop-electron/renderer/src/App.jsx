@@ -127,7 +127,7 @@ function AppShell() {
     isPackaged: false,
   });
   const [browserRuntime, setBrowserRuntime] = useState(null);
-  const { isOnline, isSyncing, lastSyncAt, connectivity, cacheStatus, syncQueue, sync } = useOfflineData();
+  const { isOnline, lastSyncAt, connectivity, cacheStatus, syncQueue, sync } = useOfflineData();
   const { themeMode, onThemeChange: handleThemeChange } = useThemeMode();
   const [showOnboarding, setShowOnboarding] = useState(false);
 
@@ -139,10 +139,6 @@ function AppShell() {
       return next;
     });
   }, [page]);
-
-  const handleSync = useCallback(() => {
-    void sync();
-  }, [sync]);
 
   useEffect(() => {
     let unsubscribe = () => {};
@@ -319,10 +315,6 @@ function AppShell() {
             <span className="nav-status-dot" />
             {renderedIndicator.text}
           </span>
-          <button type="button" className="sync-btn btn-sync" disabled={isSyncing} onClick={handleSync}>
-            {refreshIcon}
-            <span>{isSyncing ? "同步中" : "同步"}</span>
-          </button>
           {shouldShowRestartService(hasDesktopBridge) ? (
             <button type="button" className="icon-btn nav-icon-btn" onClick={() => window.desktopBridge?.restartService()} title="重启服务" aria-label="重启服务">
               {refreshIcon}

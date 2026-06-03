@@ -4,7 +4,6 @@ import { toDatetimeLocalValue } from "../lib/format.js";
 import { useNavigation } from "../lib/NavigationContext.jsx";
 import { useReviewFlow } from "../hooks/useReviewFlow.js";
 import { ReviewHeader } from "../components/ReviewDetail/ReviewHeader.jsx";
-import { ReviewNav } from "../components/ReviewDetail/ReviewNav.jsx";
 import { ReviewTabs } from "../components/ReviewDetail/ReviewTabs.jsx";
 import { StateTab } from "../components/ReviewDetail/tabs/StateTab.jsx";
 import { SubmissionsTab } from "../components/ReviewDetail/tabs/SubmissionsTab.jsx";
@@ -214,7 +213,7 @@ export function ReviewDetail({
 
   useEffect(() => {
     if (!reviewStateSupported || serviceUnavailable) return;
-    const keyMap = { q: 1, w: 2, e: 3, r: 5 };
+    const keyMap = { 1: 1, 2: 2, 3: 3, 4: 4, 5: 5, q: 1, w: 2, e: 3, r: 5 };
     const onKey = (e) => {
       if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA")
         return;
@@ -226,14 +225,13 @@ export function ReviewDetail({
     return () => window.removeEventListener("keydown", onKey);
   }, [reviewStateSupported, serviceUnavailable, activeTab, handleRate]);
 
-  const { currentIndex, total, hasNext, hasPrev, goNext, goPrev } =
-    useReviewFlow({
-      problems: filteredProblems,
-      selectedId: selectedProblemId,
-      onSelect,
-      onSave: saveReviewState,
-      onStatusChange: (status) => setReviewState((s) => ({ ...s, status })),
-    });
+  useReviewFlow({
+    problems: filteredProblems,
+    selectedId: selectedProblemId,
+    onSelect,
+    onSave: saveReviewState,
+    onStatusChange: (status) => setReviewState((s) => ({ ...s, status })),
+  });
 
   // ── AI Analysis ──
   function stopAnalysisPoll() {
@@ -316,16 +314,6 @@ export function ReviewDetail({
 
   return (
     <div className="rd-container">
-      {/* Nav bar */}
-      <ReviewNav
-        currentIndex={currentIndex}
-        total={total}
-        hasNext={hasNext}
-        hasPrev={hasPrev}
-        goNext={goNext}
-        goPrev={goPrev}
-      />
-
       {/* Animated content on problem change */}
       <div key={selectedProblemId} className="rd-content">
         {/* Problem header */}
@@ -354,6 +342,8 @@ export function ReviewDetail({
             serviceUnavailable={serviceUnavailable}
             rating={rating}
             supportMessage={supportMessage}
+            selectedProblem={selectedProblem}
+            selectedTags={selectedTags}
             handleRate={handleRate}
             saveReviewState={saveReviewState}
           />

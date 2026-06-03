@@ -12,7 +12,6 @@ export const ReviewTabs = React.memo(function ReviewTabs({
       id: "submissions",
       label: `提交记录${hasSubmissions ? ` (${submissionsCount})` : ""}`,
     },
-    { id: "raw", label: "原始数据" },
     { id: "analysis", label: "AI 分析" },
   ];
 

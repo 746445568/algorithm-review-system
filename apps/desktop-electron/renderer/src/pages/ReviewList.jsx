@@ -1,5 +1,5 @@
 import { memo, useCallback } from "react";
-import { formatDate, platformLabel, statusLabel, verdictTone } from "../lib/format.js";
+import { formatDate, platformLabel, verdictTone } from "../lib/format.js";
 
 function SkeletonCard() {
   return (
@@ -9,13 +9,6 @@ function SkeletonCard() {
     </div>
   );
 }
-
-const STATUS_CHIP_CLASS = {
-  TODO: "rl-chip-neutral",
-  REVIEWING: "rl-chip-warn",
-  SCHEDULED: "rl-chip-blue",
-  DONE: "rl-chip-good",
-};
 
 export const ReviewList = memo(function ReviewList({
   problems,
@@ -45,28 +38,15 @@ export const ReviewList = memo(function ReviewList({
     setFilter("search", e.target.value);
   }, [setFilter]);
 
-  const handleReviewStatusChange = useCallback((e) => {
-    setFilter("reviewStatus", e.target.value);
-  }, [setFilter]);
-
-  const handlePlatformChange = useCallback((e) => {
-    setFilter("platform", e.target.value);
-  }, [setFilter]);
-
-  const handleSortByChange = useCallback((e) => {
-    setFilter("sortBy", e.target.value);
-  }, [setFilter]);
-
-  const handleOnlyUnsolvedChange = useCallback((e) => {
-    setFilter("onlyUnsolved", e.target.checked);
-  }, [setFilter]);
-
   return (
     <section className="panel rl-panel">
       <div className="rl-header">
         <div>
-          <h3 className="rl-title">复习队列</h3>
-          <p className="rl-subtitle">{problems.length} 道题目</p>
+          <h3 className="rl-title">今日复习队列</h3>
+          <p className="rl-subtitle">
+            {problems.length} 道待处理 ·{" "}
+            <span className="rl-due-badge">{dueCount} 道今日到期</span>
+          </p>
         </div>
         <button
           type="button"
@@ -83,14 +63,6 @@ export const ReviewList = memo(function ReviewList({
         </button>
       </div>
 
-      <div className="rl-progress-track">
-        <div className="rl-progress-fill" style={{ width: `${progress}%` }} />
-      </div>
-      <p className="rl-progress-label">
-        {doneCount}/{totalCount} 已完成
-        {dueCount > 0 && <span className="rl-due-badge"> · {dueCount} 到期</span>}
-      </p>
-
       <div className="rl-filters">
         <div className="rl-search-wrap">
           <svg className="rl-search-icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -100,38 +72,10 @@ export const ReviewList = memo(function ReviewList({
           <input
             className="rl-search"
             value={filters.search}
-            placeholder="搜索题目…"
+            placeholder="搜索题目 / 题号 / 标签"
             onChange={handleSearchChange}
           />
         </div>
-
-        <div className="rl-selects">
-          <select className="rl-select" value={filters.reviewStatus} onChange={handleReviewStatusChange}>
-            <option value="">全部状态</option>
-            <option value="TODO">待复习</option>
-            <option value="REVIEWING">复习中</option>
-            <option value="SCHEDULED">已排期</option>
-            <option value="DONE">已完成</option>
-          </select>
-          <select className="rl-select" value={filters.platform} onChange={handlePlatformChange}>
-            <option value="">全部平台</option>
-            <option value="CODEFORCES">CF</option>
-            <option value="ATCODER">AC</option>
-          </select>
-          <select className="rl-select" value={filters.sortBy} onChange={handleSortByChange}>
-            <option value="lastSubmitted">最近提交</option>
-            <option value="nextReview">复习时间</option>
-          </select>
-        </div>
-
-        <label className="rl-checkbox">
-          <input
-            type="checkbox"
-            checked={filters.onlyUnsolved}
-            onChange={handleOnlyUnsolvedChange}
-          />
-          <span>仅显示未通过</span>
-        </label>
       </div>
 
       {serviceUnavailable && <p className="rl-state-msg">等待服务就绪…</p>}
@@ -173,8 +117,6 @@ export const ReviewList = memo(function ReviewList({
 });
 
 const ProblemCard = memo(function ProblemCard({ item, active, index, onSelect }) {
-  const statusKey = (item.reviewStatus || "TODO").toUpperCase();
-  const chipClass = STATUS_CHIP_CLASS[statusKey] || "rl-chip-neutral";
   const verdictClass = verdictTone(item.latestVerdict) === "good"
     ? "rl-chip-good"
     : verdictTone(item.latestVerdict) === "bad"
@@ -193,21 +135,24 @@ const ProblemCard = memo(function ProblemCard({ item, active, index, onSelect })
       style={{ animationDelay: `${Math.min(index * 18, 180)}ms` }}
     >
       <div className="rl-card-body">
-        <span className="rl-card-platform">{platformLabel(item.platform)}</span>
-        <strong className="rl-card-title">{item.title}</strong>
-        <span className="rl-card-id">{item.externalProblemId}</span>
-        <span className={`rl-card-schedule ${item.reviewDue ? "rl-card-schedule--due" : ""}`}>
-          {item.reviewDue
-            ? "● 已到期"
-            : item.nextReviewAt
-              ? `↻ ${formatDate(item.nextReviewAt)}`
-              : "无排期"}
-        </span>
+        <div className="rl-card-main">
+          <span className="rl-card-platform">{platformLabel(item.platform)}</span>
+          <strong className="rl-card-title">{item.title}</strong>
+        </div>
+        <span className={`rl-chip ${verdictClass}`}>{item.latestVerdict || "—"}</span>
       </div>
       <div className="rl-card-meta">
-        <span className={`rl-chip ${verdictClass}`}>{item.latestVerdict || "—"}</span>
-        <span className={`rl-chip ${chipClass}`}>{statusLabel(item.reviewStatus)}</span>
-        <span className="rl-card-attempts">{item.attemptCount}次</span>
+        <span className="rl-card-id">
+          {platformLabel(item.platform)} {item.externalProblemId}
+        </span>
+        <span className="rl-card-attempts">尝试 {item.attemptCount} 次</span>
+        <span className={`rl-card-schedule ${item.reviewDue ? "rl-card-schedule--due" : ""}`}>
+          {item.reviewDue
+            ? "到期"
+            : item.nextReviewAt
+              ? formatDate(item.nextReviewAt)
+              : "未排期"}
+        </span>
       </div>
     </button>
   );

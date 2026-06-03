@@ -41,9 +41,8 @@ function getISOWeekMonday(date) {
 function formatWeekHeader(monday) {
   const sunday = new Date(monday);
   sunday.setUTCDate(sunday.getUTCDate() + 6);
-  const week = getISOWeek(monday);
   const fmt = (d) => `${d.getUTCMonth() + 1}/${d.getUTCDate()}`;
-  return `第 ${week} 周 · ${fmt(monday)} - ${fmt(sunday)}`;
+  return `${fmt(monday)} - ${fmt(sunday)}`;
 }
 
 // Convert any ISO timestamp to a Date object shifted to UTC+8 (Beijing)
