@@ -1,20 +1,33 @@
 import { memo } from "react";
+import { useTranslation } from 'react-i18next';
+import { AppSelect } from "./AppControls.jsx";
 
 export const ReviewFilterBar = memo(function ReviewFilterBar({ filters, actions }) {
+  const { t } = useTranslation();
+
+  const platformOptions = [
+    { value: "", label: t('reviewFilter.allPlatforms') },
+    { value: "CODEFORCES", label: "Codeforces" },
+    { value: "ATCODER", label: "AtCoder" },
+  ];
+
+  const reviewStatusOptions = [
+    { value: "", label: t('reviewFilter.allStatuses') },
+    { value: "TODO", label: t('statusLabels.TODO') },
+    { value: "REVIEWING", label: t('statusLabels.REVIEWING') },
+    { value: "SCHEDULED", label: t('statusLabels.SCHEDULED') },
+    { value: "DONE", label: t('statusLabels.DONE') },
+  ];
+
+  const scheduleOptions = [
+    { value: "", label: t('reviewFilter.allSchedules') },
+    { value: "DUE", label: t('reviewFilter.due') },
+    { value: "SCHEDULED", label: t('reviewFilter.scheduled') },
+    { value: "UNSCHEDULED", label: t('reviewFilter.unscheduled') },
+  ];
+
   const handleSearchChange = (event) => {
     actions.setSearch(event.target.value);
-  };
-
-  const handlePlatformChange = (event) => {
-    actions.setPlatform(event.target.value);
-  };
-
-  const handleReviewStatusChange = (event) => {
-    actions.setReviewStatusFilter(event.target.value);
-  };
-
-  const handleScheduleChange = (event) => {
-    actions.setScheduleFilter(event.target.value);
   };
 
   const handleOnlyUnsolvedChange = (event) => {
@@ -25,43 +38,34 @@ export const ReviewFilterBar = memo(function ReviewFilterBar({ filters, actions 
       <div className="filter-row">
         <input
           value={filters.search}
-          placeholder="搜索题目名或题号"
+          placeholder={t('reviewFilter.searchPlaceholder')}
           onChange={handleSearchChange}
         />
-        <select value={filters.platform} onChange={handlePlatformChange}>
-          <option value="">全部平台</option>
-          <option value="CODEFORCES">Codeforces</option>
-          <option value="ATCODER">AtCoder</option>
-        </select>
+        <AppSelect
+          value={filters.platform}
+          options={platformOptions}
+          onChange={actions.setPlatform}
+        />
       </div>
 
       <div className="filter-row">
-        <select
+        <AppSelect
           value={filters.reviewStatusFilter}
-          onChange={handleReviewStatusChange}
-        >
-          <option value="">全部状态</option>
-          <option value="TODO">待复习</option>
-          <option value="REVIEWING">复习中</option>
-          <option value="SCHEDULED">已排期</option>
-          <option value="DONE">已完成</option>
-        </select>
-        <select
+          options={reviewStatusOptions}
+          onChange={actions.setReviewStatusFilter}
+        />
+        <AppSelect
           value={filters.scheduleFilter}
-          onChange={handleScheduleChange}
-        >
-          <option value="">全部排期</option>
-          <option value="DUE">已到期</option>
-          <option value="SCHEDULED">有排期</option>
-          <option value="UNSCHEDULED">无排期</option>
-        </select>
+          options={scheduleOptions}
+          onChange={actions.setScheduleFilter}
+        />
         <label className="checkbox-label">
           <input
             type="checkbox"
             checked={filters.onlyUnsolved}
             onChange={handleOnlyUnsolvedChange}
           />
-          仅显示未通过
+          {t('reviewFilter.onlyUnsolved')}
         </label>
       </div>
     </>

@@ -1,27 +1,7 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
+import { AppDateTimePicker } from "../../AppControls.jsx";
 import { formatDate } from "../../../lib/format.js";
-
-const STATUS_OPTIONS = [
-  { value: "TODO", label: "待复习" },
-  { value: "REVIEWING", label: "复习中" },
-  { value: "SCHEDULED", label: "已排期" },
-  { value: "DONE", label: "已完成" },
-];
-
-const RATE_OPTIONS = [
-  { quality: 1, label: "完全忘记" },
-  { quality: 2, label: "模糊记得" },
-  { quality: 3, label: "费力回想" },
-  { quality: 4, label: "有些犹豫" },
-  { quality: 5, label: "完全流畅" },
-];
-
-const NOTE_FIELDS = [
-  { key: "cause", label: "错误原因", placeholder: "这题错在哪里？记录最小反例、漏掉的性质或实现问题。" },
-  { key: "idea", label: "正确思路", placeholder: "写下下次应该从哪个性质、模板或状态定义切入。" },
-  { key: "trick", label: "关键性质 / 套路", placeholder: "沉淀可迁移的技巧，例如 border 链、倒推 DP、全局 offset。" },
-  { key: "remind", label: "下次提醒", placeholder: "给未来自己的短提醒，越具体越好。" },
-];
 
 const NOTE_HEADINGS = {
   cause: "错误原因",
@@ -56,24 +36,24 @@ function parseStructuredNotes(notes) {
 }
 
 function composeStructuredNotes(sections) {
-  return NOTE_FIELDS
-    .map((field) => {
-      const value = sections[field.key]?.trim();
-      return value ? `## ${NOTE_HEADINGS[field.key]}\n${value}` : "";
+  return Object.keys(NOTE_HEADINGS)
+    .map((key) => {
+      const value = sections[key]?.trim();
+      return value ? `## ${NOTE_HEADINGS[key]}\n${value}` : "";
     })
     .filter(Boolean)
     .join("\n\n");
 }
 
-function buildAiCards(selectedProblem, selectedTags) {
+function buildAiCards(selectedProblem, selectedTags, t) {
   const verdict = selectedProblem?.latestVerdict || "WA";
-  const tags = selectedTags?.length ? selectedTags : ["模板", "边界"];
+  const tags = selectedTags?.length ? selectedTags : [t("review.detail.aiCards.defaultTag"), t("review.detail.aiCards.boundaryTag")];
 
   return [
-    ["错误类型", ["实现错误", verdict === "TLE" ? "复杂度过高" : "边界处理风险"]],
-    ["关键漏洞", [`${tags[0]} 检查不足`, "复盘中缺少反例"]],
-    ["正确切入点", [`${tags[0]} 模板回忆`, "先写性质再写代码"]],
-    ["相似题提醒", ["CF 126B", "CF 271D"]],
+    [t("review.detail.aiCards.errorType"), [t("review.detail.aiCards.implementation"), verdict === "TLE" ? t("review.detail.aiCards.complexity") : t("review.detail.aiCards.boundaryRisk")]],
+    [t("review.detail.aiCards.keyGap"), [t("review.detail.aiCards.tagGap", { tag: tags[0] }), t("review.detail.aiCards.noCounterexample")]],
+    [t("review.detail.aiCards.entryPoint"), [t("review.detail.aiCards.tagRecall", { tag: tags[0] }), t("review.detail.aiCards.propertyFirst")]],
+    [t("review.detail.aiCards.similar"), ["CF 126B", "CF 271D"]],
   ];
 }
 
@@ -91,8 +71,24 @@ export const StateTab = React.memo(function StateTab({
   handleRate,
   saveReviewState,
 }) {
+  const { t } = useTranslation();
+  const statusOptions = [
+    { value: "TODO", label: t("review.todo") },
+    { value: "REVIEWING", label: t("review.reviewing") },
+    { value: "SCHEDULED", label: t("review.scheduled") },
+    { value: "DONE", label: t("review.done") },
+  ];
+  const rateOptions = [1, 2, 3, 4, 5].map((quality) => ({
+    quality,
+    label: t(`review.detail.rate.${quality}`),
+  }));
+  const noteFields = ["cause", "idea", "trick", "remind"].map((key) => ({
+    key,
+    label: t(`review.detail.notes.${key}.label`),
+    placeholder: t(`review.detail.notes.${key}.placeholder`),
+  }));
   const structuredNotes = parseStructuredNotes(reviewState.notes);
-  const aiCards = buildAiCards(selectedProblem, selectedTags);
+  const aiCards = buildAiCards(selectedProblem, selectedTags, t);
 
   function updateNoteField(key, value) {
     const next = { ...structuredNotes, [key]: value };
@@ -106,9 +102,9 @@ export const StateTab = React.memo(function StateTab({
       )}
 
       <div className="rd-status-strip">
-        <span className="rd-label">复习状态</span>
+        <span className="rd-label">{t("review.detail.status")}</span>
         <div className="rd-status-btns">
-          {STATUS_OPTIONS.map((opt) => (
+          {statusOptions.map((opt) => (
             <button
               key={opt.value}
               type="button"
@@ -126,11 +122,11 @@ export const StateTab = React.memo(function StateTab({
 
       <div className="panel rd-structured-panel">
         <div className="rd-panel-head">
-          <h3>结构化复盘</h3>
-          <span>只保留和当前题有关的信息</span>
+          <h3>{t("review.detail.structuredReview")}</h3>
+          <span>{t("review.detail.structuredCaption")}</span>
         </div>
         <div className="rd-notes-grid">
-          {NOTE_FIELDS.map((field) => (
+          {noteFields.map((field) => (
             <label key={field.key} className="rd-note-box">
               <span>{field.label}</span>
               <textarea
@@ -146,9 +142,9 @@ export const StateTab = React.memo(function StateTab({
 
       <div className="panel rd-ai-assist-panel">
         <div className="rd-panel-head">
-          <h3>AI 辅助分析</h3>
+          <h3>{t("review.detail.aiAssist")}</h3>
           <button type="button" className="rd-soft-btn" disabled={serviceUnavailable}>
-            生成 / 更新分析
+            {t("review.detail.generateAnalysis")}
           </button>
         </div>
         <div className="rd-ai-card-grid">
@@ -166,38 +162,38 @@ export const StateTab = React.memo(function StateTab({
       </div>
 
       <div className="rd-next-review-row">
-        <label className="rd-next-review-field" htmlFor="rd-next-review">
-          <span>下次复习时间（手动调整）</span>
-          <input
-            id="rd-next-review"
-            type="datetime-local"
+        <label className="rd-next-review-field">
+          <span>{t("review.detail.nextReviewManual")}</span>
+          <AppDateTimePicker
             value={reviewState.nextReviewAt}
             disabled={!reviewStateSupported}
-            onChange={(e) =>
-              setReviewState((s) => ({ ...s, nextReviewAt: e.target.value }))
+            onChange={(value) =>
+              setReviewState((s) => ({ ...s, nextReviewAt: value }))
             }
           />
         </label>
         {srsInfo.intervalDays > 0 && (
           <p className="rd-srs-hint">
-            当前间隔 {srsInfo.intervalDays} 天 · 已复习{" "}
-            {srsInfo.repetitionCount} 次 · 熟练度{" "}
-            {srsInfo.easeFactor.toFixed(2)}
+            {t("review.detail.srsHint", {
+              interval: srsInfo.intervalDays,
+              repetitions: srsInfo.repetitionCount,
+              ease: srsInfo.easeFactor.toFixed(2),
+            })}
           </p>
         )}
       </div>
 
       <div className="rd-bottom-bar">
-        <span className="rd-label">SM-2 评分</span>
+        <span className="rd-label">{t("review.detail.sm2Rating")}</span>
         <div className="rd-rate-btns">
-          {RATE_OPTIONS.map((opt) => (
+          {rateOptions.map((opt) => (
             <button
               key={opt.quality}
               type="button"
               className="rd-rate-btn"
               disabled={!reviewStateSupported || rating || serviceUnavailable}
               onClick={() => handleRate(opt.quality)}
-              title={`快捷键 ${opt.quality}`}
+              title={t("review.detail.shortcut", { key: opt.quality })}
             >
               <span className="rd-rate-num">{opt.quality}</span>
               <span>{opt.label}</span>
@@ -207,8 +203,8 @@ export const StateTab = React.memo(function StateTab({
         <div className="rd-save-actions">
           <span className="rd-last-saved">
             {reviewState.lastUpdatedAt
-              ? `上次保存 ${formatDate(reviewState.lastUpdatedAt)}`
-              : `${reviewState.notes.length} 字`}
+              ? t("review.detail.lastSaved", { date: formatDate(reviewState.lastUpdatedAt) })
+              : t("review.detail.noteLength", { count: reviewState.notes.length })}
           </span>
           <button
             type="button"
@@ -218,10 +214,10 @@ export const StateTab = React.memo(function StateTab({
           >
             {reviewSaving ? (
               <>
-                <span className="rd-spinner" /> 保存中…
+                <span className="rd-spinner" /> {t("review.detail.saving")}
               </>
             ) : (
-              "保存并安排下次复习"
+              t("review.detail.saveAndSchedule")
             )}
           </button>
         </div>

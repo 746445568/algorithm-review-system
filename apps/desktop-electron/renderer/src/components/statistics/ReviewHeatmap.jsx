@@ -1,4 +1,5 @@
 import { memo, useMemo } from "react";
+import { useTranslation } from 'react-i18next';
 
 function formatDateStr(d) {
   const y = d.getFullYear();
@@ -8,6 +9,7 @@ function formatDateStr(d) {
 }
 
 export const ReviewHeatmap = memo(function ReviewHeatmap({ data }) {
+  const { t } = useTranslation();
   const cells = useMemo(() => {
     const countMap = new Map((data ?? []).map((d) => [d.date, d.count || 0]));
     const maxCount = Math.max(...(data ?? []).map((d) => d.count || 0), 1);
@@ -27,19 +29,19 @@ export const ReviewHeatmap = memo(function ReviewHeatmap({ data }) {
 
   return (
     <div className="review-heatmap-wrap" data-testid="heatmap">
-      <div className="heatmap" aria-label="复习热力图">
+      <div className="heatmap" aria-label={t('statistics.reviewHeatmap')}>
         {cells.map((cell) => (
           <div
             key={cell.date}
             className={`heat-cell ${cell.level > 0 ? `heat-${cell.level}` : ""}`}
-            title={`${cell.date}: ${cell.count} 次`}
-            aria-label={`${cell.date}: ${cell.count} 次`}
+            title={t('statistics.heatmapCell', { date: cell.date, count: cell.count })}
+            aria-label={t('statistics.heatmapCell', { date: cell.date, count: cell.count })}
           />
         ))}
       </div>
       <div className="heat-labels" aria-hidden="true">
-        <span>13 周前</span>
-        <span>今天</span>
+        <span>{t('statistics.weeksAgo', { count: 13 })}</span>
+        <span>{t('statistics.today')}</span>
       </div>
     </div>
   );

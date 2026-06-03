@@ -48,19 +48,24 @@ func (s *Server) Router() http.Handler { return s.corsMiddleware(s.mux) }
 
 func (s *Server) corsMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Use configured allowed origins, default to "*" if not set
 		origins := s.cfg.AllowedOrigins
 		if len(origins) == 0 {
-			origins = []string{"*"}
+			origins = []string{"http://localhost:5173", "http://127.0.0.1:5173", "http://localhost:38473", "http://127.0.0.1:38473"}
 		}
-		// For simplicity, use the first origin in the list or "*"
-		origin := origins[0]
-		if origin == "" {
-			origin = "*"
+		reqOrigin := r.Header.Get("Origin")
+		allowedOrigin := ""
+		for _, o := range origins {
+			if o == "*" || o == reqOrigin {
+				allowedOrigin = o
+				break
+			}
 		}
-		w.Header().Set("Access-Control-Allow-Origin", origin)
+		if allowedOrigin == "" && len(origins) > 0 {
+			allowedOrigin = origins[0]
+		}
+		w.Header().Set("Access-Control-Allow-Origin", allowedOrigin)
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
-		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
+		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, Accept-Language")
 		if r.Method == http.MethodOptions {
 			w.WriteHeader(http.StatusNoContent)
 			return
@@ -112,6 +117,11 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("POST /api/problems/{problemId}/chats", s.handleSendChat)
 	s.mux.HandleFunc("DELETE /api/problems/{problemId}/chats", s.handleDeleteChats)
 	s.mux.HandleFunc("GET /api/analysis/problem/{problemId}/history", s.handleAnalysisProblemHistory)
+	s.mux.HandleFunc("GET /api/settings/language", s.handleGetLanguage)
+	s.mux.HandleFunc("PUT /api/settings/language", s.handlePutLanguage)
+	s.mux.HandleFunc("GET /api/review/calendar", s.handleReviewCalendar)
+	s.mux.HandleFunc("GET /api/error-patterns/stats", s.handleErrorPatternStats)
+	s.mux.HandleFunc("GET /api/error-patterns/problem/{problemId}", s.handleErrorPatternsByProblem)
 }
 func (s *Server) handleGetAISettings(w http.ResponseWriter, _ *http.Request) {
 	settings, err := s.db.LoadAISettings()
@@ -426,6 +436,7 @@ func (s *Server) handleSendChat(w http.ResponseWriter, r *http.Request) {
 
 	var body struct {
 		Message string `json:"message"`
+		Mode    string `json:"mode"`
 	}
 	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid json body")
@@ -443,7 +454,7 @@ func (s *Server) handleSendChat(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if settings.Provider == "" || settings.Model == "" || settings.APIKey == "" {
-		writeError(w, http.StatusBadRequest, "请先配置 AI 服务")
+		writeErrorWithCode(w, http.StatusBadRequest, "ERR_AI_NOT_CONFIGURED", "请先配置 AI 服务")
 		return
 	}
 
@@ -470,7 +481,40 @@ func (s *Server) handleSendChat(w http.ResponseWriter, r *http.Request) {
 		latestAnalysis = task.ResultText
 	}
 
-	systemPrompt := "你是一位算法竞赛教练，请用中文回答用户的问题。"
+	// Select system prompt based on chat mode
+	var systemPrompt string
+	switch strings.ToLower(strings.TrimSpace(body.Mode)) {
+	case "tutor":
+		lang, _ := s.db.LoadLanguage()
+		if strings.HasPrefix(lang, "en") {
+			systemPrompt = `You are an algorithm competition coach using the Socratic teaching method.
+Rules:
+1. NEVER give the complete answer or solution code directly.
+2. Guide the student to discover errors and solutions through targeted questions.
+3. Give hints about the direction of thinking, not specific code.
+4. When the student is close to the correct answer, give encouragement and affirmation.
+5. Gradually deepen based on the student's responses.
+6. If the student is stuck, provide a smaller hint, not the answer.
+7. Use code snippets only to illustrate concepts, never complete solutions.`
+		} else {
+			systemPrompt = `你是一位算法竞赛教练，采用苏格拉底式教学法。
+规则：
+1. 永远不要直接给出完整答案或解题代码。
+2. 通过有针对性的提问引导学生发现错误和解决方案。
+3. 给出思考方向的提示，而非具体代码。
+4. 当学生接近正确答案时给予鼓励和肯定。
+5. 根据学生的回答逐步深入。
+6. 如果学生卡住了，提供更小的提示，而不是答案。
+7. 仅使用代码片段来说明概念，永远不要给出完整解决方案。`
+		}
+	default:
+		lang, _ := s.db.LoadLanguage()
+		if strings.HasPrefix(lang, "en") {
+			systemPrompt = "You are an algorithm competition coach. Answer the user's questions clearly and thoroughly."
+		} else {
+			systemPrompt = "你是一位算法竞赛教练，请用中文回答用户的问题。"
+		}
+	}
 	var contextParts []string
 	if notes != "" {
 		contextParts = append(contextParts, "【用户笔记】"+notes)
@@ -493,7 +537,7 @@ func (s *Server) handleSendChat(w http.ResponseWriter, r *http.Request) {
 
 	reply, err := ai.Complete(systemPrompt, userPrompt, aiSettings)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, "AI 回复失败: "+err.Error())
+		writeErrorWithCode(w, http.StatusInternalServerError, "ERR_AI_REPLY_FAILED", "AI 回复失败: "+err.Error())
 		return
 	}
 
@@ -521,4 +565,83 @@ func (s *Server) handleDeleteChats(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	w.WriteHeader(http.StatusNoContent)
+}
+
+func (s *Server) handleGetLanguage(w http.ResponseWriter, _ *http.Request) {
+	lang, err := s.db.LoadLanguage()
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]string{"language": lang})
+}
+
+func (s *Server) handlePutLanguage(w http.ResponseWriter, r *http.Request) {
+	var payload struct {
+		Language string `json:"language"`
+	}
+	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
+		writeError(w, http.StatusBadRequest, "invalid json body")
+		return
+	}
+	lang := strings.TrimSpace(payload.Language)
+	if lang != "zh-CN" && lang != "en-US" {
+		writeError(w, http.StatusBadRequest, "unsupported language")
+		return
+	}
+	if err := s.db.SaveLanguage(lang); err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]string{"language": lang})
+}
+
+func (s *Server) handleReviewCalendar(w http.ResponseWriter, r *http.Request) {
+	monthStr := r.URL.Query().Get("month")
+	var year, month int
+	if monthStr != "" {
+		t, err := time.Parse("2006-01", monthStr)
+		if err != nil {
+			writeError(w, http.StatusBadRequest, "invalid month format, expected YYYY-MM")
+			return
+		}
+		year = t.Year()
+		month = int(t.Month())
+	} else {
+		now := time.Now()
+		year = now.Year()
+		month = int(now.Month())
+	}
+
+	days, err := s.db.GetReviewCalendar(year, month)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	currentStreak, longestStreak, err := s.db.GetReviewStreak()
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	todayDue := 0
+	todayStr := time.Now().Format("2006-01-02")
+	for _, d := range days {
+		if d.Date == todayStr {
+			todayDue = d.Due
+			break
+		}
+	}
+
+	if days == nil {
+		days = []storage.ReviewCalendarDay{}
+	}
+
+	writeJSON(w, http.StatusOK, map[string]any{
+		"days":          days,
+		"currentStreak": currentStreak,
+		"longestStreak": longestStreak,
+		"todayDue":      todayDue,
+	})
 }

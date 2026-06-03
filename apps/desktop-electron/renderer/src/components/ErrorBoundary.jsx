@@ -14,6 +14,7 @@ import { error as logError } from "../lib/logger.js";
  * @param {React.ReactNode} [props.fallback] - 错误发生时显示的降级 UI
  * @param {string} [props.moduleName] - 模块名称，用于日志记录
  * @param {Function} [props.onError] - 错误发生时的回调函数
+ * @param {Function} [props.t] - i18n translation function, pass from parent
  */
 export class ErrorBoundary extends Component {
   constructor(props) {
@@ -47,10 +48,10 @@ export class ErrorBoundary extends Component {
     const moduleName = this.props.moduleName || "UnknownModule";
 
     logError(
-      `组件崩溃：${moduleName}`,
+      `Component crash: ${moduleName}`,
       "ErrorBoundary",
       error,
-      "\n组件堆栈:",
+      "\nComponent stack:",
       errorInfo.componentStack
     );
 
@@ -78,7 +79,8 @@ export class ErrorBoundary extends Component {
    */
   renderError() {
     const { error, errorInfo } = this.state;
-    const moduleName = this.props.moduleName || "组件";
+    const t = this.props.t || ((key) => key);
+    const moduleName = this.props.moduleName || t('errorBoundary.defaultModule');
 
     return (
       <div className="error-boundary-fallback">
@@ -98,15 +100,15 @@ export class ErrorBoundary extends Component {
             <line x1="12" y1="16" x2="12.01" y2="16" />
           </svg>
         </div>
-        <h3 className="error-boundary-title">{moduleName} 发生错误</h3>
+        <h3 className="error-boundary-title">{t('errorBoundary.title', { module: moduleName })}</h3>
         <p className="error-boundary-message">
-          抱歉，{moduleName} 出现了问题。您可以尝试重新加载或返回主页。
+          {t('errorBoundary.message', { module: moduleName })}
         </p>
         {error && (
           <details className="error-boundary-details">
-            <summary>错误详情</summary>
+            <summary>{t('errorBoundary.details')}</summary>
             <p className="error-boundary-error-message">
-              <strong>错误:</strong> {error.message}
+              <strong>{t('errorBoundary.errorLabel')}</strong> {error.message}
             </p>
             {errorInfo && (
               <pre className="error-boundary-stack">
@@ -121,14 +123,14 @@ export class ErrorBoundary extends Component {
             className="btn btn-primary"
             onClick={this.handleReset}
           >
-            重新加载
+            {t('errorBoundary.reload')}
           </button>
           <button
             type="button"
             className="btn btn-secondary"
             onClick={() => window.location.href = "/"}
           >
-            返回主页
+            {t('errorBoundary.goHome')}
           </button>
         </div>
       </div>

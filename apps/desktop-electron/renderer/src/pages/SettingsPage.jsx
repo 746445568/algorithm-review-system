@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { api } from "../lib/api.js";
 import { statusLabel } from "../lib/format.js";
 import { useNavigation } from "../lib/NavigationContext.jsx";
 import { AccountsPage } from "./AccountsPage.jsx";
+import { AppDatePicker, AppSelect } from "../components/AppControls.jsx";
 
 const defaultAISettings = {
   provider: "",
@@ -18,27 +20,32 @@ const defaultGoalForm = {
   deadline: "",
 };
 
-const providerOptions = [
-  { value: "openai", label: "OpenAI 兼容" },
-  { value: "deepseek", label: "DeepSeek" },
-  { value: "ollama", label: "Ollama" },
-];
-
 const goalPlatformOptions = [
   { value: "CODEFORCES", label: "Codeforces" },
   { value: "ATCODER", label: "AtCoder" },
+];
+
+const languageOptions = [
+  { value: "zh-CN", label: "简体中文" },
+  { value: "en-US", label: "English" },
 ];
 
 function platformLabel(platform) {
   return goalPlatformOptions.find((option) => option.value === platform)?.label ?? platform;
 }
 
-function formatGoalDeadline(deadline) {
+function translatedStatus(t, status) {
+  const key = (status || "UNKNOWN").toUpperCase();
+  return t(`statusLabels.${key}`, { defaultValue: statusLabel(status) });
+}
+
+function formatGoalDeadline(deadline, language = "zh-CN") {
   if (!deadline) return "";
-  return new Date(deadline).toLocaleDateString("zh-CN");
+  return new Date(deadline).toLocaleDateString(language);
 }
 
 export function SettingsPage({ runtimeInfo, serviceStatus }) {
+  const { t, i18n } = useTranslation();
   const { navigationState } = useNavigation();
   const goalsSectionRef = useRef(null);
   const refreshSequenceRef = useRef(0);
@@ -46,7 +53,9 @@ export function SettingsPage({ runtimeInfo, serviceStatus }) {
   const [aiSettings, setAISettings] = useState(defaultAISettings);
   const [goals, setGoals] = useState([]);
   const [goalForm, setGoalForm] = useState(defaultGoalForm);
+  const [language, setLanguage] = useState(() => i18n.language || "zh-CN");
   const [loading, setLoading] = useState(true);
+  const [savingLanguage, setSavingLanguage] = useState(false);
   const [savingAI, setSavingAI] = useState(false);
   const [testingAI, setTestingAI] = useState(false);
   const [savingGoal, setSavingGoal] = useState(false);
@@ -59,6 +68,11 @@ export function SettingsPage({ runtimeInfo, serviceStatus }) {
   const [updateInfo, setUpdateInfo] = useState(null);
   const [updateDownloaded, setUpdateDownloaded] = useState(false);
   const [checking, setChecking] = useState(false);
+  const providerOptions = [
+    { value: "openai", label: t("settings.ai.providers.openai") },
+    { value: "deepseek", label: "DeepSeek" },
+    { value: "ollama", label: "Ollama" },
+  ];
 
   useEffect(() => {
     const bridge = window.desktopBridge?.updater;
@@ -96,9 +110,10 @@ export function SettingsPage({ runtimeInfo, serviceStatus }) {
     setLoading(true);
     setError("");
     try {
-      const [nextAISettings, nextGoals] = await Promise.all([
+      const [nextAISettings, nextGoals, nextLanguage] = await Promise.all([
         api.getAISettings(),
         api.getGoals(),
+        api.getLanguage(),
       ]);
 
       if (requestId !== refreshSequenceRef.current) {
@@ -112,6 +127,11 @@ export function SettingsPage({ runtimeInfo, serviceStatus }) {
         apiKey: nextAISettings?.apiKey ?? "",
       });
       setGoals(Array.isArray(nextGoals) ? nextGoals : []);
+      const loadedLanguage = nextLanguage?.language || "zh-CN";
+      setLanguage(loadedLanguage);
+      if (i18n.language !== loadedLanguage) {
+        void i18n.changeLanguage(loadedLanguage);
+      }
     } catch (nextError) {
       if (requestId !== refreshSequenceRef.current) {
         return;
@@ -122,13 +142,30 @@ export function SettingsPage({ runtimeInfo, serviceStatus }) {
         setLoading(false);
       }
     }
-  }, [serviceStatus.state]);
+  }, [i18n, serviceStatus.state]);
 
   useEffect(() => {
     void refresh();
   }, [refresh]);
 
   const serviceUnavailable = serviceStatus.state !== "healthy";
+
+  async function saveLanguage(value) {
+    setSavingLanguage(true);
+    setError("");
+    setNotice("");
+    setLanguage(value);
+
+    try {
+      await api.saveLanguage(value);
+      await i18n.changeLanguage(value);
+      setNotice(t("settings.language.updated"));
+    } catch (nextError) {
+      setError(nextError.message);
+    } finally {
+      setSavingLanguage(false);
+    }
+  }
 
   async function saveAISettings() {
     setSavingAI(true);
@@ -138,7 +175,7 @@ export function SettingsPage({ runtimeInfo, serviceStatus }) {
 
     try {
       await api.saveAISettings(aiSettings);
-      setNotice("AI 设置已保存。");
+      setNotice(t("settings.ai.saved"));
     } catch (nextError) {
       setError(nextError.message);
     } finally {
@@ -155,7 +192,7 @@ export function SettingsPage({ runtimeInfo, serviceStatus }) {
     try {
       const result = await api.testAISettings(aiSettings);
       setTestResult(result);
-      setNotice(result.ok ? "AI 配置测试通过。" : "");
+      setNotice(result.ok ? t("settings.ai.testSuccess") : "");
     } catch (nextError) {
       setError(nextError.message);
     } finally {
@@ -171,7 +208,7 @@ export function SettingsPage({ runtimeInfo, serviceStatus }) {
 
     const targetRating = Number.parseInt(goalForm.targetRating, 10);
     if (!Number.isFinite(targetRating) || targetRating <= 0) {
-      setError("目标分必须是大于 0 的数字。");
+      setError(t("settings.goals.invalidTarget"));
       setSavingGoal(false);
       return;
     }
@@ -187,7 +224,7 @@ export function SettingsPage({ runtimeInfo, serviceStatus }) {
         ...defaultGoalForm,
         platform: current.platform,
       }));
-      setNotice("评分目标已创建。");
+      setNotice(t("settings.goals.created"));
       await refresh();
     } catch (nextError) {
       setError(nextError.message);
@@ -203,7 +240,7 @@ export function SettingsPage({ runtimeInfo, serviceStatus }) {
 
     try {
       await api.deleteGoal(goalId);
-      setNotice("评分目标已删除。");
+      setNotice(t("settings.goals.deleted"));
       await refresh();
     } catch (nextError) {
       setError(nextError.message);
@@ -221,7 +258,7 @@ export function SettingsPage({ runtimeInfo, serviceStatus }) {
       const result = await api.exportDiagnostics();
       const nextPath = result?.path ?? "";
       setDiagPath(nextPath);
-      setNotice("诊断信息已导出。");
+      setNotice(t("settings.diagnostics.exported"));
     } catch (nextError) {
       setError(nextError.message);
     } finally {
@@ -232,32 +269,50 @@ export function SettingsPage({ runtimeInfo, serviceStatus }) {
   return (
     <div className="settings-page-root">
       <AccountsPage serviceStatus={serviceStatus} runtimeInfo={runtimeInfo} />
-    <div className="settings-grid page-grid two-column">
-      <section className="panel settings-wide">
+    <div className="settings-grid settings-control-grid">
+      <section className="panel settings-language-panel">
         <div className="panel-header">
-          <h3>运行时信息</h3>
-          <span className="caption">本地服务和存储布局</span>
+          <h3>{t("settings.language.title")}</h3>
+          <span className="caption">{t("settings.language.caption")}</span>
         </div>
-        {loading ? <p className="muted">正在加载设置...</p> : null}
+        <div className="form-stack">
+          <label>
+            <span>{t("settings.appearance.language")}</span>
+            <AppSelect
+              value={language}
+              options={languageOptions}
+              disabled={serviceUnavailable || savingLanguage}
+              onChange={(value) => void saveLanguage(value)}
+            />
+          </label>
+        </div>
+      </section>
+
+      <section className="panel settings-runtime-panel">
+        <div className="panel-header">
+          <h3>{t("settings.runtime.title")}</h3>
+          <span className="caption">{t("settings.runtime.caption")}</span>
+        </div>
+        {loading ? <p className="muted">{t("settings.loading")}</p> : null}
         {error ? <p className="error-text">{error}</p> : null}
         {notice ? <p className="success-text">{notice}</p> : null}
 
         <div className="stack-list">
           <article className="inline-card">
             <div>
-              <strong>服务状态</strong>
+              <strong>{t("settings.runtime.serviceStatus")}</strong>
               <p>{serviceStatus.message}</p>
             </div>
             <div className="meta-pill">
-              {statusLabel(serviceStatus.state)}
+              {translatedStatus(t, serviceStatus.state)}
               <span>{serviceStatus.source}</span>
             </div>
           </article>
 
           <article className="inline-card">
             <div>
-              <strong>数据目录</strong>
-              <p>{runtimeInfo.runtimeDir || "等待中"}</p>
+              <strong>{t("settings.runtime.dataDir")}</strong>
+              <p>{runtimeInfo.runtimeDir || t("common.pending")}</p>
             </div>
             <button
               type="button"
@@ -265,14 +320,14 @@ export function SettingsPage({ runtimeInfo, serviceStatus }) {
               disabled={!runtimeInfo.runtimeDir}
               onClick={() => window.desktopBridge?.openPath(runtimeInfo.runtimeDir)}
             >
-              打开文件夹
+              {t("settings.runtime.openFolder")}
             </button>
           </article>
 
           <article className="inline-card">
             <div>
-              <strong>应用路径</strong>
-              <p>{runtimeInfo.appPath || "等待中"}</p>
+              <strong>{t("settings.runtime.appPath")}</strong>
+              <p>{runtimeInfo.appPath || t("common.pending")}</p>
             </div>
             <button
               type="button"
@@ -280,49 +335,46 @@ export function SettingsPage({ runtimeInfo, serviceStatus }) {
               disabled={!runtimeInfo.appPath}
               onClick={() => window.desktopBridge?.openPath(runtimeInfo.appPath)}
             >
-              打开路径
+              {t("settings.runtime.openPath")}
             </button>
           </article>
         </div>
       </section>
 
-      <section className="panel" ref={goalsSectionRef}>
+      <section className="panel settings-goals-panel" ref={goalsSectionRef}>
         <div className="panel-header">
-          <h3>评分目标</h3>
-          <span className="caption">管理仪表盘里的目标进度</span>
+          <h3>{t("settings.goals.title")}</h3>
+          <span className="caption">{t("settings.goals.caption")}</span>
         </div>
         <form className="form-stack" onSubmit={createGoal}>
           {serviceUnavailable ? (
             <p className="muted">
-              本地服务 {runtimeInfo.serviceUrl || serviceStatus.url} 未就绪，评分目标暂不可用。
+              {t("settings.goals.serviceUnavailable", {
+                url: runtimeInfo.serviceUrl || serviceStatus.url,
+              })}
             </p>
           ) : null}
           <label>
-            <span>平台</span>
-            <select
+            <span>{t("settings.accounts.platform")}</span>
+            <AppSelect
               value={goalForm.platform}
+              options={goalPlatformOptions}
               disabled={serviceUnavailable || savingGoal}
-              onChange={(event) =>
-                setGoalForm((current) => ({ ...current, platform: event.target.value }))
+              onChange={(value) =>
+                setGoalForm((current) => ({ ...current, platform: value }))
               }
-            >
-              {goalPlatformOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
+            />
           </label>
 
           <label>
-            <span>目标分</span>
+            <span>{t("settings.goals.targetRating")}</span>
             <input
               type="number"
               min="1"
               max="9999"
               value={goalForm.targetRating}
               disabled={serviceUnavailable || savingGoal}
-              placeholder="例如 1800"
+              placeholder={t("settings.goals.targetPlaceholder")}
               onChange={(event) =>
                 setGoalForm((current) => ({ ...current, targetRating: event.target.value }))
               }
@@ -330,11 +382,11 @@ export function SettingsPage({ runtimeInfo, serviceStatus }) {
           </label>
 
           <label>
-            <span>标题（可选）</span>
+            <span>{t("settings.goals.titleLabel")}</span>
             <input
               value={goalForm.title}
               disabled={serviceUnavailable || savingGoal}
-              placeholder="例如 Codeforces 蓝名目标"
+              placeholder={t("settings.goals.titlePlaceholder")}
               onChange={(event) =>
                 setGoalForm((current) => ({ ...current, title: event.target.value }))
               }
@@ -342,13 +394,13 @@ export function SettingsPage({ runtimeInfo, serviceStatus }) {
           </label>
 
           <label>
-            <span>截止日期（可选）</span>
-            <input
-              type="date"
+            <span>{t("settings.goals.deadline")}</span>
+            <AppDatePicker
               value={goalForm.deadline}
               disabled={serviceUnavailable || savingGoal}
-              onChange={(event) =>
-                setGoalForm((current) => ({ ...current, deadline: event.target.value }))
+              placeholder={t("settings.goals.deadlinePlaceholder")}
+              onChange={(value) =>
+                setGoalForm((current) => ({ ...current, deadline: value }))
               }
             />
           </label>
@@ -358,21 +410,21 @@ export function SettingsPage({ runtimeInfo, serviceStatus }) {
             className="primary-button"
             disabled={serviceUnavailable || savingGoal}
           >
-            {savingGoal ? "创建中..." : "创建目标"}
+            {savingGoal ? t("settings.goals.creating") : t("settings.goals.create")}
           </button>
         </form>
 
         <div className="settings-goal-list">
           {goals.length === 0 ? (
-            <p className="muted">暂未设置评分目标。</p>
+            <p className="muted">{t("settings.goals.empty")}</p>
           ) : (
             goals.map((goal) => (
               <article className="inline-card" key={goal.id}>
                 <div>
-                  <strong>{goal.title || `${platformLabel(goal.platform)} 目标`}</strong>
+                  <strong>{goal.title || t("settings.goals.defaultTitle", { platform: platformLabel(goal.platform) })}</strong>
                   <p>
                     {platformLabel(goal.platform)} · {goal.targetRating} 分
-                    {goal.deadline ? ` · 截止 ${formatGoalDeadline(goal.deadline)}` : ""}
+                    {goal.deadline ? ` · ${t("settings.goals.deadlineValue", { date: formatGoalDeadline(goal.deadline, i18n.language) })}` : ""}
                   </p>
                 </div>
                 <button
@@ -381,7 +433,7 @@ export function SettingsPage({ runtimeInfo, serviceStatus }) {
                   disabled={deletingGoalId === goal.id || serviceUnavailable}
                   onClick={() => void deleteGoal(goal.id)}
                 >
-                  {deletingGoalId === goal.id ? "删除中..." : "删除"}
+                  {deletingGoalId === goal.id ? t("settings.goals.deleting") : t("actions.delete")}
                 </button>
               </article>
             ))
@@ -389,15 +441,17 @@ export function SettingsPage({ runtimeInfo, serviceStatus }) {
         </div>
       </section>
 
-      <section className="panel">
+      <section className="panel settings-diagnostics-panel">
         <div className="panel-header">
-          <h3>诊断信息</h3>
-          <span className="caption">导出运行时元数据用于调试</span>
+          <h3>{t("settings.diagnostics.title")}</h3>
+          <span className="caption">{t("settings.diagnostics.caption")}</span>
         </div>
         <div className="form-stack">
           {serviceUnavailable ? (
             <p className="muted">
-              本地服务 {runtimeInfo.serviceUrl || serviceStatus.url} 未就绪，设置暂不可用。
+              {t("settings.serviceUnavailable", {
+                url: runtimeInfo.serviceUrl || serviceStatus.url,
+              })}
             </p>
           ) : null}
           <button
@@ -406,13 +460,13 @@ export function SettingsPage({ runtimeInfo, serviceStatus }) {
             disabled={diagExporting || serviceUnavailable}
             onClick={() => void exportDiagnostics()}
           >
-            {diagExporting ? "导出中..." : "导出诊断信息"}
+            {diagExporting ? t("settings.diagnostics.exporting") : t("settings.diagnostics.export")}
           </button>
 
           {diagPath ? (
             <article className="inline-card">
               <div>
-                <strong>最近导出</strong>
+                <strong>{t("settings.diagnostics.latestExport")}</strong>
                 <p>{diagPath}</p>
               </div>
               <button
@@ -420,43 +474,38 @@ export function SettingsPage({ runtimeInfo, serviceStatus }) {
                 className="ghost-button"
                 onClick={() => window.desktopBridge?.openPath(diagPath)}
               >
-                打开文件
+                {t("settings.diagnostics.openFile")}
               </button>
             </article>
           ) : (
-            <p className="muted">本次会话尚未生成诊断导出。</p>
+            <p className="muted">{t("settings.diagnostics.empty")}</p>
           )}
         </div>
       </section>
 
-      <section className="panel">
+      <section className="panel settings-ai-panel">
         <div className="panel-header">
-          <h3>AI 服务</h3>
-          <span className="caption">通过 /api/settings/ai 接口配置</span>
+          <h3>{t("settings.ai.title")}</h3>
+          <span className="caption">{t("settings.ai.caption")}</span>
         </div>
         <div className="form-stack">
           <label>
-            <span>服务商</span>
-            <select
+            <span>{t("settings.ai.provider")}</span>
+            <AppSelect
               value={aiSettings.provider}
-              onChange={(event) =>
+              options={providerOptions}
+              placeholder={t("settings.ai.providerPlaceholder")}
+              onChange={(value) =>
                 setAISettings((current) => ({
                   ...current,
-                  provider: event.target.value,
+                  provider: value,
                 }))
               }
-            >
-              <option value="">选择服务商</option>
-              {providerOptions.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
+            />
           </label>
 
           <label>
-            <span>模型</span>
+            <span>{t("settings.ai.model")}</span>
             <input
               value={aiSettings.model}
               placeholder="gpt-4.1 / deepseek-chat / llama3.1"
@@ -470,10 +519,10 @@ export function SettingsPage({ runtimeInfo, serviceStatus }) {
           </label>
 
           <label>
-            <span>接口地址</span>
+            <span>{t("settings.ai.baseUrl")}</span>
             <input
               value={aiSettings.baseUrl}
-              placeholder="可选，用于自定义 OpenAI 兼容接口"
+              placeholder={t("settings.ai.baseUrlPlaceholder")}
               onChange={(event) =>
                 setAISettings((current) => ({
                   ...current,
@@ -484,11 +533,11 @@ export function SettingsPage({ runtimeInfo, serviceStatus }) {
           </label>
 
           <label>
-            <span>API 密钥</span>
+            <span>{t("settings.ai.apiKey")}</span>
             <input
               type="password"
               value={aiSettings.apiKey}
-              placeholder="本地加密存储"
+              placeholder={t("settings.ai.apiKeyPlaceholder")}
               onChange={(event) =>
                 setAISettings((current) => ({
                   ...current,
@@ -505,7 +554,7 @@ export function SettingsPage({ runtimeInfo, serviceStatus }) {
               disabled={testingAI || serviceUnavailable}
               onClick={() => void testAISettings()}
             >
-              {testingAI ? "测试中..." : "测试配置"}
+              {testingAI ? t("settings.ai.testing") : t("settings.ai.test")}
             </button>
             <button
               type="button"
@@ -513,14 +562,16 @@ export function SettingsPage({ runtimeInfo, serviceStatus }) {
               disabled={savingAI || serviceUnavailable}
               onClick={() => void saveAISettings()}
             >
-              {savingAI ? "保存中..." : "保存 AI 设置"}
+              {savingAI ? t("settings.ai.saving") : t("settings.ai.save")}
             </button>
           </div>
 
           {testResult ? (
             <article className="inline-card">
               <div>
-                <strong>{testResult.ok ? "配置有效" : "配置失败"}</strong>
+                <strong>
+                  {testResult.ok ? t("settings.ai.valid") : t("settings.ai.invalid")}
+                </strong>
                 <p>{testResult.message}</p>
               </div>
             </article>
@@ -528,29 +579,29 @@ export function SettingsPage({ runtimeInfo, serviceStatus }) {
         </div>
       </section>
 
-      <section className="panel">
+      <section className="panel settings-update-panel">
         <div className="panel-header">
-          <h3>应用更新</h3>
-          <span className="caption">检查并安装新版本</span>
+          <h3>{t("settings.update.title")}</h3>
+          <span className="caption">{t("settings.update.caption")}</span>
         </div>
         <div className="form-stack">
           {updateDownloaded ? (
             <div>
-              <p>新版本已下载，重启后生效。</p>
+              <p>{t("settings.update.downloaded")}</p>
               <button className="btn-primary" onClick={() => window.desktopBridge?.updater?.install?.()}>
-                立即重启安装
+                {t("settings.update.install")}
               </button>
             </div>
           ) : updateInfo ? (
             <div>
-              <p>发现新版本：{updateInfo.version}</p>
+              <p>{t("settings.update.available", { version: updateInfo.version })}</p>
               <button className="btn-primary" onClick={() => window.desktopBridge?.updater?.download?.()}>
-                下载更新
+                {t("settings.update.download")}
               </button>
             </div>
           ) : (
             <button className="ghost-button" onClick={handleCheckUpdate} disabled={checking}>
-              {checking ? "检查中..." : "检查更新"}
+              {checking ? t("settings.update.checking") : t("settings.update.check")}
             </button>
           )}
         </div>

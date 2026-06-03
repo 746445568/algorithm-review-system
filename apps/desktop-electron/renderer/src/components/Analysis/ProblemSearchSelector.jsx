@@ -1,8 +1,9 @@
 import { useRef, useState, useCallback, useEffect, useMemo } from "react";
+import { useTranslation } from 'react-i18next';
 
-function getProblemExternalId(problem) {
+function getProblemExternalId(problem, t) {
   if (!problem) return "";
-  return problem.externalProblemId || "未同步题号";
+  return problem.externalProblemId || t('analysis.problem.unsyncedId');
 }
 
 function getProblemSearchText(problem) {
@@ -43,6 +44,7 @@ export const ProblemSearchSelector = Object.freeze(function ProblemSearchSelecto
   problems = [],
   labelledBy
 }) {
+  const { t } = useTranslation();
   const [searchTerm, setSearchTerm] = useState("");
   const [isOpen, setIsOpen] = useState(false);
   const [activeIndex, setActiveIndex] = useState(0);
@@ -144,12 +146,12 @@ export const ProblemSearchSelector = Object.freeze(function ProblemSearchSelecto
               {selectedProblem.platform}
             </span>
             <span className="problem-picker-copy">
-              <span className="problem-picker-title">{selectedProblem.title || "未命名题目"}</span>
-              <span className="problem-picker-eid">{selectedProblem.externalProblemId || "未同步题号"}</span>
+              <span className="problem-picker-title">{selectedProblem.title || t('analysis.problem.untitled')}</span>
+              <span className="problem-picker-eid">{selectedProblem.externalProblemId || t('analysis.problem.unsyncedId')}</span>
             </span>
           </span>
         ) : (
-          <span className="an-placeholder">选择题目...</span>
+          <span className="an-placeholder">{t('analysis.problem.selectPlaceholder')}</span>
         )}
         <svg className="problem-picker-arrow" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" aria-hidden="true">
           <polyline points="6 9 12 15 18 9" />
@@ -161,15 +163,15 @@ export const ProblemSearchSelector = Object.freeze(function ProblemSearchSelecto
           <input
             type="text"
             className="an-search-input"
-            placeholder="搜索题名 / 题号 / 平台"
+            placeholder={t('analysis.problem.searchPlaceholder')}
             value={searchTerm}
             onChange={handleSearchChange}
-            aria-label="搜索题目"
+            aria-label={t('analysis.problem.searchLabel')}
             autoFocus
           />
           <div className="an-dropdown-list" id={listboxId} role="listbox" aria-labelledby={labelledBy}>
             {filteredProblems.length === 0 ? (
-              <div className="an-dropdown-empty">未找到题目</div>
+              <div className="an-dropdown-empty">{t('analysis.problem.notFound')}</div>
             ) : (
               filteredProblems.map((problem, index) => {
                 const selected = String(problem.id) === String(value);
@@ -188,8 +190,8 @@ export const ProblemSearchSelector = Object.freeze(function ProblemSearchSelecto
                       {problem.platform || "UNKNOWN"}
                     </span>
                     <span className="an-dropdown-title problem-option-name">
-                      <span>{problem.title || "未命名题目"}</span>
-                      <span>{getProblemExternalId(problem)}</span>
+                      <span>{problem.title || t('analysis.problem.untitled')}</span>
+                      <span>{getProblemExternalId(problem, t)}</span>
                     </span>
                     {verdict && (
                       <span className={`ai-verdict-chip ai-verdict-chip--${verdictTone(verdict)}`}>{verdict}</span>

@@ -1,25 +1,27 @@
 import { memo, useCallback, useState } from "react";
+import { useTranslation } from 'react-i18next';
+import { AppDatePicker } from "../AppControls.jsx";
 import { api } from "../../lib/api.js";
 
 const CF_TIERS = [
-  { min: 0,    max: 1199, color: "#888888", label: "灰" },
-  { min: 1200, max: 1399, color: "#00aa00", label: "绿" },
-  { min: 1400, max: 1599, color: "#03a89e", label: "青" },
-  { min: 1600, max: 1899, color: "#0000ff", label: "蓝" },
-  { min: 1900, max: 2099, color: "#aa00aa", label: "紫" },
-  { min: 2100, max: 2399, color: "#ff8c00", label: "橙" },
-  { min: 2400, max: 9999, color: "#ee0000", label: "红" },
+  { min: 0,    max: 1199, color: "#888888", labelKey: "dashboard.goal.tierGray" },
+  { min: 1200, max: 1399, color: "#00aa00", labelKey: "dashboard.goal.tierGreen" },
+  { min: 1400, max: 1599, color: "#03a89e", labelKey: "dashboard.goal.tierCyan" },
+  { min: 1600, max: 1899, color: "#0000ff", labelKey: "dashboard.goal.tierBlue" },
+  { min: 1900, max: 2099, color: "#aa00aa", labelKey: "dashboard.goal.tierPurple" },
+  { min: 2100, max: 2399, color: "#ff8c00", labelKey: "dashboard.goal.tierOrange" },
+  { min: 2400, max: 9999, color: "#ee0000", labelKey: "dashboard.goal.tierRed" },
 ];
 
 const AT_TIERS = [
-  { min: 0,    max: 399,  color: "#808080", label: "灰" },
-  { min: 400,  max: 799,  color: "#804000", label: "茶" },
-  { min: 800,  max: 1199, color: "#008000", label: "绿" },
-  { min: 1200, max: 1599, color: "#00c0c0", label: "青" },
-  { min: 1600, max: 1999, color: "#0000ff", label: "蓝" },
-  { min: 2000, max: 2399, color: "#c0c000", label: "黄" },
-  { min: 2400, max: 2799, color: "#ff8000", label: "橙" },
-  { min: 2800, max: 9999, color: "#ff0000", label: "红" },
+  { min: 0,    max: 399,  color: "#808080", labelKey: "dashboard.goal.tierGray" },
+  { min: 400,  max: 799,  color: "#804000", labelKey: "dashboard.goal.tierBrown" },
+  { min: 800,  max: 1199, color: "#008000", labelKey: "dashboard.goal.tierGreen" },
+  { min: 1200, max: 1599, color: "#00c0c0", labelKey: "dashboard.goal.tierCyan" },
+  { min: 1600, max: 1999, color: "#0000ff", labelKey: "dashboard.goal.tierBlue" },
+  { min: 2000, max: 2399, color: "#c0c000", labelKey: "dashboard.goal.tierYellow" },
+  { min: 2400, max: 2799, color: "#ff8000", labelKey: "dashboard.goal.tierOrange" },
+  { min: 2800, max: 9999, color: "#ff0000", labelKey: "dashboard.goal.tierRed" },
 ];
 
 const PLATFORMS = [
@@ -31,7 +33,7 @@ function getTier(rating, tiers) {
   return tiers.slice().reverse().find(t => rating >= t.min) || tiers[0];
 }
 
-function GoalBar({ current, target, tiers, maxScale }) {
+function GoalBar({ current, target, tiers, maxScale, t }) {
   const scale = maxScale || Math.max(target * 1.1, current * 1.1, 800);
   const currentPct = Math.min(current / scale * 100, 100);
   const targetPct  = Math.min(target  / scale * 100, 100);
@@ -46,7 +48,7 @@ function GoalBar({ current, target, tiers, maxScale }) {
           {current}
         </span>
         <div style={{ textAlign: "right" }}>
-          <div style={{ fontSize: 11, color: "var(--muted)", marginBottom: 2 }}>目标</div>
+          <div style={{ fontSize: 11, color: "var(--muted)", marginBottom: 2 }}>{t('dashboard.goal.target')}</div>
           <span style={{ fontSize: 20, fontWeight: 700, color: targetTier.color }}>{target}</span>
         </div>
       </div>
@@ -99,11 +101,11 @@ function GoalBar({ current, target, tiers, maxScale }) {
 
       <div style={{ marginTop: 6, display: "flex", alignItems: "center", gap: 8 }}>
         {current >= target ? (
-          <span style={{ fontSize: 12, color: "var(--good)", fontWeight: 600 }}>✓ 已达成目标！</span>
+          <span style={{ fontSize: 12, color: "var(--good)", fontWeight: 600 }}>✓ {t('dashboard.goal.achieved')}</span>
         ) : (
           <>
-            <span style={{ fontSize: 12, color: "var(--muted)" }}>还差</span>
-            <span style={{ fontSize: 14, fontWeight: 700, color: targetTier.color }}>{target - current} 分</span>
+            <span style={{ fontSize: 12, color: "var(--muted)" }}>{t('dashboard.goal.remaining')}</span>
+            <span style={{ fontSize: 14, fontWeight: 700, color: targetTier.color }}>{t('dashboard.goal.pointsLeft', { points: target - current })}</span>
             <div style={{ flex: 1, height: 3, borderRadius: 2, background: "var(--line)", overflow: "hidden" }}>
               <div style={{
                 height: "100%", background: currentTier.color,
@@ -132,6 +134,7 @@ function buildDraft(goals) {
 }
 
 export const GoalPanel = memo(function GoalPanel({ goals, accounts, onMutate }) {
+  const { t } = useTranslation();
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(() => buildDraft(goals));
   const [saving, setSaving] = useState(false);
@@ -169,7 +172,7 @@ export const GoalPanel = memo(function GoalPanel({ goals, accounts, onMutate }) 
         if (hasValidTarget) {
           await api.createGoal({
             platform: p.key,
-            title: `${p.label} 目标 ${targetNum}`,
+            title: `${p.label} ${t('dashboard.goal.target')} ${targetNum}`,
             targetRating: targetNum,
             deadline: d.deadline || undefined,
           });
@@ -178,7 +181,7 @@ export const GoalPanel = memo(function GoalPanel({ goals, accounts, onMutate }) 
       await onMutate?.();
       setEditing(false);
     } catch (err) {
-      setError(err.message || "保存失败，请重试");
+      setError(err.message || t('dashboard.goal.saveFailed'));
     } finally {
       setSaving(false);
     }
@@ -187,21 +190,21 @@ export const GoalPanel = memo(function GoalPanel({ goals, accounts, onMutate }) 
   return (
     <section className="panel">
       <div className="panel-header">
-        <h3>目标系统</h3>
+        <h3>{t('dashboard.goal.system')}</h3>
         <div style={{ display: "flex", gap: 8, alignItems: "center" }}>
           {editing ? (
             <>
               {error && <span style={{ fontSize: 12, color: "var(--bad)" }}>{error}</span>}
               <button type="button" className="ghost-button" onClick={cancelEditing} disabled={saving}>
-                取消
+                {t('actions.cancel')}
               </button>
               <button type="button" className="btn-primary" onClick={handleSave} disabled={saving}>
-                {saving ? "保存中…" : "保存"}
+                {saving ? t('settings.goals.creating') : t('actions.save')}
               </button>
             </>
           ) : (
             <button type="button" className="ghost-button" onClick={startEditing}>
-              编辑目标
+              {t('dashboard.goal.edit')}
             </button>
           )}
         </div>
@@ -222,7 +225,7 @@ export const GoalPanel = memo(function GoalPanel({ goals, accounts, onMutate }) 
                 {editing ? (
                   <div style={{ display: "flex", gap: 12, alignItems: "center", flexWrap: "wrap" }}>
                     <label style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, color: "var(--muted)" }}>
-                      目标分
+                      {t('dashboard.goal.targetScore')}
                       <input
                         type="number"
                         min="1"
@@ -230,33 +233,33 @@ export const GoalPanel = memo(function GoalPanel({ goals, accounts, onMutate }) 
                         className="goal-number-input"
                         value={draft[p.key].target}
                         onChange={e => updateDraft(p.key, "target", e.target.value)}
-                        placeholder="如 1500"
+                        placeholder={t('settings.goals.targetPlaceholder')}
                       />
                     </label>
                     <label style={{ display: "flex", alignItems: "center", gap: 5, fontSize: 12, color: "var(--muted)" }}>
-                      截止日期
-                      <input
-                        type="date"
+                      {t('settings.goals.deadline')}
+                      <AppDatePicker
                         className="goal-date-input"
                         value={draft[p.key].deadline}
-                        onChange={e => updateDraft(p.key, "deadline", e.target.value)}
+                        placeholder={t('settings.goals.deadlinePlaceholder')}
+                        onChange={value => updateDraft(p.key, "deadline", value)}
                       />
                     </label>
                   </div>
                 ) : (
                   goal?.deadline && (
                     <span style={{ fontSize: 11, color: "var(--muted)" }}>
-                      截止 {new Date(goal.deadline).toLocaleDateString("zh-CN")}
+                      {t('settings.goals.deadlineValue', { date: new Date(goal.deadline).toLocaleDateString() })}
                     </span>
                   )
                 )}
               </div>
 
               {goal ? (
-                <GoalBar current={current} target={goal.targetRating} tiers={p.tiers} maxScale={p.maxScale} />
+                <GoalBar current={current} target={goal.targetRating} tiers={p.tiers} maxScale={p.maxScale} t={t} />
               ) : (
                 <p style={{ fontSize: 13, color: "var(--muted)", padding: "12px 0", fontStyle: "italic", margin: 0 }}>
-                  {editing ? "输入目标分数以设置目标" : "暂未设置目标"}
+                  {editing ? t('dashboard.goal.enterTarget') : t('settings.goals.empty')}
                 </p>
               )}
             </div>

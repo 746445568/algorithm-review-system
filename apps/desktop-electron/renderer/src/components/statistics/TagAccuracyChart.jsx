@@ -1,6 +1,8 @@
 import { memo, useMemo } from "react";
+import { useTranslation } from 'react-i18next';
 
 export const TagAccuracyChart = memo(function TagAccuracyChart({ data }) {
+  const { t } = useTranslation();
   const rows = useMemo(() => {
     return [...(data ?? [])]
       .sort((a, b) => {
@@ -15,11 +17,11 @@ export const TagAccuracyChart = memo(function TagAccuracyChart({ data }) {
   }, [data]);
 
   if (rows.length === 0) {
-    return <p className="muted-text stats-empty">暂无标签数据</p>;
+    return <p className="muted-text stats-empty">{t('statistics.noTagData')}</p>;
   }
 
   return (
-    <div className="tag-rate-list" data-testid="tag-chart" aria-label="标签正确率">
+    <div className="tag-rate-list" data-testid="tag-chart" aria-label={t('statistics.tagAccuracy')}>
       {rows.map((item) => (
         <div className="tag-rate-row" key={item.tag}>
           <div className="tag-rate-head">
@@ -28,7 +30,7 @@ export const TagAccuracyChart = memo(function TagAccuracyChart({ data }) {
               {item.correct}/{item.total} · {item.rate}%
             </span>
           </div>
-          <div className="rate-track" aria-label={`${item.tag} 正确率 ${item.rate}%`}>
+          <div className="rate-track" aria-label={t('statistics.tagAccuracyRate', { tag: item.tag, rate: item.rate })}>
             <div className="rate-fill" style={{ width: `${item.rate}%` }} />
           </div>
         </div>

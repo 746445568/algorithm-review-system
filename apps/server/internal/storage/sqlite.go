@@ -32,6 +32,7 @@ var allowedTables = map[string]bool{
 	"problem_chats":         true,
 	"contests":              true,
 	"goals":                 true,
+	"error_patterns":        true,
 }
 
 // DB is the SQLite database connection
@@ -291,7 +292,18 @@ CREATE TABLE IF NOT EXISTS app_settings (
   key TEXT PRIMARY KEY,
   value TEXT NOT NULL,
   updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-);`
+);
+CREATE TABLE IF NOT EXISTS error_patterns (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  problem_id INTEGER REFERENCES problems(id),
+  submission_id TEXT DEFAULT '',
+  pattern_type TEXT NOT NULL,
+  description TEXT DEFAULT '',
+  ai_confidence REAL DEFAULT 0,
+  created_at TEXT DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_error_patterns_problem ON error_patterns(problem_id);
+CREATE INDEX IF NOT EXISTS idx_error_patterns_type ON error_patterns(pattern_type);`
 	if _, err := db.conn.Exec(schema); err != nil {
 		return err
 	}

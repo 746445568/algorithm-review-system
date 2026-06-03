@@ -217,17 +217,27 @@ export const api = {
     request(`/api/accounts/${accountId}/refresh-rating`, { method: "POST", body: JSON.stringify({}) }),
   getSubmissionStats: () => request("/api/statistics/submissions"),
   getReviewStats: () => request("/api/statistics/reviews"),
+  getLanguage: () => request("/api/settings/language"),
+  saveLanguage: (language) =>
+    request("/api/settings/language", {
+      method: "PUT",
+      body: JSON.stringify({ language }),
+    }),
+  getReviewCalendar: (month) => request(withQuery("/api/review/calendar", { month })),
 
   getProblemChats: (problemId) => request(`/api/problems/${problemId}/chats`),
-  sendProblemChat: (problemId, message) =>
+  sendProblemChat: (problemId, message, opts = {}) =>
     request(`/api/problems/${problemId}/chats`, {
       method: "POST",
-      body: JSON.stringify({ message }),
+      body: JSON.stringify({ message, mode: opts.mode || "direct" }),
     }),
   clearProblemChats: (problemId) =>
     request(`/api/problems/${problemId}/chats`, { method: "DELETE" }),
   getProblemAnalysisHistory: (problemId) =>
     request(`/api/analysis/problem/${problemId}/history`),
+  getErrorPatternStats: () => request('/api/error-patterns/stats'),
+  getErrorPatternsByProblem: (problemId) =>
+    request(`/api/error-patterns/problem/${problemId}`),
 
   getProblems: async (query = {}) => {
     const cached = await getCachedProblems(query);

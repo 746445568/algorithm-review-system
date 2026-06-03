@@ -1,4 +1,6 @@
 import { memo, useCallback } from "react";
+import { useTranslation } from 'react-i18next';
+import { AppDateTimePicker, AppSelect } from "./AppControls.jsx";
 import { formatDate, statusLabel } from "../lib/format.js";
 
 export const ReviewStateEditor = memo(function ReviewStateEditor({
@@ -12,12 +14,21 @@ export const ReviewStateEditor = memo(function ReviewStateEditor({
   onChange,
   onSave,
 }) {
-  const handleStatusChange = useCallback((event) => {
-    onChange({ status: event.target.value });
+  const { t } = useTranslation();
+
+  const reviewStatusOptions = [
+    { value: "TODO", label: t('statusLabels.TODO') },
+    { value: "REVIEWING", label: t('statusLabels.REVIEWING') },
+    { value: "SCHEDULED", label: t('statusLabels.SCHEDULED') },
+    { value: "DONE", label: t('statusLabels.DONE') },
+  ];
+
+  const handleStatusChange = useCallback((value) => {
+    onChange({ status: value });
   }, [onChange]);
 
-  const handleNextReviewAtChange = useCallback((event) => {
-    onChange({ nextReviewAt: event.target.value });
+  const handleNextReviewAtChange = useCallback((value) => {
+    onChange({ nextReviewAt: value });
   }, [onChange]);
 
   const handleNotesChange = useCallback((event) => {
@@ -31,30 +42,25 @@ export const ReviewStateEditor = memo(function ReviewStateEditor({
   return (
     <div className="panel review-editor-panel">
       <div className="panel-header">
-        <h3>复习状态</h3>
-        <span className="caption">状态、笔记和下次复习时间</span>
+        <h3>{t('review.detail.status')}</h3>
+        <span className="caption">{t('reviewEditor.caption')}</span>
       </div>
       {selectedProblem ? (
         <div className="form-stack">
           {!reviewStateSupported ? <p className="error-text">{reviewStateSupportMessage}</p> : null}
           <label>
-            <span>状态</span>
-            <select
+            <span>{t('reviewEditor.statusLabel')}</span>
+            <AppSelect
               value={reviewState.status}
+              options={reviewStatusOptions}
               disabled={!reviewStateSupported}
               onChange={handleStatusChange}
-            >
-              <option value="TODO">待复习</option>
-              <option value="REVIEWING">复习中</option>
-              <option value="SCHEDULED">已排期</option>
-              <option value="DONE">已完成</option>
-            </select>
+            />
           </label>
 
           <label>
-            <span>下次复习时间</span>
-            <input
-              type="datetime-local"
+            <span>{t('reviewEditor.nextReviewTime')}</span>
+            <AppDateTimePicker
               value={reviewState.nextReviewAt}
               disabled={!reviewStateSupported}
               onChange={handleNextReviewAtChange}
@@ -62,12 +68,12 @@ export const ReviewStateEditor = memo(function ReviewStateEditor({
           </label>
 
           <label>
-            <span>笔记</span>
+            <span>{t('reviewEditor.notes')}</span>
             <textarea
               rows="8"
               value={reviewState.notes}
               disabled={!reviewStateSupported}
-              placeholder="记录错误原因、正确思路和下次注意事项。"
+              placeholder={t('reviewEditor.notesPlaceholder')}
               onChange={handleNotesChange}
             />
           </label>
@@ -75,7 +81,7 @@ export const ReviewStateEditor = memo(function ReviewStateEditor({
           <div className="editor-toolbar">
             <span className="meta-pill review-state-pill">
               {statusLabel(reviewState.status)}
-              <span>{reviewState.lastUpdatedAt ? formatDate(reviewState.lastUpdatedAt) : "尚未保存"}</span>
+              <span>{reviewState.lastUpdatedAt ? formatDate(reviewState.lastUpdatedAt) : t('reviewEditor.notSaved')}</span>
             </span>
             <button
               type="button"
@@ -83,14 +89,14 @@ export const ReviewStateEditor = memo(function ReviewStateEditor({
               disabled={reviewSaving || serviceUnavailable || !reviewStateSupported}
               onClick={handleSaveClick}
             >
-              {reviewSaving ? "保存中..." : "保存复习状态"}
+              {reviewSaving ? t('review.detail.saving') : t('reviewEditor.saveReviewState')}
             </button>
           </div>
 
           {reviewNotice ? <p className="success-text">{reviewNotice}</p> : null}
         </div>
       ) : (
-        <p className="muted">请先选择一道题目再编辑复习状态。</p>
+        <p className="muted">{t('reviewEditor.selectFirst')}</p>
       )}
     </div>
   );

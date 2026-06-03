@@ -1,4 +1,5 @@
 import { memo, useCallback } from "react";
+import { useTranslation } from 'react-i18next';
 import { ProblemSearchSelector } from "./ProblemSearchSelector.jsx";
 import { LoadingState, ErrorMessage, AnalysisResult, FailedState } from "./AnalysisResult.jsx";
 import { tagLabel, verdictTone } from "../../lib/format.js";
@@ -20,6 +21,8 @@ function getVerdict(problem) {
 }
 
 function ProblemSummary({ problem }) {
+  const { t } = useTranslation();
+
   if (!problem) {
     return null;
   }
@@ -30,15 +33,15 @@ function ProblemSummary({ problem }) {
   const attempts = problem.attemptCount ?? problem.attempts ?? 0;
 
   return (
-    <section className="ai-problem-summary" aria-label="题目摘要">
+    <section className="ai-problem-summary" aria-label={t('analysis.problem.summaryLabel')}>
       <div className="ai-summary-top">
         <div className="ai-summary-heading">
           <span className={`ai-platform-chip ai-platform-chip--${(problem.platform || "other").toLowerCase()}`}>
             {problem.platform || "UNKNOWN"}
           </span>
           <div>
-            <h4 className="ai-summary-title">{problem.title || "未命名题目"}</h4>
-            <p className="ai-summary-meta">{problem.externalProblemId || "未同步题号"}</p>
+            <h4 className="ai-summary-title">{problem.title || t('analysis.problem.untitled')}</h4>
+            <p className="ai-summary-meta">{problem.externalProblemId || t('analysis.problem.unsyncedId')}</p>
           </div>
         </div>
         <span className={`ai-verdict-chip ai-verdict-chip--${tone}`}>{verdict}</span>
@@ -46,17 +49,17 @@ function ProblemSummary({ problem }) {
 
       <div className="ai-summary-grid">
         <div className="ai-summary-cell">
-          <span className="ai-summary-label">尝试次数</span>
+          <span className="ai-summary-label">{t('analysis.problem.attempts')}</span>
           <strong className="ai-summary-value">{attempts || "—"}</strong>
         </div>
         <div className="ai-summary-cell">
-          <span className="ai-summary-label">难度</span>
-          <strong className="ai-summary-value">{problem.difficulty || "未记录"}</strong>
+          <span className="ai-summary-label">{t('common.difficulty')}</span>
+          <strong className="ai-summary-value">{problem.difficulty || t('analysis.problem.unrecorded')}</strong>
         </div>
       </div>
 
       {tags.length > 0 && (
-        <div className="ai-summary-tags" aria-label="题目标签">
+        <div className="ai-summary-tags" aria-label={t('common.tags')}>
           {tags.slice(0, 6).map((tag) => (
             <span className="ai-tag" key={tag}>{tagLabel(tag)}</span>
           ))}
@@ -87,6 +90,8 @@ export const ProblemAnalysis = memo(function ProblemAnalysis({
   problemError,
   onGenerateProblem
 }) {
+  const { t } = useTranslation();
+
   const selectedProblem = problems.find((problem) => String(problem.id) === String(selectedProblemId));
 
   const handleSelectChange = useCallback((problemId) => {
@@ -103,12 +108,12 @@ export const ProblemAnalysis = memo(function ProblemAnalysis({
   return (
     <div className="an-panel page-content ai-report-card ai-single-card">
       <div className="an-panel-header">
-        <h3 className="an-panel-title">单题深度分析</h3>
-        <p className="an-panel-subtitle">选择错题后生成报告式诊断，聚焦错误定位、修复建议和迁移套路。</p>
+        <h3 className="an-panel-title">{t('analysis.problem.title')}</h3>
+        <p className="an-panel-subtitle">{t('analysis.problem.subtitle')}</p>
       </div>
 
       <section className="an-field ai-picker-section">
-        <label className="an-label" id="ap-problem-picker-label">选择要分析的题目</label>
+        <label className="an-label" id="ap-problem-picker-label">{t('analysis.problem.selectLabel')}</label>
         <ProblemSearchSelector
           value={selectedProblemId}
           onChange={handleSelectChange}
@@ -119,7 +124,7 @@ export const ProblemAnalysis = memo(function ProblemAnalysis({
 
       <ProblemSummary problem={selectedProblem} />
 
-      <section className="an-result-area ai-analysis-list" aria-label="分析结果">
+      <section className="an-result-area ai-analysis-list" aria-label={t('analysis.problem.resultLabel')}>
         {problemError && <ErrorMessage message={problemError} />}
 
         {isLoading && <LoadingState task={problemTask} />}
@@ -139,8 +144,8 @@ export const ProblemAnalysis = memo(function ProblemAnalysis({
           <div className="an-empty-hint ai-analysis-placeholder">
             <span className="ai-analysis-icon">AI</span>
             <div>
-              <h4>{selectedProblemId ? "等待生成分析" : "先选择一道题目"}</h4>
-              <p>{selectedProblemId ? "点击下方按钮后，这里会显示 AI 生成的单题复盘报告。" : "题目摘要和分析报告会按纵向卡片组织在这里。"}</p>
+              <h4>{selectedProblemId ? t('analysis.problem.waitingGenerate') : t('analysis.problem.selectFirst')}</h4>
+              <p>{selectedProblemId ? t('analysis.problem.waitingHint') : t('analysis.problem.selectHint')}</p>
             </div>
           </div>
         )}
@@ -149,7 +154,7 @@ export const ProblemAnalysis = memo(function ProblemAnalysis({
       <footer className="ai-analysis-actions">
         <div className="ai-task-status" aria-live="polite">
           <span className={`ai-status-dot ai-status-dot--${taskStatus.toLowerCase()}`} />
-          <span>状态：{taskStatus === "READY" ? "已选择题目" : taskStatus === "IDLE" ? "等待选择" : taskStatus}</span>
+          <span>{t('analysis.problem.statusPrefix')}{taskStatus === "READY" ? t('analysis.problem.statusReady') : taskStatus === "IDLE" ? t('analysis.problem.statusIdle') : taskStatus}</span>
         </div>
         <button
           type="button"
@@ -158,9 +163,9 @@ export const ProblemAnalysis = memo(function ProblemAnalysis({
           onClick={handleGenerate}
         >
           {isLoading ? (
-            <><span className="an-spinner" /> AI 正在解析题目数据…</>
+            <><span className="an-spinner" /> {t('analysis.problem.parsing')}</>
           ) : (
-            "开始 AI 分析"
+            t('analysis.problem.startAnalysis')
           )}
         </button>
       </footer>

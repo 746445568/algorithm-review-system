@@ -1,0 +1,213 @@
+/* Review calendar adapted to the dashboard v2 surface. */
+.review-calendar {
+  padding: 18px;
+  border: 1px solid var(--ojdr-border, var(--line));
+  border-radius: 16px;
+  background: var(--ojdr-surface, var(--panel));
+  box-shadow: 0 18px 48px -34px rgba(15, 23, 42, 0.32);
+}
+
+.cal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 16px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--ojdr-border, var(--line));
+}
+
+.cal-title {
+  margin: 0;
+  color: var(--ojdr-text, var(--text));
+  font-size: 16px;
+  font-weight: 850;
+  letter-spacing: -0.01em;
+}
+
+.cal-stats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(74px, 1fr));
+  gap: 8px;
+}
+
+.cal-stat {
+  min-width: 0;
+  padding: 9px 10px;
+  border: 1px solid var(--ojdr-border, var(--line));
+  border-radius: 12px;
+  background: var(--ojdr-surface-2, var(--surface-2));
+  text-align: center;
+}
+
+.cal-stat-value {
+  display: block;
+  color: rgb(var(--ojdr-accent-rgb, 37, 99, 235));
+  font-size: 20px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.cal-stat-label {
+  display: block;
+  margin-top: 4px;
+  overflow: hidden;
+  color: var(--ojdr-text-3, var(--muted));
+  font-size: 11px;
+  font-weight: 700;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cal-nav {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr) 32px;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.cal-nav-btn,
+.cal-month-label {
+  min-height: 32px;
+  border: 1px solid var(--ojdr-border, var(--line));
+  border-radius: 10px;
+  background: var(--ojdr-surface-2, var(--surface-2));
+  color: var(--ojdr-text-2, var(--text-secondary));
+  font: inherit;
+  font-weight: 800;
+}
+
+.cal-month-label {
+  background: transparent;
+  color: var(--ojdr-text, var(--text));
+  font-size: 13px;
+}
+
+.cal-nav-btn:hover,
+.cal-month-label:hover {
+  border-color: rgba(var(--ojdr-accent-rgb, 37, 99, 235), 0.28);
+  background: rgba(var(--ojdr-accent-rgb, 37, 99, 235), 0.08);
+}
+
+.cal-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 5px;
+}
+
+.cal-weekday {
+  padding: 3px 0 6px;
+  color: var(--ojdr-text-3, var(--muted));
+  font-size: 11px;
+  font-weight: 800;
+  text-align: center;
+}
+
+.cal-cell {
+  position: relative;
+  display: grid;
+  min-height: 44px;
+  padding: 6px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: var(--ojdr-surface-2, var(--surface-2));
+  place-items: center;
+  transition: transform 120ms ease, border-color 120ms ease, background 120ms ease;
+}
+
+.cal-cell:hover:not(.cal-cell-empty) {
+  border-color: rgba(var(--ojdr-accent-rgb, 37, 99, 235), 0.24);
+  transform: translateY(-1px);
+}
+
+.cal-cell-empty {
+  background: transparent;
+}
+
+.cal-today {
+  border-color: rgba(var(--ojdr-accent-rgb, 37, 99, 235), 0.42);
+  background: rgba(var(--ojdr-accent-rgb, 37, 99, 235), 0.10);
+}
+
+.cal-heat-1 {
+  background: rgba(var(--ojdr-accent-rgb, 37, 99, 235), 0.10);
+}
+
+.cal-heat-2 {
+  background: rgba(var(--ojdr-accent-rgb, 37, 99, 235), 0.18);
+}
+
+.cal-heat-3 {
+  background: rgba(var(--ojdr-accent-rgb, 37, 99, 235), 0.28);
+}
+
+.cal-day-num {
+  color: var(--ojdr-text, var(--text));
+  font-size: 12px;
+  font-weight: 850;
+  line-height: 1;
+}
+
+.cal-today .cal-day-num {
+  color: rgb(var(--ojdr-accent-rgb, 37, 99, 235));
+}
+
+.cal-indicators {
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  display: flex;
+  gap: 3px;
+}
+
+.cal-due-dot,
+.cal-done-dot {
+  min-width: 16px;
+  padding: 2px 4px;
+  border-radius: 999px;
+  font-size: 9px;
+  font-weight: 900;
+  line-height: 1;
+}
+
+.cal-due-dot {
+  background: rgba(245, 158, 11, 0.14);
+  color: var(--warn);
+}
+
+.cal-done-dot {
+  background: rgba(34, 197, 94, 0.14);
+  color: var(--good);
+}
+
+.cal-legend {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 12px;
+  color: var(--ojdr-text-3, var(--muted));
+  font-size: 11px;
+}
+
+.cal-legend-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.cal-legend-swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 4px;
+}
+
+@media (max-width: 720px) {
+  .cal-header {
+    display: grid;
+  }
+
+  .cal-stats {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}

@@ -1,17 +1,22 @@
 import { useCallback, useEffect, useState } from "react";
+import { useTranslation } from 'react-i18next';
 import { api } from "../lib/api.js";
 import "../styles/ui-contests.css";
 
-const STATUS_FILTERS = [
-  { key: "upcoming", label: "即将开始" },
-  { key: "all", label: "全部状态" },
-];
+function getStatusFilters(t) {
+  return [
+    { key: "upcoming", label: t('contests.upcoming') },
+    { key: "all", label: t('contests.allStatus') },
+  ];
+}
 
-const PLATFORM_FILTERS = [
-  { key: "all", label: "全部" },
-  { key: "codeforces", label: "Codeforces" },
-  { key: "atcoder", label: "AtCoder" },
-];
+function getPlatformFilters(t) {
+  return [
+    { key: "all", label: t('review.filter.all') },
+    { key: "codeforces", label: "Codeforces" },
+    { key: "atcoder", label: "AtCoder" },
+  ];
+}
 
 function normalizePlatform(platform) {
   const value = String(platform ?? "").trim().toLowerCase();
@@ -57,7 +62,7 @@ function formatStartTime(isoStr) {
   const D = d.getUTCDate();
   const hh = String(d.getUTCHours()).padStart(2, "0");
   const mm = String(d.getUTCMinutes()).padStart(2, "0");
-  return `${M}/${D} ${hh}:${mm} (北京)`;
+  return `${M}/${D} ${hh}:${mm} (Beijing)`;
 }
 
 function formatDuration(minutes) {
@@ -94,22 +99,26 @@ function PlatformBadge({ platform }) {
   return <span className={`platform-badge platform-badge--${normalized}`}>{label}</span>;
 }
 
-function StatusBadge({ status }) {
+function StatusBadge({ status, t }) {
   const map = {
-    UPCOMING: { label: "即将开始", cls: "upcoming" },
-    ONGOING: { label: "进行中", cls: "ongoing" },
-    FINISHED: { label: "已结束", cls: "finished" },
+    UPCOMING: { label: t('contests.upcoming'), cls: "upcoming" },
+    ONGOING: { label: t('contests.ongoing'), cls: "ongoing" },
+    FINISHED: { label: t('contests.finished'), cls: "finished" },
   };
   const { label, cls } = map[status] ?? { label: status, cls: "finished" };
   return <span className={`status-badge ${cls}`}>{label}</span>;
 }
 
 export function ContestsPage() {
+  const { t } = useTranslation();
   const [contests, setContests] = useState([]);
   const [statusFilter, setStatusFilter] = useState("upcoming"); // "upcoming" | "all"
   const [platformFilter, setPlatformFilter] = useState("all"); // "all" | "codeforces" | "atcoder"
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+
+  const STATUS_FILTERS = getStatusFilters(t);
+  const PLATFORM_FILTERS = getPlatformFilters(t);
 
   const loadContests = useCallback(async (currentFilter) => {
     setLoading(true);
@@ -119,7 +128,7 @@ export function ContestsPage() {
       const data = await api.getContests(query);
       setContests(Array.isArray(data) ? data : data?.contests ?? []);
     } catch (err) {
-      setError(err?.message ?? "加载失败");
+      setError(err?.message ?? t('errors.loadFailed'));
     } finally {
       setLoading(false);
     }
@@ -140,19 +149,19 @@ export function ContestsPage() {
       ? contests
       : contests.filter((contest) => normalizePlatform(contest.platform) === platformFilter);
   const groups = groupByWeek(filteredContests);
-  const activePlatformLabel = PLATFORM_FILTERS.find((item) => item.key === platformFilter)?.label ?? "当前平台";
+  const activePlatformLabel = PLATFORM_FILTERS.find((item) => item.key === platformFilter)?.label ?? t('contests.currentPlatform');
 
   return (
     <div className="page-content contests-page">
       <div className="contest-toolbar">
         <div className="contest-toolbar-copy">
           <span className="section-label">Contests</span>
-          <h2>比赛日历</h2>
-          <p>按平台分类筛选，不影响后端接口和数据同步。</p>
+          <h2>{t('contests.title')}</h2>
+          <p>{t('contests.filterHint')}</p>
         </div>
 
         <div className="contest-toolbar-actions">
-          <div className="filter-tabs" aria-label="平台筛选">
+          <div className="filter-tabs" aria-label={t('contests.platformFilter')}>
             {PLATFORM_FILTERS.map((item) => (
               <button
                 key={item.key}
@@ -165,7 +174,7 @@ export function ContestsPage() {
             ))}
           </div>
 
-          <div className="contest-status-toggle" aria-label="状态筛选">
+          <div className="contest-status-toggle" aria-label={t('contests.statusFilter')}>
             {STATUS_FILTERS.map((item) => (
               <button
                 key={item.key}
@@ -183,7 +192,7 @@ export function ContestsPage() {
       <div className="contest-summary">
         <article className={`summary-card${platformFilter === "all" ? " active" : ""}`}>
           <span className="summary-val">{summary.all}</span>
-          <span className="summary-label">全部比赛</span>
+          <span className="summary-label">{t('contests.allContests')}</span>
         </article>
         <article className={`summary-card${platformFilter === "codeforces" ? " active" : ""}`}>
           <span className="summary-val">{summary.codeforces}</span>
@@ -199,12 +208,12 @@ export function ContestsPage() {
 
       {loading ? (
         <div className="contest-state contest-state--loading">
-          <p className="muted-text">加载中...</p>
+          <p className="muted-text">{t('common.loading')}</p>
         </div>
       ) : groups.length === 0 ? (
         <div className="contest-state">
           <p className="muted-text">
-            {contests.length === 0 ? "暂无比赛数据" : `暂无 ${activePlatformLabel} 比赛`}
+            {contests.length === 0 ? t('contests.noContests') : t('contests.noPlatformContests', { platform: activePlatformLabel })}
           </p>
         </div>
       ) : (
@@ -231,7 +240,7 @@ export function ContestsPage() {
                       </span>
                     </div>
                   </div>
-                  <StatusBadge status={c.status} />
+                  <StatusBadge status={c.status} t={t} />
                 </div>
               ))}
             </div>

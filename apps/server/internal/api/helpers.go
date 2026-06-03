@@ -41,6 +41,11 @@ func writeError(w http.ResponseWriter, status int, message string) {
 	writeJSON(w, status, map[string]string{"error": message})
 }
 
+// writeErrorWithCode writes an error response with a machine-readable code for i18n.
+func writeErrorWithCode(w http.ResponseWriter, status int, code string, message string) {
+	writeJSON(w, status, map[string]string{"error": message, "code": code})
+}
+
 func parseTaskID(raw string) (int64, error) {
 	return strconv.ParseInt(raw, 10, 64)
 }

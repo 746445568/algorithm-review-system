@@ -1,4 +1,5 @@
 import { memo, useMemo } from "react";
+import { useTranslation } from 'react-i18next';
 
 function formatLabel(label) {
   if (!label) return "";
@@ -12,8 +13,9 @@ export const SubmissionChart = memo(function SubmissionChart({
   data,
   valueKey = "count",
   variant = "total",
-  emptyText = "暂无数据",
+  emptyText,
 }) {
+  const { t } = useTranslation();
   const chartData = useMemo(() => {
     const rows = data ?? [];
     const max = Math.max(...rows.map((d) => Number(d[valueKey] || 0)), 1);
@@ -32,7 +34,7 @@ export const SubmissionChart = memo(function SubmissionChart({
   }, [data, valueKey]);
 
   if (chartData.length === 0) {
-    return <p className="muted-text stats-empty">{emptyText}</p>;
+    return <p className="muted-text stats-empty">{emptyText || t('common.noData')}</p>;
   }
 
   return (
@@ -40,16 +42,16 @@ export const SubmissionChart = memo(function SubmissionChart({
       className="submission-bar-chart"
       style={{ "--bar-count": chartData.length }}
       data-testid="submission-chart"
-      aria-label="提交趋势柱状图"
+      aria-label={t('statistics.submissionTrendChart')}
     >
       <div className="fixed-bar-chart">
         {chartData.map((item) => (
           <div className="bar-cell" key={item.id}>
-            <div className="bar-tooltip">{item.value} 次</div>
+            <div className="bar-tooltip">{t('statistics.timesCount', { count: item.value })}</div>
             <div
               className={`bar-rect ${variant === "ac" ? "ac" : "total"}`}
               style={{ height: `${item.height}%` }}
-              aria-label={`${item.label}: ${item.value} 次`}
+              aria-label={t('statistics.barLabel', { label: item.label, count: item.value })}
             />
           </div>
         ))}

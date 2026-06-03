@@ -1,4 +1,5 @@
 import { memo } from "react";
+import { useTranslation } from 'react-i18next';
 import { AnalysisResult, ErrorMessage, FailedState, LoadingState } from "./AnalysisResult.jsx";
 
 /**
@@ -28,6 +29,8 @@ export const GlobalAnalysis = memo(function GlobalAnalysis({
   compError,
   onGenerateComparison
 }) {
+  const { t } = useTranslation();
+
   const handlePeriodChange = (newPeriod) => {
     setPeriod(newPeriod);
   };
@@ -37,26 +40,26 @@ export const GlobalAnalysis = memo(function GlobalAnalysis({
   return (
     <div className="an-panel page-content">
       <div className="an-panel-header">
-        <h3 className="an-panel-title">全局复盘报告</h3>
+        <h3 className="an-panel-title">{t('analysis.global.title')}</h3>
       </div>
 
       {/* Period toggle */}
       <div className="an-field">
-        <span className="an-label">分析时间范围</span>
+        <span className="an-label">{t('analysis.global.periodLabel')}</span>
         <div className="an-period-toggle">
           <button
             type="button"
             className={`an-period-btn${period === "week" ? " an-period-btn--active" : ""}`}
             onClick={() => handlePeriodChange("week")}
           >
-            本周
+            {t('analysis.global.week')}
           </button>
           <button
             type="button"
             className={`an-period-btn${period === "month" ? " an-period-btn--active" : ""}`}
             onClick={() => handlePeriodChange("month")}
           >
-            本月
+            {t('analysis.global.month')}
           </button>
         </div>
       </div>
@@ -69,9 +72,9 @@ export const GlobalAnalysis = memo(function GlobalAnalysis({
         onClick={onGenerateGlobal}
       >
         {globalLoading ? (
-          <><span className="an-spinner" /> AI 正在深度复盘中…</>
+          <><span className="an-spinner" /> {t('analysis.global.generating')}</>
         ) : (
-          "生成全局报告"
+          t('analysis.global.generate')
         )}
       </button>
 
@@ -95,18 +98,18 @@ export const GlobalAnalysis = memo(function GlobalAnalysis({
 
       {/* Comparison section */}
       <div className="an-comp-section">
-        <h4 className="an-comp-title">进步趋势分析</h4>
+        <h4 className="an-comp-title">{t('analysis.global.trendTitle')}</h4>
         <button
           type="button"
           className="ghost-button an-comp-btn"
           disabled={compLoading || !globalTask}
           onClick={onGenerateComparison}
-          title={!globalTask ? "请先生成全局报告" : ""}
+          title={!globalTask ? t('analysis.global.generateGlobalFirst') : ""}
         >
           {compLoading ? (
-            <><span className="an-spinner" /> 计算趋势中…</>
+            <><span className="an-spinner" /> {t('analysis.global.calculatingTrend')}</>
           ) : (
-            "生成环比分析"
+            t('analysis.global.generateComparison')
           )}
         </button>
 

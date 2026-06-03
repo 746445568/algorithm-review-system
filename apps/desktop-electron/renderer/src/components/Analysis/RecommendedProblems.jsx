@@ -1,4 +1,5 @@
 import { memo } from "react";
+import { useTranslation } from 'react-i18next';
 import { tagLabel } from "../../lib/format.js";
 
 /**
@@ -11,14 +12,16 @@ import { tagLabel } from "../../lib/format.js";
 export const RecommendedProblems = memo(function RecommendedProblems({
   globalTask
 }) {
+  const { t } = useTranslation();
+
   const recommendations = globalTask?.status === "SUCCESS" ? (globalTask.result?.recommendations || []) : [];
 
   return (
     <div className="ai-report-card">
       <div className="ai-report-head">
-        <div className="ai-report-title">推荐补题</div>
+        <div className="ai-report-title">{t('analysis.recommended.title')}</div>
         {recommendations.length > 0 && (
-          <span className="priority mid">{recommendations.length} 题</span>
+          <span className="priority mid">{t('analysis.recommended.count', { count: recommendations.length })}</span>
         )}
       </div>
 
@@ -27,7 +30,7 @@ export const RecommendedProblems = memo(function RecommendedProblems({
           <div className="recommend-row" key={problem.id || index}>
             <div>
               <div className="rec-name">
-                {problem.platform || "CF"} {problem.externalProblemId || ""} - {problem.title || "未命名题目"}
+                {problem.platform || "CF"} {problem.externalProblemId || ""} - {problem.title || t('analysis.problem.untitled')}
               </div>
               <div className="rec-meta">
                 {(problem.tags || []).slice(0, 3).map((tag, i) => (
@@ -45,7 +48,7 @@ export const RecommendedProblems = memo(function RecommendedProblems({
         ))
       ) : (
         <div style={{ padding: "12px", textAlign: "center", color: "var(--text3)", fontSize: "12px" }}>
-          {globalTask?.status === "SUCCESS" ? "暂无推荐题目" : "请先生成全局分析报告"}
+          {globalTask?.status === "SUCCESS" ? t('analysis.recommended.noRecommendations') : t('analysis.diagnosis.generateFirst')}
         </div>
       )}
     </div>

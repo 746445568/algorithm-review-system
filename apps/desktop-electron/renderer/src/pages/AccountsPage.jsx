@@ -1,4 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useTranslation } from "react-i18next";
+import { AppSelect } from "../components/AppControls.jsx";
 import { api } from "../lib/api.js";
 import { formatDate, platformLabel, statusLabel } from "../lib/format.js";
 
@@ -7,7 +9,13 @@ const platforms = [
   { value: "ATCODER", label: "AtCoder" },
 ];
 
+function translatedStatus(t, status) {
+  const key = (status || "UNKNOWN").toUpperCase();
+  return t(`statusLabels.${key}`, { defaultValue: statusLabel(status) });
+}
+
 export function AccountsPage({ serviceStatus, runtimeInfo }) {
+  const { t } = useTranslation();
   const [accounts, setAccounts] = useState([]);
   const [syncTasks, setSyncTasks] = useState([]);
   const [form, setForm] = useState({ platform: "CODEFORCES", handle: "" });
@@ -77,7 +85,7 @@ export function AccountsPage({ serviceStatus, runtimeInfo }) {
     try {
       await api.createAccount(form.platform, form.handle.trim());
       setForm((current) => ({ ...current, handle: "" }));
-      setNotice("账号已保存。");
+      setNotice(t("settings.accounts.saved"));
       await refresh();
     } catch (nextError) {
       setError(nextError.message);
@@ -92,7 +100,7 @@ export function AccountsPage({ serviceStatus, runtimeInfo }) {
 
     try {
       await api.deleteAccount(account.id);
-      setNotice(`已删除 ${account.externalHandle}。`);
+      setNotice(t("settings.accounts.deleted", { handle: account.externalHandle }));
       await refresh();
     } catch (nextError) {
       setError(nextError.message);
@@ -118,7 +126,7 @@ export function AccountsPage({ serviceStatus, runtimeInfo }) {
 
     try {
       await api.syncAccount(account.platform, account.id);
-      setNotice(`已将 ${account.externalHandle} 加入同步队列。`);
+      setNotice(t("settings.accounts.queued", { handle: account.externalHandle }));
       await refresh();
     } catch (nextError) {
       setError(nextError.message);
@@ -129,34 +137,30 @@ export function AccountsPage({ serviceStatus, runtimeInfo }) {
     <div className="page-grid two-column">
       <section className="panel">
         <div className="panel-header">
-          <h3>绑定平台账号</h3>
-          <span className="caption">写入本地 SQLite 数据库</span>
+          <h3>{t("settings.accounts.bindTitle")}</h3>
+          <span className="caption">{t("settings.accounts.bindCaption")}</span>
         </div>
         <form className="form-stack" onSubmit={handleSubmit}>
           <label>
-            <span>平台</span>
-            <select
+            <span>{t("settings.accounts.platform")}</span>
+            <AppSelect
               value={form.platform}
-              onChange={(event) =>
+              options={platforms}
+              disabled={serviceUnavailable || submitting}
+              onChange={(value) =>
                 setForm((current) => ({
                   ...current,
-                  platform: event.target.value,
+                  platform: value,
                 }))
               }
-            >
-              {platforms.map((platform) => (
-                <option key={platform.value} value={platform.value}>
-                  {platform.label}
-                </option>
-              ))}
-            </select>
+            />
           </label>
 
           <label>
-            <span>用户名</span>
+            <span>{t("settings.accounts.handle")}</span>
             <input
               value={form.handle}
-              placeholder="输入你的用户名"
+              placeholder={t("settings.accounts.handlePlaceholder")}
               onChange={(event) =>
                 setForm((current) => ({
                   ...current,
@@ -171,12 +175,14 @@ export function AccountsPage({ serviceStatus, runtimeInfo }) {
             className="primary-button"
             disabled={submitting || !form.handle.trim() || serviceUnavailable}
           >
-            {submitting ? "保存中..." : "保存账号"}
+            {submitting ? t("settings.accounts.saving") : t("settings.accounts.save")}
           </button>
         </form>
         {serviceUnavailable ? (
           <p className="muted">
-            本地服务 {runtimeInfo.serviceUrl || serviceStatus.url} 未就绪，账号操作暂不可用。
+            {t("settings.accounts.serviceUnavailable", {
+              url: runtimeInfo.serviceUrl || serviceStatus.url,
+            })}
           </p>
         ) : null}
         {notice ? <p className="success-text">{notice}</p> : null}
@@ -185,24 +191,24 @@ export function AccountsPage({ serviceStatus, runtimeInfo }) {
 
       <section className="panel">
         <div className="panel-header">
-          <h3>同步队列</h3>
+          <h3>{t("settings.accounts.syncQueue")}</h3>
           <button
             type="button"
             className="ghost-button"
             disabled={serviceUnavailable}
             onClick={() => void refresh()}
           >
-            刷新
+            {t("actions.refresh")}
           </button>
         </div>
         <div className="stack-list">
           {syncTasks.length === 0 ? (
-            <p className="muted">暂无同步任务。</p>
+            <p className="muted">{t("settings.accounts.noSyncTasks")}</p>
           ) : (
             syncTasks.slice(0, 8).map((task) => (
               <article key={task.id} className="inline-card">
                 <div>
-                  <strong>{statusLabel(task.status)}</strong>
+                  <strong>{translatedStatus(t, task.status)}</strong>
                   <p>{formatDate(task.createdAt)}</p>
                 </div>
                 <div className="meta-pill">
@@ -216,12 +222,12 @@ export function AccountsPage({ serviceStatus, runtimeInfo }) {
 
       <section className="panel full-span">
         <div className="panel-header">
-          <h3>已绑定账号</h3>
-          <span className="caption">Electron 端的同步入口</span>
+          <h3>{t("settings.accounts.boundTitle")}</h3>
+          <span className="caption">{t("settings.accounts.boundCaption")}</span>
         </div>
         <div className="stack-list">
           {accounts.length === 0 ? (
-            <p className="muted">尚无账号，请先绑定 Codeforces 或 AtCoder。</p>
+            <p className="muted">{t("settings.accounts.empty")}</p>
           ) : (
             accounts.map((account) => {
               const latestTask = latestTaskByAccount.get(account.id);
@@ -231,19 +237,25 @@ export function AccountsPage({ serviceStatus, runtimeInfo }) {
                     <span className="section-label">{platformLabel(account.platform)}</span>
                     <h4>{account.externalHandle}</h4>
                     <p>
-                      {statusLabel(account.status)} / 上次同步{" "}
+                      {translatedStatus(t, account.status)} / {t("settings.accounts.lastSync")}{" "}
                       {formatDate(account.lastSyncedAt)}
                     </p>
                     {latestTask ? (
                       <p className="muted">
-                        最新任务: {statusLabel(latestTask.status)} / 拉取{" "}
-                        {latestTask.fetchedCount} / 写入 {latestTask.insertedCount}
+                        {t("settings.accounts.latestTask")}: {translatedStatus(t, latestTask.status)} /{" "}
+                        {t("settings.accounts.fetched")} {latestTask.fetchedCount} /{" "}
+                        {t("settings.accounts.inserted")} {latestTask.insertedCount}
                       </p>
                     ) : null}
                     {account.rating != null ? (
-                      <p className="muted">评分：{account.rating}（最高 {account.maxRating ?? account.rating}）</p>
+                      <p className="muted">
+                        {t("settings.accounts.ratingValue", {
+                          rating: account.rating,
+                          max: account.maxRating ?? account.rating,
+                        })}
+                      </p>
                     ) : (
-                      <p className="muted">评分：暂未获取</p>
+                      <p className="muted">{t("settings.accounts.ratingMissing")}</p>
                     )}
                   </div>
                   <div className="account-actions">
@@ -253,7 +265,9 @@ export function AccountsPage({ serviceStatus, runtimeInfo }) {
                       disabled={serviceUnavailable || refreshingIds.has(account.id)}
                       onClick={() => void handleRefreshRating(account)}
                     >
-                      {refreshingIds.has(account.id) ? "刷新中..." : "刷新评分"}
+                      {refreshingIds.has(account.id)
+                        ? t("settings.accounts.refreshingRating")
+                        : t("settings.accounts.refreshRating")}
                     </button>
                     <button
                       type="button"
@@ -261,7 +275,7 @@ export function AccountsPage({ serviceStatus, runtimeInfo }) {
                       disabled={serviceUnavailable}
                       onClick={() => void triggerSync(account)}
                     >
-                      立即同步
+                      {t("settings.accounts.syncNow")}
                     </button>
                     <button
                       type="button"
@@ -269,7 +283,7 @@ export function AccountsPage({ serviceStatus, runtimeInfo }) {
                       disabled={serviceUnavailable}
                       onClick={() => void deleteAccount(account)}
                     >
-                      删除
+                      {t("actions.delete")}
                     </button>
                   </div>
                 </article>
