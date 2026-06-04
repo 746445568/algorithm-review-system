@@ -264,3 +264,6 @@ func (a *AtCoderAdapter) FetchStatement(ctx context.Context, problemID string) (
 	return string(body), nil
 }
 
+func (a *AtCoderAdapter) FetchSubmissionSource(ctx context.Context, submission models.Submission) (string, error) {
+	return "", errors.New("atcoder submission source fetching is not supported")
+}

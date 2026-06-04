@@ -161,11 +161,12 @@ func buildAnalysisPrompt(input string) string {
 - platform: 平台（codeforces/atcoder）
 - externalProblemId: 题目 ID（如 "1900/A" 表示 Codeforces 1900A）
 - title: 题目标题
+- statementText: 本地抓取到的题面原文/HTML，可能为空
 - difficulty: 难度（rating）
 - tags: 知识点标签
-- submissions: 错误提交记录（包含代码、结果、耗时等）
+- submissions: 提交记录（包含 sourceCode、结果、语言、耗时等；sourceCode 可能为空）
 
-请根据这些信息查找题面，分析错误原因，给出解题思路和正确代码。**请用中文 Markdown 格式输出，不要输出 JSON**：
+请只基于这些已提供的信息分析，不要编造缺失的题面或源码。请分析错误原因，给出解题思路、代码问题定位、修改建议和正确参考代码。**请用中文 Markdown 格式输出，不要输出 JSON**：
 
 %s`, input)
 }
@@ -187,4 +188,3 @@ func normalizeBaseURL(rawBaseURL, defaultBaseURL string) (string, error) {
 
 	return strings.TrimRight(parsed.String(), "/"), nil
 }
-

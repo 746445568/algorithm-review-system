@@ -5,9 +5,11 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"html"
 	"io"
 	"net/http"
 	"net/url"
+	"regexp"
 	"strings"
 	"time"
 )
@@ -115,6 +117,45 @@ func fetchProblemStatement(ctx context.Context, client *http.Client, url string)
 	}
 
 	return string(body), nil
+}
+
+func fetchCodeforcesSubmissionSource(ctx context.Context, client *http.Client, url string) (string, error) {
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return "", fmt.Errorf("create submission source request: %w", err)
+	}
+	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("fetch submission source: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("unexpected status: %d", resp.StatusCode)
+	}
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", fmt.Errorf("read response: %w", err)
+	}
+
+	source, err := extractCodeforcesSubmissionSource(string(body))
+	if err != nil {
+		return "", err
+	}
+	return source, nil
+}
+
+var codeforcesSourcePattern = regexp.MustCompile(`(?is)<pre[^>]*id=["']program-source-text["'][^>]*>(.*?)</pre>`)
+
+func extractCodeforcesSubmissionSource(pageHTML string) (string, error) {
+	matches := codeforcesSourcePattern.FindStringSubmatch(pageHTML)
+	if len(matches) < 2 {
+		return "", errors.New("program-source-text block not found")
+	}
+	return strings.TrimSpace(html.UnescapeString(matches[1])), nil
 }
 
 // containsProblemStatement 检查 HTML 是否包含题面内容

@@ -115,6 +115,50 @@ WHERE platform = ? AND external_submission_id = ?`, s.Platform, s.ExternalSubmis
 	return saved, nil
 }
 
+func (db *DB) SaveSubmissionSource(submissionID int64, sourceCode string) error {
+	now := time.Now().UTC().Format(time.RFC3339)
+	_, err := db.conn.Exec(`
+UPDATE submissions
+SET source_code = ?, source_fetched_at = ?, updated_at = ?
+WHERE id = ?`, sourceCode, now, now, submissionID)
+	if err != nil {
+		return fmt.Errorf("save submission source: %w", err)
+	}
+	return nil
+}
+
+func (db *DB) GetProblemSubmissionsNeedingSource(problemID int64, limit int) ([]models.Submission, error) {
+	query := `
+SELECT id, platform_account_id, platform, external_submission_id, problem_id, verdict, COALESCE(language, ''), submitted_at, exec_time_ms, memory_kb, COALESCE(source_contest_id, ''), raw_json, created_at, updated_at
+FROM submissions
+WHERE problem_id = ? AND COALESCE(source_code, '') = ''
+ORDER BY submitted_at DESC, id DESC`
+	args := []any{problemID}
+	if limit > 0 {
+		query += " LIMIT ?"
+		args = append(args, limit)
+	}
+
+	rows, err := db.conn.Query(query, args...)
+	if err != nil {
+		return nil, fmt.Errorf("get problem submissions needing source: query rows: %w", err)
+	}
+	defer rows.Close()
+
+	items := make([]models.Submission, 0)
+	for rows.Next() {
+		item, err := scanSubmissionRecord(rows)
+		if err != nil {
+			return nil, fmt.Errorf("get problem submissions needing source: scan row: %w", err)
+		}
+		items = append(items, item)
+	}
+	if err := rows.Err(); err != nil {
+		return nil, fmt.Errorf("get problem submissions needing source: iterate rows: %w", err)
+	}
+	return items, nil
+}
+
 // ProblemSummary aggregates submission statistics per problem
 type ProblemSummary struct {
 	ProblemID       int64

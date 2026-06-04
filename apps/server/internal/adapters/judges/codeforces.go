@@ -255,3 +255,23 @@ func (a *CodeforcesAdapter) FetchStatement(ctx context.Context, problemID string
 	return fetchProblemStatement(ctx, a.client, mirrorURL)
 }
 
+func (a *CodeforcesAdapter) FetchSubmissionSource(ctx context.Context, submission models.Submission) (string, error) {
+	submissionID := strings.TrimSpace(submission.ExternalSubmissionID)
+	contestID := strings.TrimSpace(submission.SourceContestID)
+	if submissionID == "" {
+		return "", errors.New("submission id is required")
+	}
+	if contestID == "" {
+		return "", errors.New("contest id is required")
+	}
+
+	url := fmt.Sprintf("https://codeforces.com/contest/%s/submission/%s", contestID, submissionID)
+	source, err := fetchCodeforcesSubmissionSource(ctx, a.client, url)
+	if err != nil {
+		return "", err
+	}
+	if strings.TrimSpace(source) == "" {
+		return "", fmt.Errorf("codeforces submission source not found: %s", submissionID)
+	}
+	return source, nil
+}

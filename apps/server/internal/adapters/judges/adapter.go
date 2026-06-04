@@ -19,6 +19,7 @@ type Adapter interface {
 	NextCursor(previous string, fetched []models.Submission) string
 	FetchProfile(ctx context.Context, handle string) (UserProfile, error)
 	FetchStatement(ctx context.Context, problemID string) (string, error)
+	FetchSubmissionSource(ctx context.Context, submission models.Submission) (string, error)
 }
 
 type ContestAdapter interface {

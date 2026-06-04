@@ -4,6 +4,7 @@ import (
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"ojreviewdesktop/internal/app"
 	cryptovault "ojreviewdesktop/internal/crypto"
@@ -102,5 +103,57 @@ func TestFindReusableAnalysisTask_SkipsFailedTask(t *testing.T) {
 	_, err = db.findReusableAnalysisTask(task.InputSnapshotID, "openai", "gpt-4o")
 	if err == nil {
 		t.Error("expected no reusable task for FAILED status, but got one")
+	}
+}
+
+func TestGetProblemAnalysisDataIncludesStatementAndSubmissionSource(t *testing.T) {
+	db := openTestDB(t)
+
+	problem, err := db.UpsertProblem(models.Problem{
+		Platform:          models.PlatformCodeforces,
+		ExternalProblemID: "4/A",
+		ExternalContestID: "4",
+		Title:             "Watermelon",
+		RawTagsJSON:       `["math"]`,
+	})
+	if err != nil {
+		t.Fatalf("upsert problem: %v", err)
+	}
+	if err := db.SaveProblemStatement(problem.ID, "Problem statement text"); err != nil {
+		t.Fatalf("save problem statement: %v", err)
+	}
+
+	submission, err := db.UpsertSubmission(models.Submission{
+		Platform:             models.PlatformCodeforces,
+		ExternalSubmissionID: "123456",
+		ProblemID:            problem.ID,
+		Verdict:              models.VerdictWA,
+		Language:             "GNU C++17",
+		SubmittedAt:          time.Date(2026, 6, 4, 10, 0, 0, 0, time.UTC),
+		SourceContestID:      "4",
+		RawJSON:              `{}`,
+	})
+	if err != nil {
+		t.Fatalf("upsert submission: %v", err)
+	}
+	if err := db.SaveSubmissionSource(submission.ID, "#include <iostream>"); err != nil {
+		t.Fatalf("save submission source: %v", err)
+	}
+
+	data, err := db.GetProblemAnalysisData(problem.ID)
+	if err != nil {
+		t.Fatalf("get problem analysis data: %v", err)
+	}
+	if data.StatementText != "Problem statement text" {
+		t.Fatalf("StatementText = %q, want problem statement", data.StatementText)
+	}
+	if len(data.Submissions) != 1 {
+		t.Fatalf("expected one submission, got %d", len(data.Submissions))
+	}
+	if got := data.Submissions[0]["sourceCode"]; got != "#include <iostream>" {
+		t.Fatalf("sourceCode = %q, want saved source", got)
+	}
+	if got := data.Submissions[0]["externalSubmissionId"]; got != "123456" {
+		t.Fatalf("externalSubmissionId = %q, want saved id", got)
 	}
 }

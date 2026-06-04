@@ -46,6 +46,10 @@ func (a *PlaceholderAdapter) FetchStatement(ctx context.Context, problemID strin
 	return "", nil
 }
 
+func (a *PlaceholderAdapter) FetchSubmissionSource(ctx context.Context, submission models.Submission) (string, error) {
+	return "", nil
+}
+
 func (a *PlaceholderAdapter) FetchEditorial(problemID string) (string, error) {
 	return "", nil
 }

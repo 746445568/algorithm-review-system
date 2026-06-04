@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"log"
 	"net/http"
 	"strconv"
 	"strings"
@@ -255,6 +256,8 @@ func (s *Server) handleAnalysisGenerateProblem(w http.ResponseWriter, r *http.Re
 		return
 	}
 
+	s.ensureProblemAnalysisArtifacts(r.Context(), problemID)
+
 	data, err := s.db.GetProblemAnalysisData(problemID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -440,3 +443,50 @@ func (s *Server) ResumeAnalysisTask(ctx context.Context, taskID int64) error {
 	return s.runAnalysisTask(ctx, taskID)
 }
 
+func (s *Server) ensureProblemAnalysisArtifacts(ctx context.Context, problemID int64) {
+	const maxSourceFetches = 5
+
+	problem, err := s.db.GetProblemByID(problemID)
+	if err != nil {
+		log.Printf("analysis artifact fetch: load problem %d: %v", problemID, err)
+		return
+	}
+
+	adapter := s.adapters[problem.Platform]
+	if adapter == nil {
+		return
+	}
+
+	statement, err := s.db.GetProblemStatement(problemID)
+	if err != nil {
+		log.Printf("analysis artifact fetch: load statement %d: %v", problemID, err)
+	} else if strings.TrimSpace(statement) == "" {
+		fetched, fetchErr := adapter.FetchStatement(ctx, problem.ExternalProblemID)
+		if fetchErr != nil {
+			log.Printf("analysis artifact fetch: fetch statement %s: %v", problem.ExternalProblemID, fetchErr)
+		} else if strings.TrimSpace(fetched) != "" {
+			if saveErr := s.db.SaveProblemStatement(problemID, fetched); saveErr != nil {
+				log.Printf("analysis artifact fetch: save statement %d: %v", problemID, saveErr)
+			}
+		}
+	}
+
+	submissions, err := s.db.GetProblemSubmissionsNeedingSource(problemID, maxSourceFetches)
+	if err != nil {
+		log.Printf("analysis artifact fetch: list submissions %d: %v", problemID, err)
+		return
+	}
+	for _, submission := range submissions {
+		source, fetchErr := adapter.FetchSubmissionSource(ctx, submission)
+		if fetchErr != nil {
+			log.Printf("analysis artifact fetch: fetch submission %s: %v", submission.ExternalSubmissionID, fetchErr)
+			continue
+		}
+		if strings.TrimSpace(source) == "" {
+			continue
+		}
+		if saveErr := s.db.SaveSubmissionSource(submission.ID, source); saveErr != nil {
+			log.Printf("analysis artifact fetch: save submission %d: %v", submission.ID, saveErr)
+		}
+	}
+}
