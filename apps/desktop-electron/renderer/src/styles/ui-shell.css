@@ -449,6 +449,26 @@ body {
   font-size: 12px;
 }
 
+.settings-page-root .app-control-trigger {
+  min-height: 38px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+}
+
+.settings-page-root .app-popover {
+  font-size: 12px;
+}
+
+.settings-page-root .app-select-option {
+  min-height: 34px;
+  font-size: 12px;
+}
+
+.settings-page-root .app-calendar-popover {
+  width: 318px;
+}
+
 .settings-page-root .primary-button,
 .settings-page-root .ghost-button {
   min-height: 36px;
