@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"strings"
 	"testing"
 	"time"
@@ -157,7 +158,7 @@ func TestCodeforcesFetchSubmissionSourceUsesAuthenticatedUserStatusSource(t *tes
 		_, _ = w.Write([]byte(`{
 			"status":"OK",
 			"result":[
-				{"id":222,"contestId":4,"creationTimeSeconds":2,"programmingLanguage":"GNU C++17","verdict":"OK","source":"int main() { return 0; }","problem":{"contestId":4,"index":"A","name":"Watermelon"}},
+				{"id":222,"contestId":4,"creationTimeSeconds":2,"programmingLanguage":"GNU C++17","verdict":"OK","sourceBase64":"aW50IG1haW4oKSB7IHJldHVybiAwOyB9","problem":{"contestId":4,"index":"A","name":"Watermelon"}},
 				{"id":111,"contestId":4,"creationTimeSeconds":1,"programmingLanguage":"GNU C++17","verdict":"WRONG_ANSWER","problem":{"contestId":4,"index":"A","name":"Watermelon"}}
 			]
 		}`))
@@ -227,5 +228,18 @@ func TestCodeforcesFetchSubmissionSourceUsesBrowserSessionSubmitSource(t *testin
 	}
 	if source != "#include <bits/stdc++.h>\nint main(){}" {
 		t.Fatalf("source = %q, want browser session source", source)
+	}
+}
+
+func TestBuildCodeforcesAPISigIncludesMethodSlash(t *testing.T) {
+	query := url.Values{
+		"apiKey": []string{"key"},
+		"time":   []string{"1700000000"},
+	}
+
+	got := buildCodeforcesAPISig("user.status", query, "secret")
+	const want = "1234562498b6d013728609cc5f604da1cd4cc6758d9f2c2065ca968731e223609cc76b93f3d2a19a5b86fc0ea564054417fd30ba66c9d76f85c5af392981c87ce8e47e"
+	if got != want {
+		t.Fatalf("apiSig = %q, want %q", got, want)
 	}
 }

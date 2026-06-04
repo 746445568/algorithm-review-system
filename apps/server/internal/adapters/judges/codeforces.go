@@ -3,6 +3,7 @@ package judges
 import (
 	"context"
 	"crypto/tls"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -338,10 +339,11 @@ func (a *CodeforcesAdapter) fetchSubmissionSourceFromAPI(ctx context.Context, su
 
 		for _, raw := range rawSubmissions {
 			if raw.ID == targetID {
-				if strings.TrimSpace(raw.Source) == "" {
-					return "", fmt.Errorf("codeforces API returned empty source for submission %d", targetID)
+				source, sourceErr := codeforcesSubmissionSource(raw)
+				if sourceErr != nil {
+					return "", sourceErr
 				}
-				return raw.Source, nil
+				return source, nil
 			}
 			if raw.ID > 0 && raw.ID < targetID {
 				return "", fmt.Errorf("submission %d not found in authenticated user.status response", targetID)
@@ -352,4 +354,21 @@ func (a *CodeforcesAdapter) fetchSubmissionSourceFromAPI(ctx context.Context, su
 		}
 	}
 	return "", fmt.Errorf("submission %d not found in authenticated user.status response", targetID)
+}
+
+func codeforcesSubmissionSource(raw codeforcesSubmissionRaw) (string, error) {
+	if strings.TrimSpace(raw.Source) != "" {
+		return raw.Source, nil
+	}
+	if strings.TrimSpace(raw.SourceBase64) != "" {
+		decoded, err := base64.StdEncoding.DecodeString(strings.TrimSpace(raw.SourceBase64))
+		if err != nil {
+			return "", fmt.Errorf("decode codeforces sourceBase64: %w", err)
+		}
+		source := string(decoded)
+		if strings.TrimSpace(source) != "" {
+			return source, nil
+		}
+	}
+	return "", fmt.Errorf("codeforces API returned empty source for submission %d", raw.ID)
 }

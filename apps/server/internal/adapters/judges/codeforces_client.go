@@ -148,7 +148,7 @@ func cloneValues(values url.Values) url.Values {
 
 func buildCodeforcesAPISig(path string, query url.Values, secret string) string {
 	const prefix = "123456"
-	base := strings.TrimPrefix(path, "/") + "?" + query.Encode() + "#" + secret
+	base := prefix + "/" + strings.TrimPrefix(path, "/") + "?" + query.Encode() + "#" + secret
 	sum := sha512.Sum512([]byte(base))
 	return prefix + hex.EncodeToString(sum[:])
 }
