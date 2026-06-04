@@ -9,6 +9,7 @@ import (
 	"net"
 	"net/http"
 	"net/url"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -28,6 +29,11 @@ const (
 type CodeforcesAdapter struct {
 	client        *http.Client
 	baseURL       string
+	apiKey        string
+	apiSecret     string
+	sessionCookie string
+	csrfToken     string
+	now           func() time.Time
 	mu            sync.Mutex
 	lastRequestAt time.Time
 }
@@ -45,8 +51,13 @@ func NewCodeforcesAdapter() Adapter {
 		TLSClientConfig:       &tls.Config{MinVersion: tls.VersionTLS12},
 	}
 	return &CodeforcesAdapter{
-		client:  &http.Client{Timeout: 120 * time.Second, Transport: transport},
-		baseURL: codeforcesBaseURL,
+		client:        &http.Client{Timeout: 120 * time.Second, Transport: transport},
+		baseURL:       codeforcesBaseURL,
+		apiKey:        strings.TrimSpace(os.Getenv("CODEFORCES_API_KEY")),
+		apiSecret:     strings.TrimSpace(os.Getenv("CODEFORCES_API_SECRET")),
+		sessionCookie: strings.TrimSpace(os.Getenv("CODEFORCES_SESSION_COOKIE")),
+		csrfToken:     strings.TrimSpace(os.Getenv("CODEFORCES_CSRF_TOKEN")),
+		now:           time.Now,
 	}
 }
 
@@ -257,10 +268,25 @@ func (a *CodeforcesAdapter) FetchStatement(ctx context.Context, problemID string
 
 func (a *CodeforcesAdapter) FetchSubmissionSource(ctx context.Context, submission models.Submission) (string, error) {
 	submissionID := strings.TrimSpace(submission.ExternalSubmissionID)
-	contestID := strings.TrimSpace(submission.SourceContestID)
 	if submissionID == "" {
 		return "", errors.New("submission id is required")
 	}
+
+	if a.hasCredentials() {
+		source, err := a.fetchSubmissionSourceFromAPI(ctx, submission)
+		if err == nil && strings.TrimSpace(source) != "" {
+			return source, nil
+		}
+	}
+
+	if a.hasBrowserSession() {
+		source, err := a.fetchSubmissionSourceFromBrowserSession(ctx, submission.ExternalSubmissionID)
+		if err == nil && strings.TrimSpace(source) != "" {
+			return source, nil
+		}
+	}
+
+	contestID := strings.TrimSpace(submission.SourceContestID)
 	if contestID == "" {
 		return "", errors.New("contest id is required")
 	}
@@ -274,4 +300,56 @@ func (a *CodeforcesAdapter) FetchSubmissionSource(ctx context.Context, submissio
 		return "", fmt.Errorf("codeforces submission source not found: %s", submissionID)
 	}
 	return source, nil
+}
+
+func (a *CodeforcesAdapter) hasCredentials() bool {
+	return strings.TrimSpace(a.apiKey) != "" && strings.TrimSpace(a.apiSecret) != ""
+}
+
+func (a *CodeforcesAdapter) hasBrowserSession() bool {
+	return strings.TrimSpace(a.sessionCookie) != "" && strings.TrimSpace(a.csrfToken) != ""
+}
+
+func (a *CodeforcesAdapter) fetchSubmissionSourceFromAPI(ctx context.Context, submission models.Submission) (string, error) {
+	const pageSize = 100
+	const maxPages = 10
+
+	handle, err := extractCodeforcesSubmissionHandle(submission.RawJSON)
+	if err != nil {
+		return "", err
+	}
+	targetID, err := strconv.Atoi(strings.TrimSpace(submission.ExternalSubmissionID))
+	if err != nil || targetID <= 0 {
+		return "", fmt.Errorf("invalid submission id: %s", submission.ExternalSubmissionID)
+	}
+
+	for page := 0; page < maxPages; page++ {
+		from := 1 + page*pageSize
+		var rawSubmissions []codeforcesSubmissionRaw
+		query := url.Values{
+			"handle":         []string{handle},
+			"from":           []string{strconv.Itoa(from)},
+			"count":          []string{strconv.Itoa(pageSize)},
+			"includeSources": []string{"true"},
+		}
+		if err := a.getAuthenticatedJSON(ctx, "user.status", query, &rawSubmissions); err != nil {
+			return "", err
+		}
+
+		for _, raw := range rawSubmissions {
+			if raw.ID == targetID {
+				if strings.TrimSpace(raw.Source) == "" {
+					return "", fmt.Errorf("codeforces API returned empty source for submission %d", targetID)
+				}
+				return raw.Source, nil
+			}
+			if raw.ID > 0 && raw.ID < targetID {
+				return "", fmt.Errorf("submission %d not found in authenticated user.status response", targetID)
+			}
+		}
+		if len(rawSubmissions) < pageSize {
+			break
+		}
+	}
+	return "", fmt.Errorf("submission %d not found in authenticated user.status response", targetID)
 }

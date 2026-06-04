@@ -2,6 +2,8 @@ package judges
 
 import (
 	"context"
+	"crypto/sha512"
+	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -10,6 +12,7 @@ import (
 	"net/http"
 	"net/url"
 	"regexp"
+	"strconv"
 	"strings"
 	"time"
 )
@@ -79,6 +82,75 @@ func (a *CodeforcesAdapter) getJSON(ctx context.Context, path string, query url.
 	}
 
 	return fmt.Errorf("after %d retries: %w", codeforcesMaxRetries, lastErr)
+}
+
+func (a *CodeforcesAdapter) getAuthenticatedJSON(ctx context.Context, path string, query url.Values, target any) error {
+	signed := cloneValues(query)
+	signed.Set("apiKey", strings.TrimSpace(a.apiKey))
+	now := a.now
+	if now == nil {
+		now = time.Now
+	}
+	signed.Set("time", strconv.FormatInt(now().Unix(), 10))
+	signed.Set("apiSig", buildCodeforcesAPISig(path, signed, strings.TrimSpace(a.apiSecret)))
+	return a.getJSON(ctx, path, signed, target)
+}
+
+func (a *CodeforcesAdapter) fetchSubmissionSourceFromBrowserSession(ctx context.Context, submissionID string) (string, error) {
+	endpoint := strings.TrimRight(strings.TrimSuffix(a.baseURL, "/api"), "/") + "/data/submitSource"
+	form := url.Values{
+		"submissionId": []string{strings.TrimSpace(submissionID)},
+		"csrf_token":   []string{strings.TrimSpace(a.csrfToken)},
+	}
+
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, strings.NewReader(form.Encode()))
+	if err != nil {
+		return "", fmt.Errorf("create submitSource request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/x-www-form-urlencoded")
+	req.Header.Set("Accept", "application/json")
+	req.Header.Set("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36")
+	req.Header.Set("Cookie", strings.TrimSpace(a.sessionCookie))
+
+	resp, err := a.client.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("fetch submitSource: %w", err)
+	}
+	defer resp.Body.Close()
+
+	body, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", fmt.Errorf("read submitSource response: %w", err)
+	}
+	if resp.StatusCode != http.StatusOK {
+		return "", fmt.Errorf("submitSource returned status %d: %s", resp.StatusCode, strings.TrimSpace(string(body)))
+	}
+
+	var payload struct {
+		Source string `json:"source"`
+	}
+	if err := json.Unmarshal(body, &payload); err != nil {
+		return "", fmt.Errorf("decode submitSource response: %w", err)
+	}
+	if strings.TrimSpace(payload.Source) == "" {
+		return "", errors.New("submitSource response missing source")
+	}
+	return payload.Source, nil
+}
+
+func cloneValues(values url.Values) url.Values {
+	out := make(url.Values, len(values))
+	for key, list := range values {
+		out[key] = append([]string(nil), list...)
+	}
+	return out
+}
+
+func buildCodeforcesAPISig(path string, query url.Values, secret string) string {
+	const prefix = "123456"
+	base := strings.TrimPrefix(path, "/") + "?" + query.Encode() + "#" + secret
+	sum := sha512.Sum512([]byte(base))
+	return prefix + hex.EncodeToString(sum[:])
 }
 
 func isRetryableError(err error) bool {

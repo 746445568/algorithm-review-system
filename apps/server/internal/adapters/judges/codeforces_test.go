@@ -5,8 +5,10 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/http/httptest"
 	"strings"
 	"testing"
+	"time"
 
 	"ojreviewdesktop/internal/models"
 )
@@ -127,5 +129,103 @@ int main() { std::cout &lt;&lt; "ok"; }
 	}
 	if strings.Contains(source, "&lt;") {
 		t.Fatalf("expected HTML entities to be decoded, got %q", source)
+	}
+}
+
+func TestCodeforcesFetchSubmissionSourceUsesAuthenticatedUserStatusSource(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/user.status" {
+			t.Fatalf("unexpected path: %s", r.URL.Path)
+		}
+		query := r.URL.Query()
+		if query.Get("handle") != "myhandle" {
+			t.Fatalf("handle = %q, want myhandle", query.Get("handle"))
+		}
+		if query.Get("includeSources") != "true" {
+			t.Fatalf("includeSources = %q, want true", query.Get("includeSources"))
+		}
+		if query.Get("apiKey") != "test-key" {
+			t.Fatalf("apiKey = %q, want test-key", query.Get("apiKey"))
+		}
+		if query.Get("apiSig") == "" {
+			t.Fatalf("expected apiSig query parameter")
+		}
+		if query.Get("time") != "1700000000" {
+			t.Fatalf("time = %q, want fixed timestamp", query.Get("time"))
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{
+			"status":"OK",
+			"result":[
+				{"id":222,"contestId":4,"creationTimeSeconds":2,"programmingLanguage":"GNU C++17","verdict":"OK","source":"int main() { return 0; }","problem":{"contestId":4,"index":"A","name":"Watermelon"}},
+				{"id":111,"contestId":4,"creationTimeSeconds":1,"programmingLanguage":"GNU C++17","verdict":"WRONG_ANSWER","problem":{"contestId":4,"index":"A","name":"Watermelon"}}
+			]
+		}`))
+	}))
+	defer server.Close()
+
+	adapter := &CodeforcesAdapter{
+		client:    server.Client(),
+		baseURL:   server.URL,
+		apiKey:    "test-key",
+		apiSecret: "test-secret",
+		now: func() time.Time {
+			return time.Unix(1700000000, 0)
+		},
+	}
+
+	source, err := adapter.FetchSubmissionSource(context.Background(), models.Submission{
+		ExternalSubmissionID: "222",
+		RawJSON:              `{"author":{"members":[{"handle":"myhandle"}]}}`,
+	})
+	if err != nil {
+		t.Fatalf("FetchSubmissionSource returned error: %v", err)
+	}
+	if source != "int main() { return 0; }" {
+		t.Fatalf("source = %q, want API source", source)
+	}
+}
+
+func TestCodeforcesFetchSubmissionSourceUsesBrowserSessionSubmitSource(t *testing.T) {
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path != "/data/submitSource" {
+			t.Fatalf("unexpected path: %s", r.URL.Path)
+		}
+		if r.Method != http.MethodPost {
+			t.Fatalf("method = %s, want POST", r.Method)
+		}
+		if got := r.Header.Get("Cookie"); !strings.Contains(got, "JSESSIONID=test-session") {
+			t.Fatalf("Cookie = %q, want browser session", got)
+		}
+		if err := r.ParseForm(); err != nil {
+			t.Fatalf("parse form: %v", err)
+		}
+		if r.Form.Get("submissionId") != "333" {
+			t.Fatalf("submissionId = %q, want 333", r.Form.Get("submissionId"))
+		}
+		if r.Form.Get("csrf_token") != "csrf-token" {
+			t.Fatalf("csrf_token = %q, want csrf-token", r.Form.Get("csrf_token"))
+		}
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"source":"#include <bits/stdc++.h>\nint main(){}"}`))
+	}))
+	defer server.Close()
+
+	adapter := &CodeforcesAdapter{
+		client:        server.Client(),
+		baseURL:       server.URL,
+		sessionCookie: "JSESSIONID=test-session",
+		csrfToken:     "csrf-token",
+	}
+
+	source, err := adapter.FetchSubmissionSource(context.Background(), models.Submission{
+		ExternalSubmissionID: "333",
+		SourceContestID:      "4",
+	})
+	if err != nil {
+		t.Fatalf("FetchSubmissionSource returned error: %v", err)
+	}
+	if source != "#include <bits/stdc++.h>\nint main(){}" {
+		t.Fatalf("source = %q, want browser session source", source)
 	}
 }
