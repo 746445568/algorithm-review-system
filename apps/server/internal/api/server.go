@@ -2,9 +2,7 @@ package api
 
 import (
 	"encoding/json"
-	"io"
 	"net/http"
-	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -227,21 +225,7 @@ func (s *Server) handleExportDiagnostics(w http.ResponseWriter, _ *http.Request)
 func (s *Server) handleBackup(w http.ResponseWriter, _ *http.Request) {
 	backupPath := s.cfg.DBPath + ".bak." + time.Now().Format("20060102-150405")
 
-	src, err := os.Open(s.cfg.DBPath)
-	if err != nil {
-		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": err.Error()})
-		return
-	}
-	defer src.Close()
-
-	dst, err := os.Create(backupPath)
-	if err != nil {
-		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": err.Error()})
-		return
-	}
-	defer dst.Close()
-
-	if _, err := io.Copy(dst, src); err != nil {
+	if err := s.db.Backup(backupPath); err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": err.Error()})
 		return
 	}
@@ -263,21 +247,7 @@ func (s *Server) handleRestore(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	src, err := os.Open(body.BackupPath)
-	if err != nil {
-		writeJSON(w, http.StatusNotFound, map[string]any{"error": err.Error()})
-		return
-	}
-	defer src.Close()
-
-	dst, err := os.Create(s.cfg.DBPath)
-	if err != nil {
-		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": err.Error()})
-		return
-	}
-	defer dst.Close()
-
-	if _, err := io.Copy(dst, src); err != nil {
+	if err := s.db.Restore(body.BackupPath); err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": err.Error()})
 		return
 	}
