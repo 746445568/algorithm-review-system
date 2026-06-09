@@ -53,17 +53,24 @@ func (s *Server) corsMiddleware(next http.Handler) http.Handler {
 			origins = []string{"http://localhost:5173", "http://127.0.0.1:5173", "http://localhost:38473", "http://127.0.0.1:38473"}
 		}
 		reqOrigin := r.Header.Get("Origin")
-		allowedOrigin := ""
-		for _, o := range origins {
-			if o == "*" || o == reqOrigin {
-				allowedOrigin = o
-				break
+		if reqOrigin != "" {
+			allowedOrigin := ""
+			for _, o := range origins {
+				if o == "*" {
+					allowedOrigin = "*"
+					break
+				}
+				if o == reqOrigin {
+					allowedOrigin = reqOrigin
+					break
+				}
 			}
+			if allowedOrigin == "" {
+				w.WriteHeader(http.StatusForbidden)
+				return
+			}
+			w.Header().Set("Access-Control-Allow-Origin", allowedOrigin)
 		}
-		if allowedOrigin == "" && len(origins) > 0 {
-			allowedOrigin = origins[0]
-		}
-		w.Header().Set("Access-Control-Allow-Origin", allowedOrigin)
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization, Accept-Language")
 		if r.Method == http.MethodOptions {

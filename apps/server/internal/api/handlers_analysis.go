@@ -79,14 +79,16 @@ func (s *Server) handleAnalysisGenerate(w http.ResponseWriter, r *http.Request) 
 		}
 		if !reused {
 			taskID := task.ID
-			_ = s.queue.Enqueue(jobs.Job{
+			if ok := s.queue.Enqueue(jobs.Job{
 				Key:      jobs.AnalysisJobKey(taskID),
 				TaskType: models.TaskTypeAnalysis,
 				TaskID:   taskID,
 				Run: func(ctx context.Context) error {
 					return s.runAnalysisTask(ctx, taskID)
 				},
-			})
+			}); !ok {
+				log.Printf("enqueue analysis task %d: %v", taskID, "queue rejected job")
+			}
 		}
 		writeJSON(w, http.StatusAccepted, map[string]any{
 			"task":   task,
@@ -101,14 +103,16 @@ func (s *Server) handleAnalysisGenerate(w http.ResponseWriter, r *http.Request) 
 	}
 	if !reused {
 		taskID := task.ID
-		_ = s.queue.Enqueue(jobs.Job{
+		if ok := s.queue.Enqueue(jobs.Job{
 			Key:      jobs.AnalysisJobKey(taskID),
 			TaskType: models.TaskTypeAnalysis,
 			TaskID:   taskID,
 			Run: func(ctx context.Context) error {
 				return s.runAnalysisTask(ctx, taskID)
 			},
-		})
+		}); !ok {
+			log.Printf("enqueue analysis task %d: %v", taskID, "queue rejected job")
+		}
 	}
 	writeJSON(w, http.StatusAccepted, map[string]any{
 		"task":   task,
@@ -213,14 +217,16 @@ func (s *Server) handleAnalysisGenerateComparison(w http.ResponseWriter, r *http
 	}
 	if !reused {
 		taskID := task.ID
-		_ = s.queue.Enqueue(jobs.Job{
+		if ok := s.queue.Enqueue(jobs.Job{
 			Key:      jobs.AnalysisJobKey(taskID),
 			TaskType: models.TaskTypeAnalysis,
 			TaskID:   taskID,
 			Run: func(ctx context.Context) error {
 				return s.runAnalysisTask(ctx, taskID)
 			},
-		})
+		}); !ok {
+			log.Printf("enqueue analysis task %d: %v", taskID, "queue rejected job")
+		}
 	}
 	writeJSON(w, http.StatusAccepted, map[string]any{"task": task, "reused": reused})
 }
@@ -292,14 +298,16 @@ func (s *Server) handleAnalysisGenerateProblem(w http.ResponseWriter, r *http.Re
 	}
 	if !reused {
 		taskID := task.ID
-		_ = s.queue.Enqueue(jobs.Job{
+		if ok := s.queue.Enqueue(jobs.Job{
 			Key:      jobs.AnalysisJobKey(taskID),
 			TaskType: models.TaskTypeAnalysis,
 			TaskID:   taskID,
 			Run: func(ctx context.Context) error {
 				return s.runAnalysisTask(ctx, taskID)
 			},
-		})
+		}); !ok {
+			log.Printf("enqueue analysis task %d: %v", taskID, "queue rejected job")
+		}
 	}
 	writeJSON(w, http.StatusAccepted, map[string]any{"task": task, "reused": reused})
 }
