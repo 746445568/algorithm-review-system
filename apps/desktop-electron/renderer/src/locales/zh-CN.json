@@ -326,6 +326,7 @@
     "noAcData": "暂无 AC 数据",
     "noSubmissionData": "暂无提交数据",
     "noTagData": "暂无标签数据",
+    "noVerdictData": "暂无提交结果数据",
     "periodLabel": "统计周期",
     "reviewCompletionCount": "复习完成数",
     "reviewCompletionRate": "复习完成率",
@@ -344,6 +345,10 @@
     "trendExcellent": "趋势优秀",
     "trendGood": "趋势良好",
     "trendNeedsImprovement": "需要改进",
+    "verdictCount": "{{count}} 次 · {{percent}}%",
+    "verdictDistribution": "提交结果分布",
+    "verdictDistributionHint": "按提交结果统计",
+    "verdictRate": "{{verdict}} 占比 {{rate}}%",
     "weeklyView": "周视图",
     "weeksAgo": "{{count}} 周前"
   },

@@ -326,6 +326,7 @@
     "noAcData": "No AC data",
     "noSubmissionData": "No submission data",
     "noTagData": "No tag data",
+    "noVerdictData": "No verdict data",
     "periodLabel": "Period",
     "reviewCompletionCount": "Review Completions",
     "reviewCompletionRate": "Review Completion Rate",
@@ -344,6 +345,10 @@
     "trendExcellent": "Excellent Trend",
     "trendGood": "Good Trend",
     "trendNeedsImprovement": "Needs Improvement",
+    "verdictCount": "{{count}} times · {{percent}}%",
+    "verdictDistribution": "Verdict Distribution",
+    "verdictDistributionHint": "Grouped by submission result",
+    "verdictRate": "{{verdict}} rate {{rate}}%",
     "weeklyView": "Weekly View",
     "weeksAgo": "{{count}} weeks ago"
   },

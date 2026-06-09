@@ -121,6 +121,7 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("DELETE /api/goals/{id}", s.handleDeleteGoal)
 	s.mux.HandleFunc("GET /api/statistics/submissions", s.handleSubmissionStats)
 	s.mux.HandleFunc("GET /api/statistics/reviews", s.handleReviewStats)
+	s.mux.HandleFunc("GET /api/statistics/verdicts", s.handleVerdictStats)
 	s.mux.HandleFunc("GET /api/problems/{problemId}/chats", s.handleListChats)
 	s.mux.HandleFunc("POST /api/problems/{problemId}/chats", s.handleSendChat)
 	s.mux.HandleFunc("DELETE /api/problems/{problemId}/chats", s.handleDeleteChats)
@@ -389,6 +390,18 @@ func (s *Server) handleReviewStats(w http.ResponseWriter, _ *http.Request) {
 		daily = []map[string]any{}
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"daily": daily})
+}
+
+func (s *Server) handleVerdictStats(w http.ResponseWriter, _ *http.Request) {
+	verdicts, err := s.db.GetVerdictStats()
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if verdicts == nil {
+		verdicts = []map[string]any{}
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"verdicts": verdicts})
 }
 
 // handleListChats returns all chat messages for a problem.

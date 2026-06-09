@@ -6,9 +6,95 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"time"
 
 	"ojreviewdesktop/internal/models"
 )
+
+func TestVerdictStats_EmptyDB(t *testing.T) {
+	server := newTestServer(t)
+	req := httptest.NewRequest(http.MethodGet, "/api/statistics/verdicts", nil)
+	rec := httptest.NewRecorder()
+
+	server.Router().ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d; body=%s", rec.Code, http.StatusOK, rec.Body.String())
+	}
+	var body struct {
+		Verdicts []map[string]any `json:"verdicts"`
+	}
+	if err := json.NewDecoder(rec.Body).Decode(&body); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	if body.Verdicts == nil {
+		t.Fatalf("expected non-nil verdicts")
+	}
+	if len(body.Verdicts) != 0 {
+		t.Fatalf("len(verdicts) = %d, want 0", len(body.Verdicts))
+	}
+}
+
+func TestVerdictStats_ReturnsGroupedCounts(t *testing.T) {
+	server := newTestServer(t)
+	problem, err := server.db.UpsertProblem(models.Problem{
+		Platform:          models.PlatformCodeforces,
+		ExternalProblemID: "1000/A",
+		Title:             "Test Problem A",
+	})
+	if err != nil {
+		t.Fatalf("upsert problem: %v", err)
+	}
+	verdicts := []models.Verdict{
+		models.VerdictAC,
+		models.VerdictWA,
+		models.VerdictWA,
+		models.VerdictTLE,
+	}
+	for i, verdict := range verdicts {
+		_, err := server.db.UpsertSubmission(models.Submission{
+			Platform:             models.PlatformCodeforces,
+			ExternalSubmissionID: string(rune('a' + i)),
+			ProblemID:            problem.ID,
+			Verdict:              verdict,
+			SubmittedAt:          time.Date(2026, 6, 9, i, 0, 0, 0, time.UTC),
+			RawJSON:              "{}",
+		})
+		if err != nil {
+			t.Fatalf("upsert submission %d: %v", i, err)
+		}
+	}
+	req := httptest.NewRequest(http.MethodGet, "/api/statistics/verdicts", nil)
+	rec := httptest.NewRecorder()
+
+	server.Router().ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d; body=%s", rec.Code, http.StatusOK, rec.Body.String())
+	}
+	var body struct {
+		Verdicts []struct {
+			Verdict string `json:"verdict"`
+			Count   int    `json:"count"`
+		} `json:"verdicts"`
+	}
+	if err := json.NewDecoder(rec.Body).Decode(&body); err != nil {
+		t.Fatalf("decode response: %v", err)
+	}
+	counts := map[string]int{}
+	for _, item := range body.Verdicts {
+		counts[item.Verdict] = item.Count
+	}
+	if counts[string(models.VerdictAC)] != 1 {
+		t.Fatalf("AC count = %d, want 1", counts[string(models.VerdictAC)])
+	}
+	if counts[string(models.VerdictWA)] != 2 {
+		t.Fatalf("WA count = %d, want 2", counts[string(models.VerdictWA)])
+	}
+	if counts[string(models.VerdictTLE)] != 1 {
+		t.Fatalf("TLE count = %d, want 1", counts[string(models.VerdictTLE)])
+	}
+}
 
 func TestBackupRestoreViaAPI(t *testing.T) {
 	server := newTestServer(t)
