@@ -8,7 +8,6 @@ import (
 	"io"
 	"net/http"
 	"strings"
-	"time"
 )
 
 const (
@@ -58,8 +57,7 @@ func (p *OllamaProvider) Analyze(ctx context.Context, input string, s Settings) 
 	}
 	req.Header.Set("Content-Type", "application/json")
 
-	client := &http.Client{Timeout: 120 * time.Second}
-	resp, err := client.Do(req)
+	resp, err := analysisClient.Do(req)
 	if err != nil {
 		return "", "", fmt.Errorf("Ollama request failed: %w", err)
 	}

@@ -9,7 +9,6 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
-	"time"
 )
 
 const (
@@ -122,8 +121,7 @@ func analyzeOpenAICompatible(ctx context.Context, input string, s Settings, expe
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+strings.TrimSpace(s.APIKey))
 
-	client := &http.Client{Timeout: 120 * time.Second}
-	resp, err := client.Do(req)
+	resp, err := analysisClient.Do(req)
 	if err != nil {
 		return "", "", fmt.Errorf("perform API request: %w", err)
 	}

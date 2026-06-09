@@ -2,8 +2,10 @@ package ai
 
 import (
 	"fmt"
+	"net/http"
 	"net/url"
 	"strings"
+	"time"
 )
 
 const (
@@ -12,6 +14,14 @@ const (
 	deepSeekProviderName    = "deepseek-compatible"
 	deepSeekAliasProvider   = "deepseek"
 	ollamaProviderName      = "ollama"
+
+	analysisHTTPTimeout = 120 * time.Second
+	completeHTTPTimeout = 300 * time.Second
+)
+
+var (
+	analysisClient = &http.Client{Timeout: analysisHTTPTimeout}
+	completeClient = &http.Client{Timeout: completeHTTPTimeout}
 )
 
 func normalizeProviderName(provider string) string {
