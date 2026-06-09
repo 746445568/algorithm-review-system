@@ -21,11 +21,7 @@ function getVerdict(problem) {
 
 function ProblemSummary({ problem }) {
   if (!problem) {
-    return (
-      <section className="ai-problem-summary ai-problem-summary--empty">
-        <p>从上方列表选择一道曾经报错的题目，让 AI 为你总结错误模式并提供改进建议。</p>
-      </section>
-    );
+    return null;
   }
 
   const tags = getProblemTags(problem);
