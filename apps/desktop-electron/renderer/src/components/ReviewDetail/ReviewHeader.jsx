@@ -1,5 +1,6 @@
 import React from "react";
-import { formatDate, statusLabel, tagLabel, verdictTone } from "../../lib/format.js";
+import { useTranslation } from "react-i18next";
+import { tagLabel, verdictTone } from "../../lib/format.js";
 import { useNavigation } from "../../lib/NavigationContext.jsx";
 
 export const ReviewHeader = React.memo(function ReviewHeader({
@@ -7,6 +8,7 @@ export const ReviewHeader = React.memo(function ReviewHeader({
   selectedProblemRecord,
   selectedTags,
 }) {
+  const { t } = useTranslation();
   const { navigateTo } = useNavigation();
 
   if (!selectedProblem) return null;
@@ -15,21 +17,27 @@ export const ReviewHeader = React.memo(function ReviewHeader({
     <div className="panel rd-header-panel">
       <div className="rd-problem-top">
         <div className="rd-problem-info">
-          <span className="rd-platform-badge">{selectedProblem.platform}</span>
-          <h3 className="rd-problem-title">{selectedProblem.title}</h3>
-          <p className="rd-problem-sub">
-            {selectedProblem.externalProblemId}
-            {selectedProblem.contestId
-              ? ` · 比赛 ${selectedProblem.contestId}`
-              : ""}
-          </p>
+          <div className="rd-title-line">
+            <span className="rd-platform-badge">{selectedProblem.platform}</span>
+            <h3 className="rd-problem-title">{selectedProblem.title}</h3>
+            <span className="rd-problem-sub">
+              {selectedProblem.platform} {selectedProblem.externalProblemId}
+            </span>
+            <span
+              className={[
+                "rd-verdict-badge",
+                verdictTone(selectedProblem.latestVerdict) === "good"
+                  ? "badge-good"
+                  : verdictTone(selectedProblem.latestVerdict) === "bad"
+                    ? "badge-bad"
+                    : "",
+              ].join(" ")}
+            >
+              {selectedProblem.latestVerdict || "—"}
+            </span>
+          </div>
         </div>
         <div className="rd-problem-actions">
-          <span
-            className={`rd-solved-badge ${selectedProblem.solvedLater ? "badge-good" : "badge-bad"}`}
-          >
-            {selectedProblem.solvedLater ? "已通过" : "仍未通过"}
-          </span>
           <button
             type="button"
             className="ghost-button"
@@ -37,7 +45,7 @@ export const ReviewHeader = React.memo(function ReviewHeader({
               navigateTo("analysis", { problemId: selectedProblem.problemId })
             }
           >
-            分析这道题
+            {t("review.detail.analyzeProblem")}
           </button>
           {selectedProblemRecord?.url ? (
             <button
@@ -51,43 +59,10 @@ export const ReviewHeader = React.memo(function ReviewHeader({
                 }
               }}
             >
-              打开题目 ↗
-            </button>
-          ) : null}
+            {t("review.detail.openProblem")}
+          </button>
+        ) : null}
         </div>
-      </div>
-
-      <div className="rd-metrics">
-        <article>
-          <span>尝试次数</span>
-          <strong>{selectedProblem.attemptCount}</strong>
-        </article>
-        <article>
-          <span>复习状态</span>
-          <strong>{statusLabel(selectedProblem.reviewStatus)}</strong>
-        </article>
-        <article>
-          <span>下次复习</span>
-          <strong>
-            {selectedProblem.nextReviewAt
-              ? formatDate(selectedProblem.nextReviewAt)
-              : "未设置"}
-          </strong>
-        </article>
-        <article>
-          <span>最近判定</span>
-          <strong
-            className={
-              verdictTone(selectedProblem.latestVerdict) === "good"
-                ? "text-good"
-                : verdictTone(selectedProblem.latestVerdict) === "bad"
-                  ? "text-bad"
-                  : ""
-            }
-          >
-            {selectedProblem.latestVerdict || "—"}
-          </strong>
-        </article>
       </div>
 
       {selectedTags && selectedTags.length > 0 && (

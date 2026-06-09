@@ -96,7 +96,7 @@ func (s *Server) handleRateReview(w http.ResponseWriter, r *http.Request) {
 		EaseFactor:      current.EaseFactor,
 		IntervalDays:    current.IntervalDays,
 		RepetitionCount: current.RepetitionCount,
-	})
+	}, time.Now())
 
 	current.Status = models.ReviewStatusScheduled
 	current.EaseFactor = result.EaseFactor

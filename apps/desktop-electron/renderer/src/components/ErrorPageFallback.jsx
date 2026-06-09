@@ -1,4 +1,5 @@
 import { useCallback, useState } from "react";
+import { useTranslation } from 'react-i18next';
 
 /**
  * 错误页面降级 UI 组件
@@ -11,11 +12,14 @@ import { useCallback, useState } from "react";
  * @param {boolean} [props.showHomeButton] - 是否显示返回主页按钮
  */
 export function ErrorPageFallback({
-  title = "页面发生错误",
-  message = "抱歉，页面加载时出现了问题。您可以尝试重新加载或返回主页。",
+  title,
+  message,
   onRetry,
   showHomeButton = true,
 }) {
+  const { t } = useTranslation();
+  const resolvedTitle = title ?? t('errorPage.title');
+  const resolvedMessage = message ?? t('errorPage.message');
   const [isRetrying, setIsRetrying] = useState(false);
 
   const handleRetry = useCallback(async () => {
@@ -52,8 +56,8 @@ export function ErrorPageFallback({
           </svg>
         </div>
 
-        <h2 className="error-page-title">{title}</h2>
-        <p className="error-page-message">{message}</p>
+        <h2 className="error-page-title">{resolvedTitle}</h2>
+        <p className="error-page-message">{resolvedMessage}</p>
 
         <div className="error-page-actions">
           <button
@@ -62,7 +66,7 @@ export function ErrorPageFallback({
             onClick={handleRetry}
             disabled={isRetrying}
           >
-            {isRetrying ? "加载中..." : "重新加载"}
+            {isRetrying ? t('common.loading') : t('errorPage.reload')}
           </button>
 
           {showHomeButton && (
@@ -71,17 +75,17 @@ export function ErrorPageFallback({
               className="btn btn-secondary btn-lg"
               onClick={() => (window.location.href = "/")}
             >
-              返回主页
+              {t('errorPage.goHome')}
             </button>
           )}
         </div>
 
         <div className="error-page-tips">
-          <p>提示：如果问题持续，请尝试：</p>
+          <p>{t('errorPage.tipsTitle')}</p>
           <ul>
-            <li>清除浏览器缓存</li>
-            <li>检查网络连接</li>
-            <li>重启应用程序</li>
+            <li>{t('errorPage.tipClearCache')}</li>
+            <li>{t('errorPage.tipCheckNetwork')}</li>
+            <li>{t('errorPage.tipRestartApp')}</li>
           </ul>
         </div>
       </div>

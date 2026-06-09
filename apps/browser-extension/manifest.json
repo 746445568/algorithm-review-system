@@ -1,0 +1,32 @@
+{
+  "manifest_version": 3,
+  "name": "OJ Review Companion",
+  "version": "0.1.0",
+  "description": "Import visible OJ problem statements and submission source code into the local OJ Review service.",
+  "permissions": ["activeTab", "scripting"],
+  "host_permissions": [
+    "http://127.0.0.1:38473/*",
+    "http://localhost:38473/*",
+    "https://codeforces.com/*",
+    "http://mirror.codeforces.com/*",
+    "https://atcoder.jp/*"
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "Import to OJ Review"
+  },
+  "background": {
+    "service_worker": "background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://codeforces.com/*",
+        "http://mirror.codeforces.com/*",
+        "https://atcoder.jp/*"
+      ],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ]
+}

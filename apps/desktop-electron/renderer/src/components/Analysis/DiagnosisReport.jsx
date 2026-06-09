@@ -1,4 +1,5 @@
 import { memo } from "react";
+import { useTranslation } from 'react-i18next';
 
 /**
  * Diagnosis Report Component
@@ -19,6 +20,8 @@ export const DiagnosisReport = memo(function DiagnosisReport({
   type,
   globalTask
 }) {
+  const { t } = useTranslation();
+
   // Extract data from global task
   const diagnosis = globalTask?.status === "SUCCESS" ? (globalTask.result?.diagnosis || []) : [];
   const suggestions = globalTask?.status === "SUCCESS" ? (globalTask.result?.suggestions || []) : [];
@@ -50,7 +53,7 @@ export const DiagnosisReport = memo(function DiagnosisReport({
                     {iconInfo.icon}
                   </div>
                   <div>
-                    <div className="ai-row-title">{item.title || `诊断项 ${index + 1}`}</div>
+                    <div className="ai-row-title">{item.title || t('analysis.diagnosis.item', { index: index + 1 })}</div>
                     <div className="ai-row-text">{item.description || ""}</div>
                   </div>
                 </div>
@@ -58,7 +61,7 @@ export const DiagnosisReport = memo(function DiagnosisReport({
             })
           ) : (
             <div className="ai-row-text" style={{ padding: "12px", textAlign: "center", color: "var(--text3)" }}>
-              {globalTask?.status === "SUCCESS" ? "暂无诊断数据" : "请先生成全局分析报告"}
+              {globalTask?.status === "SUCCESS" ? t('analysis.diagnosis.noDiagnosis') : t('analysis.diagnosis.generateFirst')}
             </div>
           )}
         </div>
@@ -78,14 +81,14 @@ export const DiagnosisReport = memo(function DiagnosisReport({
         {data.length > 0 ? (
           data.map((item, index) => (
             <div className="ai-detail" key={index}>
-              <div className="ai-detail-title">{item.title || `建议 ${index + 1}`}</div>
+              <div className="ai-detail-title">{item.title || t('analysis.diagnosis.suggestion', { index: index + 1 })}</div>
               <div className="ai-detail-text">{item.description || ""}</div>
             </div>
           ))
         ) : (
           <div className="ai-detail" style={{ gridColumn: "1 / -1" }}>
             <div className="ai-detail-text" style={{ textAlign: "center", color: "var(--text3)" }}>
-              {globalTask?.status === "SUCCESS" ? "暂无建议数据" : "请先生成全局分析报告"}
+              {globalTask?.status === "SUCCESS" ? t('analysis.diagnosis.noSuggestions') : t('analysis.diagnosis.generateFirst')}
             </div>
           </div>
         )}

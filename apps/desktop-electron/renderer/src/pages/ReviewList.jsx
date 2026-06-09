@@ -1,5 +1,6 @@
 import { memo, useCallback } from "react";
-import { formatDate, platformLabel, statusLabel, verdictTone } from "../lib/format.js";
+import { useTranslation } from "react-i18next";
+import { formatDate, platformLabel, verdictTone } from "../lib/format.js";
 
 function SkeletonCard() {
   return (
@@ -9,13 +10,6 @@ function SkeletonCard() {
     </div>
   );
 }
-
-const STATUS_CHIP_CLASS = {
-  TODO: "rl-chip-neutral",
-  REVIEWING: "rl-chip-warn",
-  SCHEDULED: "rl-chip-blue",
-  DONE: "rl-chip-good",
-};
 
 export const ReviewList = memo(function ReviewList({
   problems,
@@ -31,6 +25,7 @@ export const ReviewList = memo(function ReviewList({
   doneCount,
   totalCount,
 }) {
+  const { t } = useTranslation();
   const progress = totalCount > 0 ? Math.round((doneCount / totalCount) * 100) : 0;
 
   const setFilter = useCallback((key, value) => {
@@ -45,35 +40,24 @@ export const ReviewList = memo(function ReviewList({
     setFilter("search", e.target.value);
   }, [setFilter]);
 
-  const handleReviewStatusChange = useCallback((e) => {
-    setFilter("reviewStatus", e.target.value);
-  }, [setFilter]);
-
-  const handlePlatformChange = useCallback((e) => {
-    setFilter("platform", e.target.value);
-  }, [setFilter]);
-
-  const handleSortByChange = useCallback((e) => {
-    setFilter("sortBy", e.target.value);
-  }, [setFilter]);
-
-  const handleOnlyUnsolvedChange = useCallback((e) => {
-    setFilter("onlyUnsolved", e.target.checked);
-  }, [setFilter]);
-
   return (
     <section className="panel rl-panel">
       <div className="rl-header">
         <div>
-          <h3 className="rl-title">复习队列</h3>
-          <p className="rl-subtitle">{problems.length} 道题目</p>
+          <h3 className="rl-title">{t("review.list.title")}</h3>
+          <p className="rl-subtitle">
+            {t("review.list.pendingSummary", { count: problems.length })} ·{" "}
+            <span className="rl-due-badge">
+              {t("review.list.dueSummary", { count: dueCount })}
+            </span>
+          </p>
         </div>
         <button
           type="button"
           className="rl-refresh-btn"
           onClick={handleRefresh}
           disabled={serviceUnavailable}
-          title="刷新"
+          title={t("actions.refresh")}
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <polyline points="23 4 23 10 17 10" />
@@ -82,14 +66,6 @@ export const ReviewList = memo(function ReviewList({
           </svg>
         </button>
       </div>
-
-      <div className="rl-progress-track">
-        <div className="rl-progress-fill" style={{ width: `${progress}%` }} />
-      </div>
-      <p className="rl-progress-label">
-        {doneCount}/{totalCount} 已完成
-        {dueCount > 0 && <span className="rl-due-badge"> · {dueCount} 到期</span>}
-      </p>
 
       <div className="rl-filters">
         <div className="rl-search-wrap">
@@ -100,41 +76,13 @@ export const ReviewList = memo(function ReviewList({
           <input
             className="rl-search"
             value={filters.search}
-            placeholder="搜索题目…"
+            placeholder={t("review.list.searchPlaceholder")}
             onChange={handleSearchChange}
           />
         </div>
-
-        <div className="rl-selects">
-          <select className="rl-select" value={filters.reviewStatus} onChange={handleReviewStatusChange}>
-            <option value="">全部状态</option>
-            <option value="TODO">待复习</option>
-            <option value="REVIEWING">复习中</option>
-            <option value="SCHEDULED">已排期</option>
-            <option value="DONE">已完成</option>
-          </select>
-          <select className="rl-select" value={filters.platform} onChange={handlePlatformChange}>
-            <option value="">全部平台</option>
-            <option value="CODEFORCES">CF</option>
-            <option value="ATCODER">AC</option>
-          </select>
-          <select className="rl-select" value={filters.sortBy} onChange={handleSortByChange}>
-            <option value="lastSubmitted">最近提交</option>
-            <option value="nextReview">复习时间</option>
-          </select>
-        </div>
-
-        <label className="rl-checkbox">
-          <input
-            type="checkbox"
-            checked={filters.onlyUnsolved}
-            onChange={handleOnlyUnsolvedChange}
-          />
-          <span>仅显示未通过</span>
-        </label>
       </div>
 
-      {serviceUnavailable && <p className="rl-state-msg">等待服务就绪…</p>}
+      {serviceUnavailable && <p className="rl-state-msg">{t("review.list.waitingService")}</p>}
       {error && <p className="rl-state-msg rl-state-error">{error}</p>}
 
       <div className="rl-list">
@@ -146,7 +94,7 @@ export const ReviewList = memo(function ReviewList({
               <path d="M9 11l3 3L22 4" />
               <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
             </svg>
-            <p>没有符合条件的题目</p>
+            <p>{t("review.list.empty")}</p>
           </div>
         ) : (
           problems.map((item, idx) => (
@@ -156,59 +104,71 @@ export const ReviewList = memo(function ReviewList({
               active={item.problemId === selectedProblemId}
               index={idx}
               onSelect={onSelect}
+              t={t}
             />
           ))
         )}
       </div>
 
       <div className="rl-kb-hint">
-        <kbd>J</kbd><kbd>K</kbd> 导航
+        <kbd>J</kbd><kbd>K</kbd> {t("review.list.keyboard.navigation")}
         <span className="rl-kb-sep">·</span>
-        <kbd>1–4</kbd> 状态
+        <kbd>1–4</kbd> {t("review.list.keyboard.status")}
         <span className="rl-kb-sep">·</span>
-        <kbd>⌘S</kbd> 保存
+        <kbd>⌘S</kbd> {t("actions.save")}
       </div>
     </section>
   );
 });
 
-const ProblemCard = memo(function ProblemCard({ item, active, index, onSelect }) {
-  const statusKey = (item.reviewStatus || "TODO").toUpperCase();
-  const chipClass = STATUS_CHIP_CLASS[statusKey] || "rl-chip-neutral";
+const ProblemCard = memo(function ProblemCard({ item, active, index, onSelect, t }) {
   const verdictClass = verdictTone(item.latestVerdict) === "good"
     ? "rl-chip-good"
     : verdictTone(item.latestVerdict) === "bad"
       ? "rl-chip-bad"
       : "rl-chip-neutral";
 
+  const handleKeyDown = (event) => {
+    if (event.key !== "Enter" && event.key !== " ") return;
+    event.preventDefault();
+    onSelect(item.problemId);
+  };
+
   return (
-    <button
-      type="button"
+    <div
+      role="button"
+      tabIndex={0}
       className={[
         "rl-card",
         active ? "rl-card--active" : "",
         item.reviewDue ? "rl-card--due" : "",
       ].filter(Boolean).join(" ")}
       onClick={() => onSelect(item.problemId)}
+      onKeyDown={handleKeyDown}
       style={{ animationDelay: `${Math.min(index * 18, 180)}ms` }}
     >
       <div className="rl-card-body">
-        <span className="rl-card-platform">{platformLabel(item.platform)}</span>
-        <strong className="rl-card-title">{item.title}</strong>
-        <span className="rl-card-id">{item.externalProblemId}</span>
-        <span className={`rl-card-schedule ${item.reviewDue ? "rl-card-schedule--due" : ""}`}>
-          {item.reviewDue
-            ? "● 已到期"
-            : item.nextReviewAt
-              ? `↻ ${formatDate(item.nextReviewAt)}`
-              : "无排期"}
-        </span>
+        <div className="rl-card-main">
+          <span className="rl-card-platform">{platformLabel(item.platform)}</span>
+          <strong className="rl-card-title">{item.title}</strong>
+        </div>
+        <span className={`rl-chip ${verdictClass}`}>{item.latestVerdict || "—"}</span>
       </div>
       <div className="rl-card-meta">
-        <span className={`rl-chip ${verdictClass}`}>{item.latestVerdict || "—"}</span>
-        <span className={`rl-chip ${chipClass}`}>{statusLabel(item.reviewStatus)}</span>
-        <span className="rl-card-attempts">{item.attemptCount}次</span>
+        <span className="rl-card-id">
+          {platformLabel(item.platform)} {item.externalProblemId}
+        </span>
+        <span className="rl-card-attempts">
+          {t("review.list.attempts", { count: item.attemptCount })}
+        </span>
+        <span className={`rl-card-schedule ${item.reviewDue ? "rl-card-schedule--due" : ""}`}>
+          {item.reviewDue
+            ? t("review.list.due")
+            : item.nextReviewAt
+              ? formatDate(item.nextReviewAt)
+              : t("review.list.unscheduled")}
+        </span>
       </div>
-    </button>
+    </div>
   );
 });

@@ -571,24 +571,29 @@
 
 /* Report Card Head */
 .ai-report-head {
-  display: flex;
-  justify-content: space-between;
-  gap: 10px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
   margin-bottom: 11px;
-  align-items: center;
+  align-items: start;
 }
 
 .ai-report-title {
+  min-width: 0;
   font-size: 14px;
   font-weight: 850;
+  line-height: 1.45;
+  overflow-wrap: anywhere;
 }
 
 /* Priority Badges */
 .priority {
+  align-self: start;
   font-size: 11px;
   font-weight: 900;
+  line-height: 1.2;
   border-radius: 999px;
-  padding: 2px 8px;
+  padding: 4px 9px;
   white-space: nowrap;
 }
 

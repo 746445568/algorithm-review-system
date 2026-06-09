@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	deepSeekDefaultBase = "https://api.deepseek.com/v1"
+	deepSeekDefaultBase = "https://api.deepseek.com"
 )
 
 type DeepSeekProvider struct{}
@@ -27,7 +27,7 @@ func (p *DeepSeekProvider) ValidateConfig(s Settings) error {
 	if strings.TrimSpace(s.APIKey) == "" {
 		return fmt.Errorf("apiKey is required for %s", deepSeekProviderName)
 	}
-	if err := validateBaseURL(s.BaseURL, deepSeekDefaultBase); err != nil {
+	if _, err := normalizeDeepSeekOpenAIBaseURL(s.BaseURL); err != nil {
 		return fmt.Errorf("invalid baseUrl: %w", err)
 	}
 	return nil
@@ -38,7 +38,10 @@ func (p *DeepSeekProvider) Analyze(ctx context.Context, input string, s Settings
 		return "", "", err
 	}
 
-	baseURL := defaultBaseURL(s.BaseURL, deepSeekDefaultBase)
+	baseURL, err := normalizeDeepSeekOpenAIBaseURL(s.BaseURL)
+	if err != nil {
+		return "", "", fmt.Errorf("resolve DeepSeek baseUrl: %w", err)
+	}
 	endpoint, err := buildEndpoint(baseURL, "/chat/completions")
 	if err != nil {
 		return "", "", err
@@ -108,4 +111,18 @@ func (p *DeepSeekProvider) Analyze(ctx context.Context, input string, s Settings
 	}
 
 	return result, rawJSON, nil
+}
+
+func normalizeDeepSeekOpenAIBaseURL(rawBaseURL string) (string, error) {
+	baseURL, err := normalizeBaseURL(rawBaseURL, deepSeekDefaultBase)
+	if err != nil {
+		return "", err
+	}
+
+	const anthropicPath = "/anthropic"
+	if strings.HasSuffix(baseURL, anthropicPath) {
+		baseURL = strings.TrimSuffix(baseURL, anthropicPath)
+	}
+
+	return strings.TrimRight(baseURL, "/"), nil
 }

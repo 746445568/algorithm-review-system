@@ -1,14 +1,17 @@
 import React from "react";
+import { useTranslation } from 'react-i18next';
 import { formatDate, verdictTone } from "../../../lib/format.js";
 
 export const SubmissionsTab = React.memo(function SubmissionsTab({
   hasSubmissions,
   selectedSubmissions,
 }) {
+  const { t } = useTranslation();
+
   if (!hasSubmissions) {
     return (
       <div className="panel rd-subs-panel">
-        <p className="muted">当前范围内未找到该题的提交记录。</p>
+        <p className="muted">{t('review.detail.noSubmissions')}</p>
       </div>
     );
   }
@@ -32,7 +35,7 @@ export const SubmissionsTab = React.memo(function SubmissionsTab({
                 </span>
                 <div>
                   <strong className="rd-sub-lang">
-                    {sub.language || "未知语言"}
+                    {sub.language || t('review.detail.unknownLanguage')}
                   </strong>
                   <p className="rd-sub-date muted">
                     {formatDate(sub.submittedAt)}

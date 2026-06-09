@@ -1,24 +1,23 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useTranslation } from 'react-i18next';
 import { api } from "../lib/api.js";
 import { toDatetimeLocalValue } from "../lib/format.js";
 import { useNavigation } from "../lib/NavigationContext.jsx";
 import { useReviewFlow } from "../hooks/useReviewFlow.js";
 import { ReviewHeader } from "../components/ReviewDetail/ReviewHeader.jsx";
-import { ReviewNav } from "../components/ReviewDetail/ReviewNav.jsx";
 import { ReviewTabs } from "../components/ReviewDetail/ReviewTabs.jsx";
 import { StateTab } from "../components/ReviewDetail/tabs/StateTab.jsx";
 import { SubmissionsTab } from "../components/ReviewDetail/tabs/SubmissionsTab.jsx";
 import { RawTab } from "../components/ReviewDetail/tabs/RawTab.jsx";
 import { AnalysisTab } from "../components/ReviewDetail/tabs/AnalysisTab.jsx";
+import { ChatTab } from "../components/ReviewDetail/tabs/ChatTab.jsx";
 import { Toast } from "../components/ReviewDetail/Toast.jsx";
 
 function isMissingReviewStateRoute(error) {
   return /\b404\b/.test(error?.message || "");
 }
 
-function buildSupportMessage(serviceUrl) {
-  return `ojreviewd (${serviceUrl}) 版本过旧，不支持复习状态读写。请从 apps/server 重新构建。`;
-}
+// buildSupportMessage is now handled inline with t()
 
 export function ReviewDetail({
   selectedProblem,
@@ -48,6 +47,7 @@ export function ReviewDetail({
     repetitionCount: 0,
   });
   const [rating, setRating] = useState(false);
+  const { t } = useTranslation();
   const { navigateTo } = useNavigation();
   const [analysisTask, setAnalysisTask] = useState(null);
   const [analysisLoading, setAnalysisLoading] = useState(false);
@@ -99,7 +99,7 @@ export function ReviewDetail({
         if (reqId !== seqRef.current) return;
         if (isMissingReviewStateRoute(err)) {
           setReviewStateSupported(false);
-          setSupportMessage(buildSupportMessage(serviceUrl));
+          setSupportMessage(t('reviewDetail.unsupportedVersion', { url: serviceUrl }));
         }
       });
   }, [selectedProblemId, serviceUnavailable, serviceUrl]);
@@ -125,7 +125,7 @@ export function ReviewDetail({
       setReviewStateSupported(true);
       setSupportMessage("");
       onReviewSaved(saved);
-      setToast({ message: "已保存", isError: false });
+      setToast({ message: t('reviewDetail.saved'), isError: false });
 
       if (saved.status === "DONE" || saved.status === "SCHEDULED") {
         const idx = filteredProblems.findIndex(
@@ -141,9 +141,9 @@ export function ReviewDetail({
     } catch (err) {
       if (isMissingReviewStateRoute(err)) {
         setReviewStateSupported(false);
-        setSupportMessage(buildSupportMessage(serviceUrl));
+        setSupportMessage(t('reviewDetail.unsupportedVersion', { url: serviceUrl }));
       } else {
-        setToast({ message: `保存失败：${err.message}`, isError: true });
+        setToast({ message: t('reviewDetail.saveFailed', { error: err.message }), isError: true });
       }
     } finally {
       setReviewSaving(false);
@@ -186,7 +186,7 @@ export function ReviewDetail({
         }));
         onReviewSaved(result);
         const days = result.intervalDays ?? 0;
-        setToast({ message: `已评分，下次复习：${days} 天后`, isError: false });
+        setToast({ message: t('reviewDetail.ratedSuccess', { days }), isError: false });
         const idx = filteredProblems.findIndex(
           (p) => p.problemId === selectedProblemId,
         );
@@ -197,7 +197,7 @@ export function ReviewDetail({
           }, 1200);
         }
       } catch (err) {
-        setToast({ message: `评分失败：${err.message}`, isError: true });
+        setToast({ message: t('reviewDetail.rateFailed', { error: err.message }), isError: true });
       } finally {
         setRating(false);
       }
@@ -214,7 +214,7 @@ export function ReviewDetail({
 
   useEffect(() => {
     if (!reviewStateSupported || serviceUnavailable) return;
-    const keyMap = { q: 1, w: 2, e: 3, r: 5 };
+    const keyMap = { 1: 1, 2: 2, 3: 3, 4: 4, 5: 5, q: 1, w: 2, e: 3, r: 5 };
     const onKey = (e) => {
       if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA")
         return;
@@ -226,14 +226,13 @@ export function ReviewDetail({
     return () => window.removeEventListener("keydown", onKey);
   }, [reviewStateSupported, serviceUnavailable, activeTab, handleRate]);
 
-  const { currentIndex, total, hasNext, hasPrev, goNext, goPrev } =
-    useReviewFlow({
-      problems: filteredProblems,
-      selectedId: selectedProblemId,
-      onSelect,
-      onSave: saveReviewState,
-      onStatusChange: (status) => setReviewState((s) => ({ ...s, status })),
-    });
+  useReviewFlow({
+    problems: filteredProblems,
+    selectedId: selectedProblemId,
+    onSelect,
+    onSave: saveReviewState,
+    onStatusChange: (status) => setReviewState((s) => ({ ...s, status })),
+  });
 
   // ── AI Analysis ──
   function stopAnalysisPoll() {
@@ -305,8 +304,8 @@ export function ReviewDetail({
           <line x1="16" y1="13" x2="8" y2="13" />
           <line x1="16" y1="17" x2="8" y2="17" />
         </svg>
-        <p>从左侧选择一道题目</p>
-        <span className="rd-empty-hint">J / K 快速导航</span>
+        <p>{t('reviewDetail.selectProblem')}</p>
+        <span className="rd-empty-hint">{t('reviewDetail.quickNav')}</span>
       </div>
     );
   }
@@ -316,16 +315,6 @@ export function ReviewDetail({
 
   return (
     <div className="rd-container">
-      {/* Nav bar */}
-      <ReviewNav
-        currentIndex={currentIndex}
-        total={total}
-        hasNext={hasNext}
-        hasPrev={hasPrev}
-        goNext={goNext}
-        goPrev={goPrev}
-      />
-
       {/* Animated content on problem change */}
       <div key={selectedProblemId} className="rd-content">
         {/* Problem header */}
@@ -354,6 +343,8 @@ export function ReviewDetail({
             serviceUnavailable={serviceUnavailable}
             rating={rating}
             supportMessage={supportMessage}
+            selectedProblem={selectedProblem}
+            selectedTags={selectedTags}
             handleRate={handleRate}
             saveReviewState={saveReviewState}
           />
@@ -386,6 +377,14 @@ export function ReviewDetail({
             handleGenerateAnalysis={handleGenerateAnalysis}
             handleAnalysisReset={handleAnalysisReset}
             navigateTo={navigateTo}
+          />
+        )}
+
+        {/* Tab: Chat */}
+        {activeTab === "chat" && (
+          <ChatTab
+            problemId={selectedProblemId}
+            serviceUnavailable={serviceUnavailable}
           />
         )}
       </div>

@@ -1,4 +1,5 @@
 import React from "react";
+import { useTranslation } from 'react-i18next';
 import { formatDate } from "../../../lib/format.js";
 import { SimpleMarkdown } from "../../../components/SimpleMarkdown.jsx";
 
@@ -12,19 +13,21 @@ export const AnalysisTab = React.memo(function AnalysisTab({
   handleAnalysisReset,
   navigateTo,
 }) {
+  const { t } = useTranslation();
+
   // Empty / error state
   if (!analysisTask && !analysisLoading) {
     return (
       <div className="panel rd-ai-panel">
         <div className="rd-ai-empty">
           <p className="rd-ai-hint">
-            基于全部复习数据生成个性化弱点分析，帮助你找到最需要补强的知识点。
+            {t('review.detail.analysisHint')}
           </p>
           {analysisError && (
             <p className="rd-ai-error-msg">
               {analysisError.includes("provider and model are required")
-                ? "请先在设置页面配置 AI 服务（提供商 + 模型 + API Key）"
-                : `分析失败：${analysisError}`}
+                ? t('review.detail.configureAiFirst')
+                : t('review.detail.analysisFailed', { error: analysisError })}
             </p>
           )}
           <button
@@ -33,7 +36,7 @@ export const AnalysisTab = React.memo(function AnalysisTab({
             disabled={serviceUnavailable}
             onClick={() => void handleGenerateAnalysis()}
           >
-            生成 AI 分析
+            {t('review.detail.generateAnalysis')}
           </button>
           <button
             type="button"
@@ -42,11 +45,11 @@ export const AnalysisTab = React.memo(function AnalysisTab({
               navigateTo("analysis", { problemId: selectedProblemId })
             }
           >
-            在分析页查看 →
+            {t('review.detail.viewInAnalysis')}
           </button>
           {serviceUnavailable && (
             <p className="muted" style={{ fontSize: 12 }}>
-              等待本地服务就绪…
+              {t('review.detail.waitingService')}
             </p>
           )}
         </div>
@@ -66,9 +69,9 @@ export const AnalysisTab = React.memo(function AnalysisTab({
         <div className="rd-ai-progress">
           <span className="rd-spinner" />
           <span>
-            {!analysisTask && "正在提交…"}
-            {analysisTask?.status === "PENDING" && "排队等待中…"}
-            {analysisTask?.status === "RUNNING" && "AI 分析中，请稍候…"}
+            {!analysisTask && t('analysis.status.submitting')}
+            {analysisTask?.status === "PENDING" && t('analysis.status.queuing')}
+            {analysisTask?.status === "RUNNING" && t('analysis.status.analyzing')}
           </span>
           {analysisTask && (
             <span className="rd-ai-provider-hint muted">
@@ -86,14 +89,14 @@ export const AnalysisTab = React.memo(function AnalysisTab({
       <div className="panel rd-ai-panel">
         <div className="rd-ai-failed">
           <p className="rd-ai-error-msg">
-            {analysisTask.errorMessage || "分析任务失败，请重试"}
+            {analysisTask.errorMessage || t('analysis.status.failedRetry')}
           </p>
           <button
             type="button"
             className="ghost-button"
             onClick={() => handleAnalysisReset()}
           >
-            重试
+            {t('actions.retry')}
           </button>
         </div>
       </div>
@@ -119,7 +122,7 @@ export const AnalysisTab = React.memo(function AnalysisTab({
               disabled={analysisLoading}
               onClick={() => void handleGenerateAnalysis()}
             >
-              重新生成
+              {t('review.detail.regenerate')}
             </button>
           </div>
           <div className="rd-ai-result">

@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from "react";
+import { useTranslation } from 'react-i18next';
 import { useNavigation } from "../lib/NavigationContext.jsx";
 import { getAnalysisErrorMessage } from "../lib/runtimeStatus.js";
 import { useAnalysisTaskWithPoll } from "../hooks/useAnalysisTask.js";
@@ -16,6 +17,7 @@ import "../styles/ui-analysis.css";
  * 使用 SWR 管理分析任务状态，采用分栏卡片布局
  */
 export function AnalysisPage({ serviceStatus, runtimeInfo }) {
+  const { t } = useTranslation();
   const { navigateTo, navigationState } = useNavigation();
 
   // Global report state
@@ -137,14 +139,14 @@ export function AnalysisPage({ serviceStatus, runtimeInfo }) {
           type="button"
           className="an-back-btn"
           onClick={() => navigateTo("dashboard")}
-          title="返回仪表盘"
+          title={t('analysis.backToDashboard')}
         >
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <polyline points="15 18 9 12 15 6" />
           </svg>
-          <span>仪表盘</span>
+          <span>{t('nav.dashboard')}</span>
         </button>
-        <h2 className="an-title">AI 分析洞察</h2>
+        <h2 className="an-title">{t('analysis.insightTitle')}</h2>
       </header>
 
       {/* Main content grid */}
@@ -159,17 +161,17 @@ export function AnalysisPage({ serviceStatus, runtimeInfo }) {
           />
 
           <DiagnosisReport
-            title="本周诊断结论"
+            title={t('analysis.weeklyDiagnosis')}
             priority="high"
-            priorityLabel="优先处理"
+            priorityLabel={t('analysis.priorityHigh')}
             type="diagnosis"
             globalTask={globalTask}
           />
 
           <DiagnosisReport
-            title="下周训练建议"
+            title={t('analysis.weeklySuggestions')}
             priority="mid"
-            priorityLabel="建议执行"
+            priorityLabel={t('analysis.priorityMid')}
             type="suggestions"
             globalTask={globalTask}
           />

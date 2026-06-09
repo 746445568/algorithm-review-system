@@ -3,12 +3,14 @@ package judges
 import (
 	"context"
 	"crypto/tls"
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"net"
 	"net/http"
 	"net/url"
+	"os"
 	"strconv"
 	"strings"
 	"sync"
@@ -28,6 +30,11 @@ const (
 type CodeforcesAdapter struct {
 	client        *http.Client
 	baseURL       string
+	apiKey        string
+	apiSecret     string
+	sessionCookie string
+	csrfToken     string
+	now           func() time.Time
 	mu            sync.Mutex
 	lastRequestAt time.Time
 }
@@ -45,8 +52,30 @@ func NewCodeforcesAdapter() Adapter {
 		TLSClientConfig:       &tls.Config{MinVersion: tls.VersionTLS12},
 	}
 	return &CodeforcesAdapter{
-		client:  &http.Client{Timeout: 120 * time.Second, Transport: transport},
-		baseURL: codeforcesBaseURL,
+		client:        &http.Client{Timeout: 120 * time.Second, Transport: transport},
+		baseURL:       codeforcesBaseURL,
+		apiKey:        strings.TrimSpace(os.Getenv("CODEFORCES_API_KEY")),
+		apiSecret:     strings.TrimSpace(os.Getenv("CODEFORCES_API_SECRET")),
+		sessionCookie: strings.TrimSpace(os.Getenv("CODEFORCES_SESSION_COOKIE")),
+		csrfToken:     strings.TrimSpace(os.Getenv("CODEFORCES_CSRF_TOKEN")),
+		now:           time.Now,
+	}
+}
+
+func (a *CodeforcesAdapter) Capabilities() JudgeCapabilities {
+	return JudgeCapabilities{
+		Platform:         models.PlatformCodeforces,
+		Label:            "Codeforces",
+		AccountSync:      JudgeCapabilitySupported,
+		Profile:          JudgeCapabilitySupported,
+		Contests:         JudgeCapabilitySupported,
+		ProblemMetadata:  JudgeCapabilitySupported,
+		ProblemStatement: JudgeCapabilitySupported,
+		SubmissionSource: JudgeCapabilitySupported,
+		PreferredFetchPath: JudgeFetchPaths{
+			ProblemStatement: JudgeFetchPathPublicPage,
+			SubmissionSource: JudgeFetchPathOfficialAPI,
+		},
 	}
 }
 
@@ -255,3 +284,113 @@ func (a *CodeforcesAdapter) FetchStatement(ctx context.Context, problemID string
 	return fetchProblemStatement(ctx, a.client, mirrorURL)
 }
 
+func (a *CodeforcesAdapter) FetchSubmissionSource(ctx context.Context, submission models.Submission) (string, error) {
+	submissionID := strings.TrimSpace(submission.ExternalSubmissionID)
+	if submissionID == "" {
+		return "", errors.New("submission id is required")
+	}
+
+	if a.hasCredentials() {
+		source, err := a.fetchSubmissionSourceFromAPI(ctx, submission)
+		if err == nil && strings.TrimSpace(source) != "" {
+			return source, nil
+		}
+	}
+
+	if a.hasBrowserSession() {
+		source, err := a.fetchSubmissionSourceFromBrowserSession(ctx, submission.ExternalSubmissionID)
+		if err == nil && strings.TrimSpace(source) != "" {
+			return source, nil
+		}
+	}
+
+	contestID := strings.TrimSpace(submission.SourceContestID)
+	if contestID == "" {
+		return "", errors.New("contest id is required")
+	}
+
+	// 先尝试 /contest/ 路径，失败后回退 /gym/（Gym 比赛 URL 使用 /gym/ 而非 /contest/）
+	url := fmt.Sprintf("https://codeforces.com/contest/%s/submission/%s", contestID, submissionID)
+	source, err := fetchCodeforcesSubmissionSource(ctx, a.client, url)
+	if err != nil {
+		gymURL := fmt.Sprintf("https://codeforces.com/gym/%s/submission/%s", contestID, submissionID)
+		source, err = fetchCodeforcesSubmissionSource(ctx, a.client, gymURL)
+		if err != nil {
+			return "", err
+		}
+	}
+	if strings.TrimSpace(source) == "" {
+		return "", fmt.Errorf("codeforces submission source not found: %s", submissionID)
+	}
+	return source, nil
+}
+
+func (a *CodeforcesAdapter) hasCredentials() bool {
+	return strings.TrimSpace(a.apiKey) != "" && strings.TrimSpace(a.apiSecret) != ""
+}
+
+func (a *CodeforcesAdapter) hasBrowserSession() bool {
+	return strings.TrimSpace(a.sessionCookie) != "" && strings.TrimSpace(a.csrfToken) != ""
+}
+
+func (a *CodeforcesAdapter) fetchSubmissionSourceFromAPI(ctx context.Context, submission models.Submission) (string, error) {
+	const pageSize = 100
+	const maxPages = 10
+
+	handle, err := extractCodeforcesSubmissionHandle(submission.RawJSON)
+	if err != nil {
+		return "", err
+	}
+	targetID, err := strconv.Atoi(strings.TrimSpace(submission.ExternalSubmissionID))
+	if err != nil || targetID <= 0 {
+		return "", fmt.Errorf("invalid submission id: %s", submission.ExternalSubmissionID)
+	}
+
+	for page := 0; page < maxPages; page++ {
+		from := 1 + page*pageSize
+		var rawSubmissions []codeforcesSubmissionRaw
+		query := url.Values{
+			"handle":         []string{handle},
+			"from":           []string{strconv.Itoa(from)},
+			"count":          []string{strconv.Itoa(pageSize)},
+			"includeSources": []string{"true"},
+		}
+		if err := a.getAuthenticatedJSON(ctx, "user.status", query, &rawSubmissions); err != nil {
+			return "", err
+		}
+
+		for _, raw := range rawSubmissions {
+			if raw.ID == targetID {
+				source, sourceErr := codeforcesSubmissionSource(raw)
+				if sourceErr != nil {
+					return "", sourceErr
+				}
+				return source, nil
+			}
+			if raw.ID > 0 && raw.ID < targetID {
+				return "", fmt.Errorf("submission %d not found in authenticated user.status response", targetID)
+			}
+		}
+		if len(rawSubmissions) < pageSize {
+			break
+		}
+	}
+	return "", fmt.Errorf("submission %d not found in authenticated user.status response", targetID)
+}
+
+func codeforcesSubmissionSource(raw codeforcesSubmissionRaw) (string, error) {
+	if strings.TrimSpace(raw.Source) != "" {
+		return raw.Source, nil
+	}
+	if strings.TrimSpace(raw.SourceBase64) != "" {
+		decoded, err := base64.StdEncoding.DecodeString(strings.TrimSpace(raw.SourceBase64))
+		if err != nil {
+			return "", fmt.Errorf("decode codeforces sourceBase64: %w", err)
+		}
+		source := string(decoded)
+		if strings.TrimSpace(source) != "" {
+			return source, nil
+		}
+	}
+	return "", fmt.Errorf("codeforces API returned empty source for submission %d", raw.ID)
+}

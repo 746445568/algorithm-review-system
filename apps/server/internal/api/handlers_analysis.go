@@ -5,12 +5,14 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"log"
 	"net/http"
 	"strconv"
 	"strings"
 	"time"
 
 	"ojreviewdesktop/internal/adapters/ai"
+	"ojreviewdesktop/internal/adapters/judges"
 	"ojreviewdesktop/internal/jobs"
 	"ojreviewdesktop/internal/models"
 )
@@ -61,7 +63,7 @@ func (s *Server) handleAnalysisGenerate(w http.ResponseWriter, r *http.Request) 
 		}
 		summaryJSON, err := json.Marshal(summary)
 		if err != nil {
-			writeError(w, http.StatusInternalServerError, normalizeAnalysisCreationError(err).Error())
+			writeAnalysisError(w, http.StatusInternalServerError, err)
 			return
 		}
 		task, reused, err := s.db.CreateAnalysisTaskWithTypedSnapshot(
@@ -72,7 +74,7 @@ func (s *Server) handleAnalysisGenerate(w http.ResponseWriter, r *http.Request) 
 			nil,
 		)
 		if err != nil {
-			writeError(w, http.StatusInternalServerError, normalizeAnalysisCreationError(err).Error())
+			writeAnalysisError(w, http.StatusInternalServerError, err)
 			return
 		}
 		if !reused {
@@ -94,7 +96,7 @@ func (s *Server) handleAnalysisGenerate(w http.ResponseWriter, r *http.Request) 
 	}
 	task, reused, err := s.db.CreateAnalysisTask(payload.Provider, payload.Model, payload.InputSnapshotID)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, normalizeAnalysisCreationError(err).Error())
+		writeAnalysisError(w, http.StatusInternalServerError, err)
 		return
 	}
 	if !reused {
@@ -206,7 +208,7 @@ func (s *Server) handleAnalysisGenerateComparison(w http.ResponseWriter, r *http
 		nil,
 	)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, normalizeAnalysisCreationError(err).Error())
+		writeAnalysisError(w, http.StatusInternalServerError, err)
 		return
 	}
 	if !reused {
@@ -255,6 +257,8 @@ func (s *Server) handleAnalysisGenerateProblem(w http.ResponseWriter, r *http.Re
 		return
 	}
 
+	s.ensureProblemAnalysisArtifacts(r.Context(), problemID)
+
 	data, err := s.db.GetProblemAnalysisData(problemID)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
@@ -265,7 +269,7 @@ func (s *Server) handleAnalysisGenerateProblem(w http.ResponseWriter, r *http.Re
 		return
 	}
 	if len(data.Submissions) == 0 {
-		writeError(w, http.StatusBadRequest, "该题暂无提交记录，无法进行 AI 分析")
+		writeErrorWithCode(w, http.StatusBadRequest, "ERR_NO_SUBMISSIONS", "该题暂无提交记录，无法进行 AI 分析")
 		return
 	}
 
@@ -283,7 +287,7 @@ func (s *Server) handleAnalysisGenerateProblem(w http.ResponseWriter, r *http.Re
 		&problemID,
 	)
 	if err != nil {
-		writeError(w, http.StatusInternalServerError, normalizeAnalysisCreationError(err).Error())
+		writeAnalysisError(w, http.StatusInternalServerError, err)
 		return
 	}
 	if !reused {
@@ -383,6 +387,15 @@ func (s *Server) translateContent(ctx context.Context, content string, settings 
 	return result
 }
 
+func writeAnalysisError(w http.ResponseWriter, status int, err error) {
+	msg := err.Error()
+	if strings.Contains(strings.ToLower(msg), "database is locked") || strings.Contains(msg, sqliteBusyUserMessage) {
+		writeErrorWithCode(w, status, "ERR_DB_BUSY", msg)
+		return
+	}
+	writeError(w, status, msg)
+}
+
 func normalizeAnalysisCreationError(err error) error {
 	if err == nil {
 		return nil
@@ -396,6 +409,96 @@ func normalizeAnalysisCreationError(err error) error {
 	return err
 }
 
+// handleErrorPatternStats returns aggregated error pattern statistics.
+func (s *Server) handleErrorPatternStats(w http.ResponseWriter, _ *http.Request) {
+	stats, err := s.db.GetErrorPatternStats()
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if stats == nil {
+		stats = []models.ErrorPatternStats{}
+	}
+	writeJSON(w, http.StatusOK, stats)
+}
+
+// handleErrorPatternsByProblem returns all error patterns for a given problem.
+func (s *Server) handleErrorPatternsByProblem(w http.ResponseWriter, r *http.Request) {
+	problemID, err := strconv.ParseInt(r.PathValue("problemId"), 10, 64)
+	if err != nil || problemID <= 0 {
+		writeError(w, http.StatusBadRequest, "invalid problem id")
+		return
+	}
+	patterns, err := s.db.GetErrorPatternsByProblem(problemID)
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if patterns == nil {
+		patterns = []models.ErrorPattern{}
+	}
+	writeJSON(w, http.StatusOK, patterns)
+}
+
 func (s *Server) ResumeAnalysisTask(ctx context.Context, taskID int64) error {
 	return s.runAnalysisTask(ctx, taskID)
+}
+
+func (s *Server) ensureProblemAnalysisArtifacts(ctx context.Context, problemID int64) {
+	const maxSourceFetches = 5
+
+	problem, err := s.db.GetProblemByID(problemID)
+	if err != nil {
+		log.Printf("analysis artifact fetch: load problem %d: %v", problemID, err)
+		return
+	}
+
+	adapter := s.adapters[problem.Platform]
+	if adapter == nil {
+		return
+	}
+	caps := adapter.Capabilities()
+
+	if judgeCapabilityAllowsFetch(caps.ProblemStatement) {
+		statement, err := s.db.GetProblemStatement(problemID)
+		if err != nil {
+			log.Printf("analysis artifact fetch: load statement %d: %v", problemID, err)
+		} else if strings.TrimSpace(statement) == "" {
+			fetched, fetchErr := adapter.FetchStatement(ctx, problem.ExternalProblemID)
+			if fetchErr != nil {
+				log.Printf("analysis artifact fetch: fetch statement %s: %v", problem.ExternalProblemID, fetchErr)
+			} else if strings.TrimSpace(fetched) != "" {
+				if saveErr := s.db.SaveProblemStatement(problemID, fetched); saveErr != nil {
+					log.Printf("analysis artifact fetch: save statement %d: %v", problemID, saveErr)
+				}
+			}
+		}
+	}
+
+	if !judgeCapabilityAllowsFetch(caps.SubmissionSource) {
+		return
+	}
+
+	submissions, err := s.db.GetProblemSubmissionsNeedingSource(problemID, maxSourceFetches)
+	if err != nil {
+		log.Printf("analysis artifact fetch: list submissions %d: %v", problemID, err)
+		return
+	}
+	for _, submission := range submissions {
+		source, fetchErr := adapter.FetchSubmissionSource(ctx, submission)
+		if fetchErr != nil {
+			log.Printf("analysis artifact fetch: fetch submission %s: %v", submission.ExternalSubmissionID, fetchErr)
+			continue
+		}
+		if strings.TrimSpace(source) == "" {
+			continue
+		}
+		if saveErr := s.db.SaveSubmissionSource(submission.ID, source); saveErr != nil {
+			log.Printf("analysis artifact fetch: save submission %d: %v", submission.ID, saveErr)
+		}
+	}
+}
+
+func judgeCapabilityAllowsFetch(status judges.JudgeCapabilityStatus) bool {
+	return status == judges.JudgeCapabilitySupported || status == judges.JudgeCapabilityPartial
 }

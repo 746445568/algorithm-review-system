@@ -340,6 +340,258 @@ body {
   background: var(--input-bg);
 }
 
+/* Compact settings surface */
+.settings-page-root {
+  display: grid;
+  gap: 18px;
+  width: min(960px, 100%);
+  margin: 0 auto;
+}
+
+.settings-page-root > .page-grid.two-column,
+.settings-page-root .settings-grid {
+  width: 100%;
+  gap: 16px;
+  align-items: start;
+}
+
+.settings-page-root .page-grid.two-column {
+  grid-template-columns: 1fr;
+}
+
+.settings-page-root .settings-control-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  align-items: start;
+}
+
+.settings-page-root .settings-language-panel {
+  order: 1;
+}
+
+.settings-page-root .settings-goals-panel {
+  order: 2;
+}
+
+.settings-page-root .settings-ai-panel {
+  order: 3;
+}
+
+.settings-page-root .settings-runtime-panel {
+  order: 4;
+}
+
+.settings-page-root .settings-diagnostics-panel {
+  order: 5;
+}
+
+.settings-page-root .settings-update-panel {
+  order: 6;
+}
+
+.settings-page-root .settings-wide {
+  grid-column: auto;
+}
+
+.settings-page-root .panel {
+  padding: 18px 20px;
+  border-radius: 12px;
+  box-shadow: 0 8px 22px -18px rgba(15, 23, 42, 0.32);
+  overflow: visible;
+}
+
+.settings-page-root > .page-grid.two-column > .panel,
+.settings-page-root .settings-control-grid > .panel {
+  min-width: 0;
+}
+
+.settings-page-root .panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+  padding-bottom: 9px;
+}
+
+.settings-page-root .panel-header h3 {
+  font-size: 14px;
+  line-height: 1.2;
+}
+
+.settings-page-root .panel-header .caption {
+  font-size: 11px;
+  max-width: 52%;
+  overflow: hidden;
+  text-align: right;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.settings-page-root .form-stack {
+  gap: 12px;
+}
+
+.settings-page-root .form-stack label {
+  gap: 4px;
+}
+
+.settings-page-root .form-stack label > span {
+  font-size: 12px;
+}
+
+.settings-page-root input,
+.settings-page-root select,
+.settings-page-root textarea {
+  min-height: 38px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+}
+
+.settings-page-root .app-control-trigger {
+  min-height: 38px;
+  padding: 8px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+}
+
+.settings-page-root .app-popover {
+  font-size: 12px;
+}
+
+.settings-page-root .app-select-option {
+  min-height: 34px;
+  font-size: 12px;
+}
+
+.settings-page-root .app-calendar-popover {
+  width: 318px;
+}
+
+.settings-page-root .primary-button,
+.settings-page-root .ghost-button {
+  min-height: 36px;
+  padding: 7px 12px;
+  border-radius: 8px;
+  font-size: 12px;
+}
+
+.settings-page-root .stack-list {
+  gap: 8px;
+}
+
+.settings-page-root .inline-card,
+.settings-page-root .account-card {
+  gap: 12px;
+  padding: 11px 12px;
+  border-radius: 10px;
+}
+
+.settings-page-root .inline-card p,
+.settings-page-root .account-card p,
+.settings-page-root .muted,
+.settings-page-root .caption {
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.settings-page-root p {
+  margin: 0;
+}
+
+.settings-page-root .success-text,
+.settings-page-root .error-text {
+  margin-top: 8px;
+}
+
+.settings-page-root > .page-grid.two-column > .panel:nth-child(2) .stack-list {
+  max-height: 214px;
+  overflow: auto;
+  padding-right: 2px;
+}
+
+.settings-page-root > .page-grid.two-column > .panel:nth-child(2) .inline-card {
+  min-height: 50px;
+  padding-block: 9px;
+}
+
+.settings-page-root > .page-grid.two-column > .panel:nth-child(2) .inline-card strong {
+  font-size: 13px;
+}
+
+.settings-page-root > .page-grid.two-column > .panel.full-span .stack-list {
+  display: grid;
+  grid-template-columns: 1fr;
+}
+
+.settings-page-root .account-card {
+  align-items: center;
+  min-height: 88px;
+}
+
+.settings-page-root .account-card h4 {
+  font-size: 14px;
+  line-height: 1.25;
+}
+
+.settings-page-root .account-main {
+  display: grid;
+  gap: 3px;
+}
+
+.settings-page-root .account-main .section-label {
+  margin: 0;
+  font-size: 10px;
+  line-height: 1.2;
+}
+
+.settings-page-root .account-actions {
+  align-items: center;
+  gap: 6px;
+  flex-wrap: nowrap;
+}
+
+.settings-page-root .account-actions .ghost-button {
+  padding-inline: 10px;
+  white-space: nowrap;
+}
+
+.settings-page-root .meta-pill {
+  min-width: 44px;
+  padding: 6px 9px;
+  font-size: 11px;
+}
+
+.settings-page-root .settings-goal-list {
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.settings-page-root .settings-goal-list .inline-card {
+  min-height: 54px;
+}
+
+.settings-page-root .editor-toolbar {
+  gap: 8px;
+}
+
+.settings-page-root .editor-toolbar .primary-button,
+.settings-page-root .editor-toolbar .ghost-button {
+  flex: 1;
+}
+
+@media (max-width: 980px) {
+  .settings-page-root .page-grid.two-column,
+  .settings-page-root .settings-control-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .settings-page-root > .page-grid.two-column > .panel.full-span .stack-list {
+    grid-template-columns: 1fr;
+  }
+}
+
 @media (max-width: 1040px) {
   .app-shell-v2 .top-nav.nav {
     gap: 10px;

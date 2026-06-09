@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { SWRConfig } from "swr";
 import { NavigationProvider, useNavigation } from "./lib/NavigationContext.jsx";
 import { api } from "./lib/api.js";
@@ -7,6 +8,7 @@ import { useOfflineData } from "./hooks/useOfflineData.js";
 import { useThemeMode } from "./hooks/useThemeMode.js";
 import { resolveEffectiveTheme } from "./lib/theme.js";
 import { ErrorBoundary } from "./components/ErrorBoundary.jsx";
+import { ToastProvider } from "./components/ToastProvider.jsx";
 import { ErrorPageFallback } from "./components/ErrorPageFallback.jsx";
 import { DashboardPage } from "./pages/DashboardPage.jsx";
 import { OnboardingPage } from "./pages/OnboardingPage.jsx";
@@ -32,7 +34,6 @@ const swrConfig = {
 const navItemsBase = [
   {
     id: "dashboard",
-    label: "仪表盘",
     icon: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <rect x="3" y="3" width="7" height="9" rx="1" />
@@ -44,7 +45,6 @@ const navItemsBase = [
   },
   {
     id: "review",
-    label: "错题复习",
     icon: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
@@ -56,7 +56,6 @@ const navItemsBase = [
   },
   {
     id: "analysis",
-    label: "AI 分析",
     icon: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <circle cx="12" cy="12" r="10" />
@@ -67,7 +66,6 @@ const navItemsBase = [
   },
   {
     id: "contests",
-    label: "比赛日历",
     icon: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
@@ -79,7 +77,6 @@ const navItemsBase = [
   },
   {
     id: "statistics",
-    label: "统计",
     icon: (
       <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <line x1="18" y1="20" x2="18" y2="10" />
@@ -116,6 +113,7 @@ const initialStatus = {
 };
 
 function AppShell() {
+  const { t, i18n } = useTranslation();
   const { page, navigateTo } = useNavigation();
   const [visitedPages, setVisitedPages] = useState(() => new Set([page]));
   const hasDesktopBridge = Boolean(window.desktopBridge);
@@ -127,9 +125,13 @@ function AppShell() {
     isPackaged: false,
   });
   const [browserRuntime, setBrowserRuntime] = useState(null);
-  const { isOnline, isSyncing, lastSyncAt, connectivity, cacheStatus, syncQueue, sync } = useOfflineData();
+  const { isOnline, lastSyncAt, connectivity, cacheStatus, syncQueue, sync } = useOfflineData();
   const { themeMode, onThemeChange: handleThemeChange } = useThemeMode();
   const [showOnboarding, setShowOnboarding] = useState(false);
+
+  useEffect(() => {
+    document.documentElement.lang = i18n.resolvedLanguage || i18n.language || "zh-CN";
+  }, [i18n.language, i18n.resolvedLanguage]);
 
   useEffect(() => {
     setVisitedPages((prev) => {
@@ -139,10 +141,6 @@ function AppShell() {
       return next;
     });
   }, [page]);
-
-  const handleSync = useCallback(() => {
-    void sync();
-  }, [sync]);
 
   useEffect(() => {
     let unsubscribe = () => {};
@@ -275,12 +273,12 @@ function AppShell() {
     serviceStatus,
   });
   const lastSyncLabel = useMemo(
-    () => (lastSyncAt ? formatDate(lastSyncAt.toISOString()) : "尚未同步"),
+    () => (lastSyncAt ? formatDate(lastSyncAt.toISOString()) : t("status.notSynced")),
     [lastSyncAt]
   );
   const effectiveTheme = resolveEffectiveTheme(themeMode);
   const nextThemeMode = effectiveTheme === "dark" ? "light" : "dark";
-  const themeToggleLabel = effectiveTheme === "dark" ? "切换到浅色主题" : "切换到深色主题";
+  const themeToggleLabel = effectiveTheme === "dark" ? t("theme.switchToLight") : t("theme.switchToDark");
   const themeToggleGlyph = effectiveTheme === "dark" ? "☾" : "☀";
 
   if (showOnboarding) {
@@ -295,7 +293,7 @@ function AppShell() {
             <span className="logo-mark">OJ</span>
             <div>
               <h1>OJReview</h1>
-              <span className="brand-eyebrow">错题复盘</span>
+              <span className="brand-eyebrow">{t("app.tagline")}</span>
             </div>
           </div>
         </div>
@@ -309,7 +307,7 @@ function AppShell() {
               onClick={() => navigateTo(item.id)}
             >
               <span className="nav-icon">{item.icon}</span>
-              <span className="nav-label">{item.label}</span>
+              <span className="nav-label">{t(`nav.${item.id}`)}</span>
             </button>
           ))}
         </nav>
@@ -319,12 +317,8 @@ function AppShell() {
             <span className="nav-status-dot" />
             {renderedIndicator.text}
           </span>
-          <button type="button" className="sync-btn btn-sync" disabled={isSyncing} onClick={handleSync}>
-            {refreshIcon}
-            <span>{isSyncing ? "同步中" : "同步"}</span>
-          </button>
           {shouldShowRestartService(hasDesktopBridge) ? (
-            <button type="button" className="icon-btn nav-icon-btn" onClick={() => window.desktopBridge?.restartService()} title="重启服务" aria-label="重启服务">
+            <button type="button" className="icon-btn nav-icon-btn" onClick={() => window.desktopBridge?.restartService()} title={t("actions.restartService")} aria-label={t("actions.restartService")}>
               {refreshIcon}
             </button>
           ) : null}
@@ -342,8 +336,8 @@ function AppShell() {
             type="button"
             className={page === "settings" ? "icon-btn nav-icon-btn active" : "icon-btn nav-icon-btn"}
             onClick={() => navigateTo("settings")}
-            title="设置"
-            aria-label="设置"
+            title={t("nav.settings")}
+            aria-label={t("nav.settings")}
           >
             {settingsIcon}
           </button>
@@ -406,9 +400,11 @@ function AppShell() {
 export function App() {
   return (
     <SWRConfig value={swrConfig}>
-      <NavigationProvider>
-        <AppShell />
-      </NavigationProvider>
+      <ToastProvider>
+        <NavigationProvider>
+          <AppShell />
+        </NavigationProvider>
+      </ToastProvider>
     </SWRConfig>
   );
 }

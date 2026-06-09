@@ -15,6 +15,23 @@ func NewPlaceholderAdapter(platform models.Platform) Adapter {
 	return &PlaceholderAdapter{platform: platform}
 }
 
+func (a *PlaceholderAdapter) Capabilities() JudgeCapabilities {
+	return JudgeCapabilities{
+		Platform:         a.platform,
+		Label:            string(a.platform),
+		AccountSync:      JudgeCapabilityUnsupported,
+		Profile:          JudgeCapabilityUnsupported,
+		Contests:         JudgeCapabilityUnsupported,
+		ProblemMetadata:  JudgeCapabilityUnsupported,
+		ProblemStatement: JudgeCapabilityUnsupported,
+		SubmissionSource: JudgeCapabilityUnsupported,
+		PreferredFetchPath: JudgeFetchPaths{
+			ProblemStatement: JudgeFetchPathManual,
+			SubmissionSource: JudgeFetchPathManual,
+		},
+	}
+}
+
 func (a *PlaceholderAdapter) ValidateAccount(ctx context.Context, handle string) error {
 	if handle == "" {
 		return errors.New("handle is required")
@@ -43,6 +60,10 @@ func (a *PlaceholderAdapter) FetchProfile(ctx context.Context, handle string) (U
 }
 
 func (a *PlaceholderAdapter) FetchStatement(ctx context.Context, problemID string) (string, error) {
+	return "", nil
+}
+
+func (a *PlaceholderAdapter) FetchSubmissionSource(ctx context.Context, submission models.Submission) (string, error) {
 	return "", nil
 }
 

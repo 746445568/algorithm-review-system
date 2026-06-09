@@ -2,8 +2,10 @@ package api
 
 import (
 	"net/http"
+	"sort"
 	"time"
 
+	"ojreviewdesktop/internal/adapters/judges"
 	"ojreviewdesktop/internal/buildinfo"
 )
 
@@ -33,6 +35,17 @@ func (s *Server) handleCapabilities(w http.ResponseWriter, _ *http.Request) {
 		"serviceVersion":             buildinfo.Version,
 		"serviceCommit":              buildinfo.Commit,
 	})
+}
+
+func (s *Server) handleJudges(w http.ResponseWriter, _ *http.Request) {
+	items := make([]judges.JudgeCapabilities, 0, len(s.adapters))
+	for _, adapter := range s.adapters {
+		items = append(items, adapter.Capabilities())
+	}
+	sort.Slice(items, func(i, j int) bool {
+		return items[i].Platform < items[j].Platform
+	})
+	writeJSON(w, http.StatusOK, items)
 }
 
 func (s *Server) handleMe(w http.ResponseWriter, _ *http.Request) {

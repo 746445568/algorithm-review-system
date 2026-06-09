@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { useTranslation } from 'react-i18next';
 import useSWR from "swr";
 import { api } from "../../lib/api.js";
 import { useNavigation } from "../../lib/NavigationContext.jsx";
@@ -6,7 +7,9 @@ import { useDashboardData } from "../../hooks/useDashboardData.js";
 import { HeroSection } from "./HeroSection.jsx";
 import { GoalProgress } from "./GoalProgress.jsx";
 import { SubmissionChart } from "../statistics/SubmissionChart.jsx";
+import { ReviewCalendar } from "../ReviewCalendar.jsx";
 import "../../styles/ui-dashboard-review.css";
+import "../../styles/review-calendar.css";
 
 const DUE_PREVIEW_LIMIT = 4;
 
@@ -38,8 +41,8 @@ function platformShortLabel(platform) {
   return "";
 }
 
-function problemPlatformLabel(platform) {
-  return platformShortLabel(platform) || "题目";
+function problemPlatformLabel(platform, fallback) {
+  return platformShortLabel(platform) || fallback;
 }
 
 function formatContestTime(isoStr) {
@@ -50,7 +53,7 @@ function formatContestTime(isoStr) {
   const D = d.getUTCDate();
   const hh = String(d.getUTCHours()).padStart(2, "0");
   const mm = String(d.getUTCMinutes()).padStart(2, "0");
-  return `${M}/${D} ${hh}:${mm} 北京`;
+  return `${M}/${D} ${hh}:${mm}`;
 }
 
 function formatDuration(minutes) {
@@ -64,6 +67,7 @@ function formatDuration(minutes) {
 
 export function DashboardPage({ serviceStatus }) {
   const { navigateTo } = useNavigation();
+  const { t } = useTranslation();
   const [showAllDue, setShowAllDue] = useState(false);
 
   const { data, isLoading } = useDashboardData(serviceStatus);
@@ -109,14 +113,16 @@ export function DashboardPage({ serviceStatus }) {
         loading={isLoading}
       />
 
+      <ReviewCalendar />
+
       <section className="panel">
         <div className="dash-panel-head">
           <div>
-            <div className="dash-panel-title">今日到期</div>
+            <div className="dash-panel-title">{t('dashboard.dueToday')}</div>
             <div className="dash-panel-sub">
               {hasMoreDue && !showAllDue
-                ? `显示 ${visibleDueItems.length} / ${recentUnsolved.length} 题`
-                : `${recentUnsolved.length} 题`}
+                ? t('dashboard.showingCount', { shown: visibleDueItems.length, total: recentUnsolved.length })
+                : t('dashboard.problemCount', { count: recentUnsolved.length })}
             </div>
           </div>
           {hasMoreDue ? (
@@ -125,20 +131,20 @@ export function DashboardPage({ serviceStatus }) {
               className="dash-btn-ghost dash-btn-compact"
               onClick={() => setShowAllDue((current) => !current)}
             >
-              {showAllDue ? "收起" : "展开全部"}
+              {showAllDue ? t('dashboard.collapse') : t('dashboard.expandAll')}
             </button>
           ) : null}
         </div>
         {recentUnsolved.length === 0 ? (
           <p className="dash-muted">
-            {isLoading ? "加载中..." : "今天没有到期的复盘题，保持节奏。"}
+            {isLoading ? t('common.loading') : t('dashboard.noDueToday')}
           </p>
         ) : (
           <div className="dash-due-list">
-            {visibleDueItems.map((p) => (
-              <div key={p.id} className="dash-due-row">
+            {visibleDueItems.map((p, index) => (
+              <div key={p.problemId ?? p.id ?? p.externalId ?? index} className="dash-due-row">
                 <span className={`dash-chip ${platformChipClass(p.platform)}`}>
-                  {problemPlatformLabel(p.platform)}
+                  {problemPlatformLabel(p.platform, t('common.problem'))}
                 </span>
                 <span className="dash-due-title">{p.title}</span>
                 {p.externalId ? (
@@ -149,7 +155,7 @@ export function DashboardPage({ serviceStatus }) {
                     {p.lastVerdict ?? p.verdict}
                   </span>
                 ) : null}
-                <span className="dash-chip chip-red">到期</span>
+                <span className="dash-chip chip-red">{t('dashboard.due')}</span>
               </div>
             ))}
           </div>
@@ -161,17 +167,17 @@ export function DashboardPage({ serviceStatus }) {
 
         <section className="panel">
           <div className="dash-panel-head">
-            <div className="dash-panel-title">近期比赛</div>
+            <div className="dash-panel-title">{t('dashboard.upcomingContests')}</div>
             <button
               type="button"
               className="dash-btn-ghost"
               onClick={() => navigateTo("contests")}
             >
-              全部
+              {t('review.filter.all')}
             </button>
           </div>
           {upcomingContests.length === 0 ? (
-            <p className="dash-muted">暂无即将开始的比赛。</p>
+            <p className="dash-muted">{t('dashboard.noUpcomingContests')}</p>
           ) : (
             upcomingContests.map((c) => (
               <div key={c.id} className="dash-contest-card">
@@ -195,17 +201,17 @@ export function DashboardPage({ serviceStatus }) {
 
       <section className="panel">
         <div className="dash-panel-head">
-          <div className="dash-panel-title">近期提交</div>
-          <div className="dash-panel-sub">近 8 周</div>
+          <div className="dash-panel-title">{t('dashboard.recentSubmissions')}</div>
+          <div className="dash-panel-sub">{t('dashboard.last8Weeks')}</div>
         </div>
         <div className="dash-charts-row">
           <div>
-            <div className="dash-chart-head">总提交</div>
-            <SubmissionChart data={weeklyData} valueKey="count" variant="total" emptyText="暂无提交数据" />
+            <div className="dash-chart-head">{t('dashboard.totalSubmissions')}</div>
+            <SubmissionChart data={weeklyData} valueKey="count" variant="total" emptyText={t('dashboard.noSubmissionData')} />
           </div>
           <div>
             <div className="dash-chart-head">AC</div>
-            <SubmissionChart data={weeklyData} valueKey="acCount" variant="ac" emptyText="暂无 AC 数据" />
+            <SubmissionChart data={weeklyData} valueKey="acCount" variant="ac" emptyText={t('dashboard.noAcData')} />
           </div>
         </div>
       </section>

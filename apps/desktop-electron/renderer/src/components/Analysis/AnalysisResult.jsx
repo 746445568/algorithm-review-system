@@ -1,4 +1,5 @@
 import { memo } from "react";
+import { useTranslation } from 'react-i18next';
 import { formatDate } from "../../lib/format.js";
 import { SimpleMarkdown } from "../SimpleMarkdown.jsx";
 
@@ -7,13 +8,15 @@ import { SimpleMarkdown } from "../SimpleMarkdown.jsx";
  * @param {{ task: object|null, isSmall?: boolean }} props
  */
 export const LoadingState = memo(function LoadingState({ task, isSmall = false }) {
+  const { t } = useTranslation();
+
   return (
     <div className={`an-progress ${isSmall ? "an-progress--small" : ""}`}>
       <span className="an-spinner" />
       <span>
-        {!task && "正在提交…"}
-        {task?.status === "PENDING" && "排队等待中…"}
-        {task?.status === "RUNNING" && "AI 分析中，请稍候…"}
+        {!task && t('analysis.status.submitting')}
+        {task?.status === "PENDING" && t('analysis.status.queuing')}
+        {task?.status === "RUNNING" && t('analysis.status.analyzing')}
       </span>
     </div>
   );
@@ -61,16 +64,18 @@ export const AnalysisResult = memo(function AnalysisResult({ task, isCompact = f
  * @param {{ task: object, onRetry?: Function, isSmall?: boolean }} props
  */
 export const FailedState = memo(function FailedState({ task, onRetry, isSmall = false }) {
+  const { t } = useTranslation();
+
   return (
     <div className={`an-failed ${isSmall ? "an-failed--small" : ""}`}>
-      <p className="an-error-msg">{task.errorMessage || "分析任务失败，请重试"}</p>
+      <p className="an-error-msg">{task.errorMessage || t('analysis.status.failedRetry')}</p>
       {onRetry && (
         <button
           type="button"
           className="ghost-button"
           onClick={onRetry}
         >
-          重试
+          {t('actions.retry')}
         </button>
       )}
     </div>
