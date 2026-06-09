@@ -16,7 +16,7 @@ import (
 	"ojreviewdesktop/internal/models"
 )
 
-const schemaVersion = 3
+const schemaVersion = 4
 
 // allowedTables is a whitelist of table names that can be modified by addColumnIfMissing.
 // This prevents SQL injection attacks through malicious table names.
@@ -34,6 +34,8 @@ var allowedTables = map[string]bool{
 	"contests":              true,
 	"goals":                 true,
 	"error_patterns":        true,
+	"knowledge_nodes":       true,
+	"problem_knowledge":     true,
 }
 
 // DB is the SQLite database connection
@@ -271,6 +273,23 @@ CREATE TABLE IF NOT EXISTS problem_tags (
   UNIQUE(problem_id, tag_name, tag_source),
   FOREIGN KEY(problem_id) REFERENCES problems(id) ON DELETE CASCADE
 );
+CREATE TABLE IF NOT EXISTS knowledge_nodes (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL UNIQUE,
+  parent_id INTEGER,
+  description TEXT NOT NULL DEFAULT '',
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY(parent_id) REFERENCES knowledge_nodes(id) ON DELETE SET NULL
+);
+CREATE TABLE IF NOT EXISTS problem_knowledge (
+  problem_id INTEGER NOT NULL,
+  knowledge_id INTEGER NOT NULL,
+  mastery_level REAL NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY(problem_id, knowledge_id),
+  FOREIGN KEY(problem_id) REFERENCES problems(id) ON DELETE CASCADE,
+  FOREIGN KEY(knowledge_id) REFERENCES knowledge_nodes(id) ON DELETE CASCADE
+);
 CREATE TABLE IF NOT EXISTS problem_chats (
   id          INTEGER PRIMARY KEY AUTOINCREMENT,
   problem_id  INTEGER NOT NULL REFERENCES problems(id) ON DELETE CASCADE,
@@ -408,6 +427,28 @@ CREATE INDEX IF NOT EXISTS idx_error_patterns_type ON error_patterns(pattern_typ
 			created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ','now'))
 		)`); err != nil {
 			return fmt.Errorf("migrate v2->v3 create goals: %w", err)
+		}
+	}
+	if currentVersion < 4 {
+		if _, err := db.conn.Exec(`
+CREATE TABLE IF NOT EXISTS knowledge_nodes (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL UNIQUE,
+  parent_id INTEGER,
+  description TEXT NOT NULL DEFAULT '',
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  FOREIGN KEY(parent_id) REFERENCES knowledge_nodes(id) ON DELETE SET NULL
+);
+CREATE TABLE IF NOT EXISTS problem_knowledge (
+  problem_id INTEGER NOT NULL,
+  knowledge_id INTEGER NOT NULL,
+  mastery_level REAL NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY(problem_id, knowledge_id),
+  FOREIGN KEY(problem_id) REFERENCES problems(id) ON DELETE CASCADE,
+  FOREIGN KEY(knowledge_id) REFERENCES knowledge_nodes(id) ON DELETE CASCADE
+);`); err != nil {
+			return fmt.Errorf("migrate v3->v4 create knowledge graph: %w", err)
 		}
 	}
 	_, err := db.conn.Exec(`

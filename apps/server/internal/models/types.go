@@ -201,3 +201,17 @@ type ErrorPatternStats struct {
 	Count         int     `json:"count"`
 	AvgConfidence float64 `json:"avg_confidence"`
 }
+
+type KnowledgeNode struct {
+	ID          int64  `json:"id"`
+	Name        string `json:"name"`
+	ParentID    *int64 `json:"parentId,omitempty"`
+	Description string `json:"description"`
+	CreatedAt   string `json:"createdAt"`
+}
+
+type ProblemKnowledge struct {
+	ProblemID    int64   `json:"problemId"`
+	KnowledgeID  int64   `json:"knowledgeId"`
+	MasteryLevel float64 `json:"masteryLevel"`
+}
