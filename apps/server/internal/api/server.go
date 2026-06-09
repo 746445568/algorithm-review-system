@@ -122,6 +122,8 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("GET /api/statistics/submissions", s.handleSubmissionStats)
 	s.mux.HandleFunc("GET /api/statistics/reviews", s.handleReviewStats)
 	s.mux.HandleFunc("GET /api/statistics/verdicts", s.handleVerdictStats)
+	s.mux.HandleFunc("GET /api/knowledge-graph", s.handleKnowledgeGraph)
+	s.mux.HandleFunc("POST /api/knowledge-graph/sync", s.handleKnowledgeGraphSync)
 	s.mux.HandleFunc("GET /api/problems/{problemId}/chats", s.handleListChats)
 	s.mux.HandleFunc("POST /api/problems/{problemId}/chats", s.handleSendChat)
 	s.mux.HandleFunc("DELETE /api/problems/{problemId}/chats", s.handleDeleteChats)
@@ -402,6 +404,30 @@ func (s *Server) handleVerdictStats(w http.ResponseWriter, _ *http.Request) {
 		verdicts = []map[string]any{}
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"verdicts": verdicts})
+}
+
+func (s *Server) handleKnowledgeGraph(w http.ResponseWriter, _ *http.Request) {
+	nodes, err := s.db.GetKnowledgeGraph()
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if nodes == nil {
+		nodes = []map[string]any{}
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"nodes": nodes})
+}
+
+func (s *Server) handleKnowledgeGraphSync(w http.ResponseWriter, _ *http.Request) {
+	nodesCreated, linksCreated, err := s.db.SyncTagsToKnowledgeGraph()
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, map[string]any{
+		"nodesCreated": nodesCreated,
+		"linksCreated": linksCreated,
+	})
 }
 
 // handleListChats returns all chat messages for a problem.

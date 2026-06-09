@@ -6,6 +6,7 @@ import { SubmissionChart } from "../components/statistics/SubmissionChart.jsx";
 import { TagAccuracyChart } from "../components/statistics/TagAccuracyChart.jsx";
 import { ReviewHeatmap } from "../components/statistics/ReviewHeatmap.jsx";
 import { VerdictDistributionChart } from "../components/statistics/VerdictDistributionChart.jsx";
+import { KnowledgeGraph } from "../components/statistics/KnowledgeGraph.jsx";
 import "../styles/ui-statistics.css";
 
 function SubmissionIcon() {
@@ -117,6 +118,8 @@ export function StatisticsPage() {
   const [reviewStats, setReviewStats] = useState(null);
   const [reviewSummary, setReviewSummary] = useState(null);
   const [verdictStats, setVerdictStats] = useState(null);
+  const [knowledgeGraph, setKnowledgeGraph] = useState(null);
+  const [syncingKnowledge, setSyncingKnowledge] = useState(false);
   const [period, setPeriod] = useState("week");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -131,13 +134,15 @@ export function StatisticsPage() {
       api.getReviewStats(),
       api.getReviewSummary(),
       api.getVerdictStats(),
+      api.getKnowledgeGraph(),
     ])
-      .then(([sub, rev, summary, verdicts]) => {
+      .then(([sub, rev, summary, verdicts, knowledge]) => {
         if (cancelled) return;
         setSubmissionStats(sub);
         setReviewStats(rev);
         setReviewSummary(summary);
         setVerdictStats(verdicts);
+        setKnowledgeGraph(knowledge);
       })
       .catch((err) => {
         if (cancelled) return;
@@ -159,6 +164,20 @@ export function StatisticsPage() {
   const weeklyData = useMemo(() => normalizeWeeklyData(submissionStats), [submissionStats]);
   const tagData = useMemo(() => normalizeTagData(reviewStats), [reviewStats]);
   const trendSubtitle = period === "month" ? t('statistics.monthlyView') : t('statistics.weeklyView');
+
+  async function handleSyncKnowledgeGraph() {
+    setSyncingKnowledge(true);
+    setError(null);
+    try {
+      await api.syncKnowledgeGraph();
+      const knowledge = await api.getKnowledgeGraph();
+      setKnowledgeGraph(knowledge);
+    } catch (err) {
+      setError(err?.message ?? t('errors.loadFailed'));
+    } finally {
+      setSyncingKnowledge(false);
+    }
+  }
 
   if (loading) {
     return (
@@ -278,6 +297,24 @@ export function StatisticsPage() {
           <ReviewHeatmap data={reviewStats?.daily ?? []} />
         </section>
       </div>
+
+      <section className="panel chart-wrap stats-panel">
+        <div className="stats-panel-head stats-panel-head--actions">
+          <div>
+            <h3>{t('statistics.knowledgeGraph')}</h3>
+            <span>{t('statistics.knowledgeGraphHint')}</span>
+          </div>
+          <button
+            type="button"
+            className="stats-action-btn"
+            onClick={handleSyncKnowledgeGraph}
+            disabled={syncingKnowledge}
+          >
+            {syncingKnowledge ? t('statistics.syncingKnowledgeGraph') : t('statistics.syncKnowledgeGraph')}
+          </button>
+        </div>
+        <KnowledgeGraph nodes={knowledgeGraph?.nodes ?? []} />
+      </section>
     </div>
   );
 }

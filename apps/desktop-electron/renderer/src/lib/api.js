@@ -219,6 +219,12 @@ export const api = {
   getSubmissionStats: () => request("/api/statistics/submissions"),
   getReviewStats: () => request("/api/statistics/reviews"),
   getVerdictStats: () => request("/api/statistics/verdicts"),
+  getKnowledgeGraph: () => request("/api/knowledge-graph"),
+  syncKnowledgeGraph: () =>
+    request("/api/knowledge-graph/sync", {
+      method: "POST",
+      body: JSON.stringify({}),
+    }),
   getLanguage: () => request("/api/settings/language"),
   saveLanguage: (language) =>
     request("/api/settings/language", {
