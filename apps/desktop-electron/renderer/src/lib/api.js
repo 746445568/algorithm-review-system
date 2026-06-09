@@ -219,6 +219,9 @@ export const api = {
   getReviewStats: () => request("/api/statistics/reviews"),
   getVerdictStats: () => request("/api/statistics/verdicts"),
 
+  getKnowledgeGraph: () => request("/api/knowledge-graph"),
+  syncKnowledgeGraph: () => request("/api/knowledge-graph/sync", { method: "POST" }),
+
   getProblemChats: (problemId) => request(`/api/problems/${problemId}/chats`),
   sendProblemChat: (problemId, message) =>
     request(`/api/problems/${problemId}/chats`, {

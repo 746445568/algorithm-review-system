@@ -5,6 +5,7 @@ import { SubmissionChart } from "../components/statistics/SubmissionChart.jsx";
 import { TagAccuracyChart } from "../components/statistics/TagAccuracyChart.jsx";
 import { ReviewHeatmap } from "../components/statistics/ReviewHeatmap.jsx";
 import { ErrorPatternChart } from "../components/statistics/ErrorPatternChart.jsx";
+import KnowledgeGraph from "../components/statistics/KnowledgeGraph.jsx";
 import "../styles/ui-statistics.css";
 
 function SubmissionIcon() {
@@ -115,6 +116,7 @@ export function StatisticsPage() {
   const [reviewStats, setReviewStats] = useState(null);
   const [reviewSummary, setReviewSummary] = useState(null);
   const [verdictStats, setVerdictStats] = useState(null);
+  const [knowledgeGraph, setKnowledgeGraph] = useState(null);
   const [period, setPeriod] = useState("week");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -129,13 +131,15 @@ export function StatisticsPage() {
       api.getReviewStats(),
       api.getReviewSummary(),
       api.getVerdictStats(),
+      api.getKnowledgeGraph(),
     ])
-      .then(([sub, rev, summary, verdicts]) => {
+      .then(([sub, rev, summary, verdicts, kg]) => {
         if (cancelled) return;
         setSubmissionStats(sub);
         setReviewStats(rev);
         setReviewSummary(summary);
         setVerdictStats(verdicts);
+        setKnowledgeGraph(kg);
       })
       .catch((err) => {
         if (cancelled) return;
@@ -276,6 +280,14 @@ export function StatisticsPage() {
           <span>按判定结果聚合</span>
         </div>
         <ErrorPatternChart data={verdictStats?.verdicts ?? []} />
+      </section>
+
+      <section className="panel chart-wrap stats-panel">
+        <div className="stats-panel-head">
+          <h3>知识点图谱</h3>
+          <span>按标签聚合 · 掌握度</span>
+        </div>
+        <KnowledgeGraph nodes={knowledgeGraph?.nodes ?? []} />
       </section>
     </div>
   );
