@@ -4,10 +4,24 @@ import { AppSelect } from "../components/AppControls.jsx";
 import { api } from "../lib/api.js";
 import { formatDate, platformLabel, statusLabel } from "../lib/format.js";
 
-const platforms = [
+const defaultPlatforms = [
   { value: "CODEFORCES", label: "Codeforces" },
   { value: "ATCODER", label: "AtCoder" },
 ];
+
+function accountSyncPlatformOptions(judges) {
+  if (!Array.isArray(judges)) {
+    return defaultPlatforms;
+  }
+  const options = judges
+    .filter((judge) => judge.accountSync === "supported" || judge.accountSync === "partial")
+    .map((judge) => ({
+      value: judge.platform,
+      label: judge.label || platformLabel(judge.platform),
+    }))
+    .filter((option) => option.value);
+  return options.length > 0 ? options : defaultPlatforms;
+}
 
 function translatedStatus(t, status) {
   const key = (status || "UNKNOWN").toUpperCase();
@@ -19,6 +33,7 @@ export function AccountsPage({ serviceStatus, runtimeInfo }) {
   const [accounts, setAccounts] = useState([]);
   const [syncTasks, setSyncTasks] = useState([]);
   const [form, setForm] = useState({ platform: "CODEFORCES", handle: "" });
+  const [platforms, setPlatforms] = useState(defaultPlatforms);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
@@ -52,6 +67,27 @@ export function AccountsPage({ serviceStatus, runtimeInfo }) {
     }
   }, [serviceStatus.state]);
 
+  const refreshPlatforms = useCallback(async () => {
+    if (serviceStatus.state !== "healthy") {
+      setPlatforms(defaultPlatforms);
+      return;
+    }
+
+    try {
+      const judges = await api.getJudges();
+      const nextPlatforms = accountSyncPlatformOptions(judges);
+      setPlatforms(nextPlatforms);
+      setForm((current) => {
+        if (nextPlatforms.some((option) => option.value === current.platform)) {
+          return current;
+        }
+        return { ...current, platform: nextPlatforms[0].value };
+      });
+    } catch {
+      setPlatforms(defaultPlatforms);
+    }
+  }, [serviceStatus.state]);
+
   useEffect(() => {
     void refresh();
     if (serviceStatus.state !== "healthy") {
@@ -63,6 +99,10 @@ export function AccountsPage({ serviceStatus, runtimeInfo }) {
     }, 12000);
     return () => window.clearInterval(timer);
   }, [refresh, serviceStatus.state]);
+
+  useEffect(() => {
+    void refreshPlatforms();
+  }, [refreshPlatforms]);
 
   const latestTaskByAccount = useMemo(() => {
     const index = new Map();

@@ -127,6 +127,14 @@ WHERE id = ?`, sourceCode, now, now, submissionID)
 	return nil
 }
 
+func (db *DB) GetSubmissionByExternalID(platform models.Platform, externalSubmissionID string) (models.Submission, error) {
+	row := db.conn.QueryRow(`
+SELECT id, platform_account_id, platform, external_submission_id, problem_id, verdict, COALESCE(language, ''), submitted_at, exec_time_ms, memory_kb, COALESCE(source_contest_id, ''), raw_json, created_at, updated_at
+FROM submissions
+WHERE platform = ? AND external_submission_id = ?`, platform, externalSubmissionID)
+	return scanSubmissionRecord(row)
+}
+
 func (db *DB) GetProblemSubmissionsNeedingSource(problemID int64, limit int) ([]models.Submission, error) {
 	query := `
 SELECT id, platform_account_id, platform, external_submission_id, problem_id, verdict, COALESCE(language, ''), submitted_at, exec_time_ms, memory_kb, COALESCE(source_contest_id, ''), raw_json, created_at, updated_at

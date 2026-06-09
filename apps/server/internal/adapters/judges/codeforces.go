@@ -62,6 +62,23 @@ func NewCodeforcesAdapter() Adapter {
 	}
 }
 
+func (a *CodeforcesAdapter) Capabilities() JudgeCapabilities {
+	return JudgeCapabilities{
+		Platform:         models.PlatformCodeforces,
+		Label:            "Codeforces",
+		AccountSync:      JudgeCapabilitySupported,
+		Profile:          JudgeCapabilitySupported,
+		Contests:         JudgeCapabilitySupported,
+		ProblemMetadata:  JudgeCapabilitySupported,
+		ProblemStatement: JudgeCapabilitySupported,
+		SubmissionSource: JudgeCapabilitySupported,
+		PreferredFetchPath: JudgeFetchPaths{
+			ProblemStatement: JudgeFetchPathPublicPage,
+			SubmissionSource: JudgeFetchPathOfficialAPI,
+		},
+	}
+}
+
 func (a *CodeforcesAdapter) FetchContests(ctx context.Context) ([]models.Contest, error) {
 	var contests []codeforcesContest
 	if err := a.getJSON(ctx, "contest.list", url.Values{"gym": []string{"false"}}, &contests); err != nil {
@@ -292,10 +309,15 @@ func (a *CodeforcesAdapter) FetchSubmissionSource(ctx context.Context, submissio
 		return "", errors.New("contest id is required")
 	}
 
+	// 先尝试 /contest/ 路径，失败后回退 /gym/（Gym 比赛 URL 使用 /gym/ 而非 /contest/）
 	url := fmt.Sprintf("https://codeforces.com/contest/%s/submission/%s", contestID, submissionID)
 	source, err := fetchCodeforcesSubmissionSource(ctx, a.client, url)
 	if err != nil {
-		return "", err
+		gymURL := fmt.Sprintf("https://codeforces.com/gym/%s/submission/%s", contestID, submissionID)
+		source, err = fetchCodeforcesSubmissionSource(ctx, a.client, gymURL)
+		if err != nil {
+			return "", err
+		}
 	}
 	if strings.TrimSpace(source) == "" {
 		return "", fmt.Errorf("codeforces submission source not found: %s", submissionID)

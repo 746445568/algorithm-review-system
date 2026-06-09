@@ -38,6 +38,23 @@ func NewAtCoderAdapter() Adapter {
 	}
 }
 
+func (a *AtCoderAdapter) Capabilities() JudgeCapabilities {
+	return JudgeCapabilities{
+		Platform:         models.PlatformAtCoder,
+		Label:            "AtCoder",
+		AccountSync:      JudgeCapabilitySupported,
+		Profile:          JudgeCapabilitySupported,
+		Contests:         JudgeCapabilitySupported,
+		ProblemMetadata:  JudgeCapabilitySupported,
+		ProblemStatement: JudgeCapabilitySupported,
+		SubmissionSource: JudgeCapabilityUnsupported,
+		PreferredFetchPath: JudgeFetchPaths{
+			ProblemStatement: JudgeFetchPathPublicPage,
+			SubmissionSource: JudgeFetchPathBrowserImport,
+		},
+	}
+}
+
 func (a *AtCoderAdapter) FetchContests(ctx context.Context) ([]models.Contest, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, atCoderContestsURL, nil)
 	if err != nil {

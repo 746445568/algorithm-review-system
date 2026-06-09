@@ -111,6 +111,7 @@ export const api = {
   },
   getBaseUrl: () => apiBase,
   getHealth: () => request("/health"),
+  getJudges: () => request("/api/system/judges"),
   getOwner: () => request("/api/me"),
   getAccounts: () => request("/api/accounts"),
   createAccount: (platform, handle) =>

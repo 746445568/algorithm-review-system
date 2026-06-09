@@ -79,6 +79,7 @@ func (s *Server) Adapters() map[models.Platform]judges.Adapter { return s.adapte
 func (s *Server) routes() {
 	s.mux.HandleFunc("GET /health", s.handleHealth)
 	s.mux.HandleFunc("GET /api/system/capabilities", s.handleCapabilities)
+	s.mux.HandleFunc("GET /api/system/judges", s.handleJudges)
 	s.mux.HandleFunc("GET /api/me", s.handleMe)
 	s.mux.HandleFunc("GET /api/accounts", s.handleAccounts)
 	s.mux.HandleFunc("PUT /api/accounts/{platform}", s.handleUpsertAccount)
@@ -94,6 +95,8 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("POST /api/review/items/{problemId}/rate", s.handleRateReview)
 	s.mux.HandleFunc("GET /api/contests", s.handleContests)
 	s.mux.HandleFunc("POST /api/contests/sync", s.handleSyncContests)
+	s.mux.HandleFunc("POST /api/import/problem-statement", s.handleImportProblemStatement)
+	s.mux.HandleFunc("POST /api/import/submission-source", s.handleImportSubmissionSource)
 	s.mux.HandleFunc("POST /api/analysis/generate", s.handleAnalysisGenerate)
 	s.mux.HandleFunc("POST /api/analysis/generate-comparison", s.handleAnalysisGenerateComparison)
 	s.mux.HandleFunc("POST /api/analysis/generate-problem/{problemId}", s.handleAnalysisGenerateProblem)

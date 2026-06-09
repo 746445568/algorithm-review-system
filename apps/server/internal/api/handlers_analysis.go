@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"ojreviewdesktop/internal/adapters/ai"
+	"ojreviewdesktop/internal/adapters/judges"
 	"ojreviewdesktop/internal/jobs"
 	"ojreviewdesktop/internal/models"
 )
@@ -456,19 +457,26 @@ func (s *Server) ensureProblemAnalysisArtifacts(ctx context.Context, problemID i
 	if adapter == nil {
 		return
 	}
+	caps := adapter.Capabilities()
 
-	statement, err := s.db.GetProblemStatement(problemID)
-	if err != nil {
-		log.Printf("analysis artifact fetch: load statement %d: %v", problemID, err)
-	} else if strings.TrimSpace(statement) == "" {
-		fetched, fetchErr := adapter.FetchStatement(ctx, problem.ExternalProblemID)
-		if fetchErr != nil {
-			log.Printf("analysis artifact fetch: fetch statement %s: %v", problem.ExternalProblemID, fetchErr)
-		} else if strings.TrimSpace(fetched) != "" {
-			if saveErr := s.db.SaveProblemStatement(problemID, fetched); saveErr != nil {
-				log.Printf("analysis artifact fetch: save statement %d: %v", problemID, saveErr)
+	if judgeCapabilityAllowsFetch(caps.ProblemStatement) {
+		statement, err := s.db.GetProblemStatement(problemID)
+		if err != nil {
+			log.Printf("analysis artifact fetch: load statement %d: %v", problemID, err)
+		} else if strings.TrimSpace(statement) == "" {
+			fetched, fetchErr := adapter.FetchStatement(ctx, problem.ExternalProblemID)
+			if fetchErr != nil {
+				log.Printf("analysis artifact fetch: fetch statement %s: %v", problem.ExternalProblemID, fetchErr)
+			} else if strings.TrimSpace(fetched) != "" {
+				if saveErr := s.db.SaveProblemStatement(problemID, fetched); saveErr != nil {
+					log.Printf("analysis artifact fetch: save statement %d: %v", problemID, saveErr)
+				}
 			}
 		}
+	}
+
+	if !judgeCapabilityAllowsFetch(caps.SubmissionSource) {
+		return
 	}
 
 	submissions, err := s.db.GetProblemSubmissionsNeedingSource(problemID, maxSourceFetches)
@@ -489,4 +497,8 @@ func (s *Server) ensureProblemAnalysisArtifacts(ctx context.Context, problemID i
 			log.Printf("analysis artifact fetch: save submission %d: %v", submission.ID, saveErr)
 		}
 	}
+}
+
+func judgeCapabilityAllowsFetch(status judges.JudgeCapabilityStatus) bool {
+	return status == judges.JudgeCapabilitySupported || status == judges.JudgeCapabilityPartial
 }

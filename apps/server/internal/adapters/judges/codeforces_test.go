@@ -133,6 +133,52 @@ int main() { std::cout &lt;&lt; "ok"; }
 	}
 }
 
+func TestCodeforcesFetchSubmissionSourceFallsBackToGymURL(t *testing.T) {
+	adapter := &CodeforcesAdapter{
+		client: &http.Client{
+			Transport: roundTripFunc(func(req *http.Request) (*http.Response, error) {
+				// /contest/ 路径返回 404，模拟 Gym 比赛
+				if req.URL.String() == "https://codeforces.com/contest/2228/submission/789" {
+					return &http.Response{
+						StatusCode: http.StatusNotFound,
+						Body:       io.NopCloser(strings.NewReader("not found")),
+						Header:     make(http.Header),
+						Request:    req,
+					}, nil
+				}
+				// /gym/ 路径返回源码
+				if req.URL.String() == "https://codeforces.com/gym/2228/submission/789" {
+					return &http.Response{
+						StatusCode: http.StatusOK,
+						Body: io.NopCloser(strings.NewReader(`
+							<html><body>
+								<pre id="program-source-text" class="program-source">
+#include &lt;bits/stdc++.h&gt;
+int main() {}
+								</pre>
+							</body></html>
+						`)),
+						Header:  make(http.Header),
+						Request: req,
+					}, nil
+				}
+				return nil, fmt.Errorf("unexpected url: %s", req.URL.String())
+			}),
+		},
+	}
+
+	source, err := adapter.FetchSubmissionSource(context.Background(), models.Submission{
+		ExternalSubmissionID: "789",
+		SourceContestID:      "2228",
+	})
+	if err != nil {
+		t.Fatalf("FetchSubmissionSource returned error: %v", err)
+	}
+	if !strings.Contains(source, `#include <bits/stdc++.h>`) {
+		t.Fatalf("expected gym source code, got %q", source)
+	}
+}
+
 func TestCodeforcesFetchSubmissionSourceUsesAuthenticatedUserStatusSource(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.URL.Path != "/user.status" {
