@@ -35,7 +35,7 @@ type ReviewResult struct {
 }
 
 // Calculate computes the next review schedule using the SM-2 algorithm.
-func Calculate(input ReviewInput) ReviewResult {
+func Calculate(input ReviewInput, now time.Time) ReviewResult {
 	quality := input.Quality
 	if quality < 0 {
 		quality = 0
@@ -75,7 +75,7 @@ func Calculate(input ReviewInput) ReviewResult {
 		ef = MinEaseFactor
 	}
 
-	nextReview := time.Now().UTC().Truncate(time.Second).Add(time.Duration(interval) * 24 * time.Hour)
+	nextReview := now.UTC().Truncate(time.Second).Add(time.Duration(interval) * 24 * time.Hour)
 
 	return ReviewResult{
 		EaseFactor:      math.Round(ef*100) / 100,

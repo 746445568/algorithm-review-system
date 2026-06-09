@@ -99,3 +99,28 @@ func (db *DB) LoadThemeMode() (string, error) {
 	}
 	return normalizeThemeMode(mode), nil
 }
+
+// SaveLanguage saves the language setting
+func (db *DB) SaveLanguage(lang string) error {
+	_, err := db.conn.Exec(`
+INSERT INTO app_settings(key, value) VALUES ('language', ?)
+ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = CURRENT_TIMESTAMP`, lang)
+	return err
+}
+
+// LoadLanguage loads the language setting
+func (db *DB) LoadLanguage() (string, error) {
+	row := db.conn.QueryRow(`SELECT value FROM app_settings WHERE key = 'language'`)
+	var lang string
+	if err := row.Scan(&lang); err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return "zh-CN", nil
+		}
+		return "", err
+	}
+	lang = strings.TrimSpace(lang)
+	if lang != "zh-CN" && lang != "en-US" {
+		return "zh-CN", nil
+	}
+	return lang, nil
+}

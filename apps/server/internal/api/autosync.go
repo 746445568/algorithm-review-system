@@ -3,6 +3,7 @@ package api
 import (
 	"context"
 	"errors"
+	"log"
 	"net/http"
 	"strings"
 	"sync"
@@ -53,7 +54,9 @@ func NewAutoSyncManager(server *Server, interval time.Duration) *AutoSyncManager
 func (m *AutoSyncManager) Start(ctx context.Context) {
 	m.startOnce.Do(func() {
 		go func() {
-			_ = m.RunNow(ctx)
+			if err := m.RunNow(ctx); err != nil {
+				log.Printf("[autosync] RunNow failed: %v", err)
+			}
 
 			ticker := time.NewTicker(m.interval)
 			defer ticker.Stop()
@@ -63,7 +66,9 @@ func (m *AutoSyncManager) Start(ctx context.Context) {
 				case <-ctx.Done():
 					return
 				case <-ticker.C:
-					_ = m.RunNow(ctx)
+					if err := m.RunNow(ctx); err != nil {
+						log.Printf("[autosync] RunNow failed: %v", err)
+					}
 				}
 			}
 		}()

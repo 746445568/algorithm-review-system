@@ -1,4 +1,5 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 
 export const ReviewTabs = React.memo(function ReviewTabs({
   activeTab,
@@ -6,13 +7,15 @@ export const ReviewTabs = React.memo(function ReviewTabs({
   hasSubmissions,
   submissionsCount,
 }) {
+  const { t } = useTranslation();
   const tabs = [
-    { id: "state", label: "复习状态" },
+    { id: "state", label: t("review.detail.tabs.state") },
     {
       id: "submissions",
-      label: `提交记录${hasSubmissions ? ` (${submissionsCount})` : ""}`,
+      label: `${t("review.detail.tabs.submissions")}${hasSubmissions ? ` (${submissionsCount})` : ""}`,
     },
-    { id: "analysis", label: "AI 分析" },
+    { id: "analysis", label: t("review.detail.tabs.analysis") },
+    { id: "chat", label: t("review.detail.tabs.chat", "聊天") },
   ];
 
   return (

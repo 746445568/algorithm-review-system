@@ -1078,10 +1078,14 @@
 }
 
 .review-shell-v2 .rl-card {
+  appearance: none;
+  -webkit-appearance: none;
   display: block;
-  min-height: 72px;
+  flex: 0 0 auto;
+  gap: 9px;
+  min-height: 0;
   margin-bottom: 8px;
-  padding: 12px 12px 11px;
+  padding: 12px;
   border-radius: 10px;
 }
 
@@ -1098,18 +1102,20 @@
 .review-shell-v2 .rl-card-meta,
 .review-shell-v2 .rl-card-main {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   min-width: 0;
 }
 
 .review-shell-v2 .rl-card-body {
+  flex-direction: row;
   justify-content: space-between;
-  gap: 10px;
+  gap: 12px;
 }
 
 .review-shell-v2 .rl-card-main {
-  gap: 8px;
+  gap: 9px;
   flex: 1;
+  flex-wrap: wrap;
 }
 
 .review-shell-v2 .rl-card-platform,
@@ -1128,20 +1134,26 @@
 }
 
 .review-shell-v2 .rl-card-title {
-  overflow: hidden;
-  flex: 1;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  overflow: visible;
+  flex: 1 1 150px;
+  min-width: 0;
+  max-width: none;
+  white-space: normal;
   font-size: 14px;
   font-weight: 850;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
 }
 
 .review-shell-v2 .rl-card-meta {
+  flex-direction: row;
   gap: 8px;
-  margin-top: 7px;
+  margin-top: 9px;
   padding-left: 4px;
   color: var(--ojdr-text-3);
   font-size: 12px;
+  flex-wrap: wrap;
+  line-height: 1.35;
 }
 
 .review-shell-v2 .rl-card-schedule {
@@ -1149,6 +1161,7 @@
 }
 
 .review-shell-v2 .rl-chip {
+  flex: 0 0 auto;
   min-height: 24px;
   padding: 2px 8px;
 }

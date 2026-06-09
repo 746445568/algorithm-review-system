@@ -1,4 +1,5 @@
 import { memo, useMemo } from "react";
+import { useTranslation } from 'react-i18next';
 import { renderInline } from '../lib/renderInline.jsx'
 
 /**
@@ -22,6 +23,8 @@ import { renderInline } from '../lib/renderInline.jsx'
  * ```
  */
 export const SimpleMarkdown = memo(function SimpleMarkdown({ text }) {
+  const { t } = useTranslation();
+
   // Memoize the rendered elements
   const elements = useMemo(() => {
     if (!text) return null;
@@ -100,7 +103,7 @@ export const SimpleMarkdown = memo(function SimpleMarkdown({ text }) {
     return result;
   }, [text]);
 
-  if (!elements) return <p className="md-p-placeholder">暂无内容</p>;
+  if (!elements) return <p className="md-p-placeholder">{t('simpleMarkdown.noContent')}</p>;
 
   return <div className="md-body">{elements}</div>;
 });

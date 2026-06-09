@@ -87,6 +87,26 @@ func toCodeforcesSubmissionRaw(raw any) (codeforcesSubmissionRaw, error) {
 	return decoded, nil
 }
 
+func extractCodeforcesSubmissionHandle(rawJSON string) (string, error) {
+	var payload struct {
+		Author struct {
+			Members []struct {
+				Handle string `json:"handle"`
+			} `json:"members"`
+		} `json:"author"`
+	}
+	if err := json.Unmarshal([]byte(rawJSON), &payload); err != nil {
+		return "", err
+	}
+	for _, member := range payload.Author.Members {
+		handle := strings.TrimSpace(member.Handle)
+		if handle != "" {
+			return handle, nil
+		}
+	}
+	return "", errors.New("submission author handle is required for authenticated source fetch")
+}
+
 func optionalInt(value int) *int {
 	if value <= 0 {
 		return nil

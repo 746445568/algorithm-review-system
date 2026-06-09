@@ -185,3 +185,19 @@ type Contest struct {
 	UpdatedAt         time.Time  `json:"updatedAt"`
 	LastSyncedAt      *time.Time `json:"lastSyncedAt,omitempty"`
 }
+
+type ErrorPattern struct {
+	ID           int64   `json:"id"`
+	ProblemID    int64   `json:"problem_id"`
+	SubmissionID string  `json:"submission_id,omitempty"`
+	PatternType  string  `json:"pattern_type"`
+	Description  string  `json:"description"`
+	Confidence   float64 `json:"ai_confidence"`
+	CreatedAt    string  `json:"created_at"`
+}
+
+type ErrorPatternStats struct {
+	PatternType   string  `json:"pattern_type"`
+	Count         int     `json:"count"`
+	AvgConfidence float64 `json:"avg_confidence"`
+}

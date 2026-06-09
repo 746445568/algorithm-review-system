@@ -38,6 +38,23 @@ func NewAtCoderAdapter() Adapter {
 	}
 }
 
+func (a *AtCoderAdapter) Capabilities() JudgeCapabilities {
+	return JudgeCapabilities{
+		Platform:         models.PlatformAtCoder,
+		Label:            "AtCoder",
+		AccountSync:      JudgeCapabilitySupported,
+		Profile:          JudgeCapabilitySupported,
+		Contests:         JudgeCapabilitySupported,
+		ProblemMetadata:  JudgeCapabilitySupported,
+		ProblemStatement: JudgeCapabilitySupported,
+		SubmissionSource: JudgeCapabilityUnsupported,
+		PreferredFetchPath: JudgeFetchPaths{
+			ProblemStatement: JudgeFetchPathPublicPage,
+			SubmissionSource: JudgeFetchPathBrowserImport,
+		},
+	}
+}
+
 func (a *AtCoderAdapter) FetchContests(ctx context.Context) ([]models.Contest, error) {
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, atCoderContestsURL, nil)
 	if err != nil {
@@ -264,3 +281,6 @@ func (a *AtCoderAdapter) FetchStatement(ctx context.Context, problemID string) (
 	return string(body), nil
 }
 
+func (a *AtCoderAdapter) FetchSubmissionSource(ctx context.Context, submission models.Submission) (string, error) {
+	return "", errors.New("atcoder submission source fetching is not supported")
+}

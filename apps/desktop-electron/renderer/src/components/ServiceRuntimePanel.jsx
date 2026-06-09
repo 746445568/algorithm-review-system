@@ -1,21 +1,24 @@
 import { memo } from "react";
+import { useTranslation } from 'react-i18next';
 
 export const ServiceRuntimePanel = memo(function ServiceRuntimePanel({ runtimeInfo, serviceStatus }) {
+  const { t } = useTranslation();
+
   return (
     <section className="sidebar-runtime">
-      <span className="section-label">运行时</span>
+      <span className="section-label">{t('serviceRuntime.title')}</span>
       <dl>
         <div>
-          <dt>服务地址</dt>
+          <dt>{t('serviceRuntime.serviceUrl')}</dt>
           <dd>{serviceStatus.url}</dd>
         </div>
         <div>
-          <dt>数据目录</dt>
-          <dd title={runtimeInfo.runtimeDir || "未就绪"}>{runtimeInfo.runtimeDir || "等待中"}</dd>
+          <dt>{t('settings.runtime.dataDir')}</dt>
+          <dd title={runtimeInfo.runtimeDir || t('serviceRuntime.notReady')}>{runtimeInfo.runtimeDir || t('serviceRuntime.waiting')}</dd>
         </div>
         <div>
-          <dt>模式</dt>
-          <dd>{runtimeInfo.isPackaged ? "发布版" : "开发版"}</dd>
+          <dt>{t('serviceRuntime.mode')}</dt>
+          <dd>{runtimeInfo.isPackaged ? t('serviceRuntime.production') : t('serviceRuntime.development')}</dd>
         </div>
       </dl>
     </section>

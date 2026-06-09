@@ -1,4 +1,5 @@
 import { memo } from "react";
+import { useTranslation } from 'react-i18next';
 
 /**
  * AI Hero Section - Gradient hero with score cards
@@ -17,6 +18,8 @@ export const AiHero = memo(function AiHero({
   globalLoading,
   onGenerateGlobal
 }) {
+  const { t } = useTranslation();
+
   const handlePeriodChange = (newPeriod) => {
     setPeriod(newPeriod);
   };
@@ -27,9 +30,9 @@ export const AiHero = memo(function AiHero({
 
   return (
     <div className="ai-hero">
-      <div className="ai-hero-title">AI 分析中心</div>
+      <div className="ai-hero-title">{t('analysis.hero.title')}</div>
       <div className="ai-hero-desc">
-        把提交记录、复盘内容、错误类型和标签掌握情况汇总到一起。这里不是聊天窗口，而是训练诊断面板。
+        {t('analysis.hero.description')}
       </div>
 
       <div className="ai-actions">
@@ -40,9 +43,9 @@ export const AiHero = memo(function AiHero({
           onClick={onGenerateGlobal}
         >
           {globalLoading ? (
-            <>⏳ 正在生成...</>
+            <>{t('analysis.hero.generating')}</>
           ) : (
-            "生成本周全局分析"
+            t('analysis.hero.generateWeekly')
           )}
         </button>
         <button
@@ -50,25 +53,25 @@ export const AiHero = memo(function AiHero({
           className="ai-ghost-btn"
           onClick={() => {
             // Export functionality - to be implemented
-            alert("导出功能开发中");
+            alert(t('analysis.hero.exportWip'));
           }}
         >
-          导出训练报告
+          {t('analysis.hero.exportReport')}
         </button>
       </div>
 
       <div className="ai-score-grid">
         <div className="ai-score">
           <div className="ai-score-val">{scores.quality || "--"}%</div>
-          <div className="ai-score-label">复盘质量</div>
+          <div className="ai-score-label">{t('analysis.hero.reviewQuality')}</div>
         </div>
         <div className="ai-score">
           <div className="ai-score-val">{scores.errorTypes || diagnosisCount || "--"}</div>
-          <div className="ai-score-label">高频错误类型</div>
+          <div className="ai-score-label">{t('analysis.hero.frequentErrors')}</div>
         </div>
         <div className="ai-score">
           <div className="ai-score-val">{scores.recommended || "--"}</div>
-          <div className="ai-score-label">建议复习题</div>
+          <div className="ai-score-label">{t('analysis.hero.recommendedReview')}</div>
         </div>
       </div>
     </div>

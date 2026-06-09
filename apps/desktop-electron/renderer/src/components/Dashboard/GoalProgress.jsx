@@ -1,4 +1,5 @@
 import { memo } from "react";
+import { useTranslation } from 'react-i18next';
 import { useNavigation } from "../../lib/NavigationContext.jsx";
 
 const PLATFORM_CONFIG = {
@@ -8,21 +9,22 @@ const PLATFORM_CONFIG = {
 
 export const GoalProgress = memo(function GoalProgress({ goals = [], accounts = [] }) {
   const { navigateTo } = useNavigation();
+  const { t } = useTranslation();
 
   if (goals.length === 0) {
     return (
       <section className="panel">
         <div className="dash-panel-head">
-          <div className="dash-panel-title">评分目标</div>
+          <div className="dash-panel-title">{t('dashboard.goal.ratingGoal')}</div>
         </div>
         <div className="dash-empty-action">
-          <p className="dash-muted">暂未设置目标，前往设置页添加。</p>
+          <p className="dash-muted">{t('dashboard.goal.noGoalHint')}</p>
           <button
             type="button"
             className="dash-btn-ghost"
             onClick={() => navigateTo("settings", { focus: "goals" })}
           >
-            去设置目标
+            {t('dashboard.goal.goSetGoal')}
           </button>
         </div>
       </section>
@@ -32,7 +34,7 @@ export const GoalProgress = memo(function GoalProgress({ goals = [], accounts = 
   return (
     <section className="panel">
       <div className="dash-panel-head">
-        <div className="dash-panel-title">评分目标</div>
+        <div className="dash-panel-title">{t('dashboard.goal.ratingGoal')}</div>
       </div>
       {goals.map((goal) => {
         const account = accounts.find((a) => a.platform === goal.platform);
@@ -41,7 +43,7 @@ export const GoalProgress = memo(function GoalProgress({ goals = [], accounts = 
           ? Math.min(100, Math.round((current / goal.targetRating) * 100))
           : 0;
         const cfg = PLATFORM_CONFIG[goal.platform] ?? {
-          chip: goal.platform || "目标",
+          chip: goal.platform || t('dashboard.goal.target'),
           cls: "",
           color: "var(--ojdr-accent)",
         };

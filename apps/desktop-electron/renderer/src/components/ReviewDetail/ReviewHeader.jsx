@@ -1,4 +1,5 @@
 import React from "react";
+import { useTranslation } from "react-i18next";
 import { tagLabel, verdictTone } from "../../lib/format.js";
 import { useNavigation } from "../../lib/NavigationContext.jsx";
 
@@ -7,6 +8,7 @@ export const ReviewHeader = React.memo(function ReviewHeader({
   selectedProblemRecord,
   selectedTags,
 }) {
+  const { t } = useTranslation();
   const { navigateTo } = useNavigation();
 
   if (!selectedProblem) return null;
@@ -43,7 +45,7 @@ export const ReviewHeader = React.memo(function ReviewHeader({
               navigateTo("analysis", { problemId: selectedProblem.problemId })
             }
           >
-            分析这道题
+            {t("review.detail.analyzeProblem")}
           </button>
           {selectedProblemRecord?.url ? (
             <button
@@ -57,7 +59,7 @@ export const ReviewHeader = React.memo(function ReviewHeader({
                 }
               }}
             >
-            打开题目 ↗
+            {t("review.detail.openProblem")}
           </button>
         ) : null}
         </div>

@@ -1,6 +1,8 @@
 import { memo } from "react";
+import { useTranslation } from 'react-i18next';
 
 export const HeroSection = memo(function HeroSection({ data, navigateTo, loading }) {
+  const { t } = useTranslation();
   const dueCount = data.reviewSummary?.dueReviewCount ?? 0;
   const scheduledCount = data.reviewSummary?.scheduledReviewCount ?? 0;
   const totalSubmissions = data.reviewSummary?.totalSubmissions ?? 0;
@@ -10,20 +12,20 @@ export const HeroSection = memo(function HeroSection({ data, navigateTo, loading
   return (
     <div className="dash-hero">
       <div className="dash-hero-content">
-        <div className="dash-hero-label">今日任务</div>
+        <div className="dash-hero-label">{t('dashboard.hero.todayTask')}</div>
         <div className="dash-hero-count">{loading ? "—" : dueCount}</div>
-        <div className="dash-hero-sub">题目待复盘</div>
+        <div className="dash-hero-sub">{t('dashboard.hero.problemsPendingReview')}</div>
         <button
           type="button"
           className="dash-hero-cta"
           onClick={() => navigateTo("review")}
         >
-          ▷ 开始今日复习
+          ▷ {t('dashboard.hero.startReview')}
         </button>
         <div className="dash-hero-progress">
           <div className="dash-hero-progress-label">
-            <span>今日复习进度</span>
-            <span>{scheduledCount}/{totalToday} 题完成</span>
+            <span>{t('dashboard.hero.todayProgress')}</span>
+            <span>{t('dashboard.hero.progressCount', { done: scheduledCount, total: totalToday })}</span>
           </div>
           <div className="dash-hero-track">
             <div className="dash-hero-fill" style={{ width: `${progress}%` }} />
@@ -32,15 +34,15 @@ export const HeroSection = memo(function HeroSection({ data, navigateTo, loading
         <div className="dash-hero-stats">
           <div>
             <div className="dash-hero-stat-val">{totalSubmissions}</div>
-            <div className="dash-hero-stat-label">总提交数</div>
+            <div className="dash-hero-stat-label">{t('dashboard.hero.totalSubmissions')}</div>
           </div>
           <div>
             <div className="dash-hero-stat-val">{data.accounts?.length ?? 0}</div>
-            <div className="dash-hero-stat-label">已绑平台</div>
+            <div className="dash-hero-stat-label">{t('dashboard.hero.boundPlatforms')}</div>
           </div>
           <div>
             <div className="dash-hero-stat-val">{data.goals?.length ?? 0}</div>
-            <div className="dash-hero-stat-label">进行中目标</div>
+            <div className="dash-hero-stat-label">{t('dashboard.hero.activeGoals')}</div>
           </div>
         </div>
       </div>

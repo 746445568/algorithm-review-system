@@ -173,20 +173,41 @@ type ProblemAnalysisData struct {
 	ExternalProblemID string           `json:"externalProblemId"`
 	Title             string           `json:"title"`
 	Platform          string           `json:"platform"`
+	StatementText     string           `json:"statementText"`
 	Tags              []string         `json:"tags"`
 	Notes             string           `json:"notes"`
 	Submissions       []map[string]any `json:"submissions"`
+}
+
+func (db *DB) SaveProblemStatement(problemID int64, statement string) error {
+	now := time.Now().UTC().Format(time.RFC3339)
+	_, err := db.conn.Exec(`
+UPDATE problems
+SET statement_text = ?, statement_fetched_at = ?, updated_at = ?
+WHERE id = ?`, statement, now, now, problemID)
+	if err != nil {
+		return fmt.Errorf("save problem statement: %w", err)
+	}
+	return nil
+}
+
+func (db *DB) GetProblemStatement(problemID int64) (string, error) {
+	var statement string
+	if err := db.conn.QueryRow(`SELECT COALESCE(statement_text, '') FROM problems WHERE id = ?`, problemID).Scan(&statement); err != nil {
+		return "", fmt.Errorf("get problem statement: %w", err)
+	}
+	return statement, nil
 }
 
 // GetProblemAnalysisData returns all data needed for AI analysis of a problem
 func (db *DB) GetProblemAnalysisData(problemID int64) (*ProblemAnalysisData, error) {
 	// 1. Problem metadata
 	row := db.conn.QueryRow(`
-SELECT id, COALESCE(external_problem_id,''), COALESCE(title,''), COALESCE(platform,'')
+SELECT id, COALESCE(external_problem_id,''), COALESCE(title,''), COALESCE(platform,''), COALESCE(statement_text,'')
 FROM problems WHERE id = ?`, problemID)
 	var d ProblemAnalysisData
 	d.ProblemID = problemID
-	if err := row.Scan(&d.ProblemID, &d.ExternalProblemID, &d.Title, &d.Platform); err != nil {
+	if err := row.Scan(&d.ProblemID, &d.ExternalProblemID, &d.Title, &d.Platform, &d.StatementText); err != nil {
 		return nil, fmt.Errorf("get problem analysis data: problem not found: %w", err)
 	}
 
@@ -211,8 +232,8 @@ FROM problems WHERE id = ?`, problemID)
 
 	// 4. Submissions (all, ordered by time)
 	subRows, err := db.conn.Query(`
-SELECT verdict, COALESCE(language,''), submitted_at,
-     COALESCE(exec_time_ms, 0), COALESCE(memory_kb, 0)
+SELECT external_submission_id, verdict, COALESCE(language,''), submitted_at,
+     COALESCE(exec_time_ms, 0), COALESCE(memory_kb, 0), COALESCE(source_code, '')
 FROM submissions WHERE problem_id = ? ORDER BY submitted_at ASC`, problemID)
 	if err != nil {
 		return nil, fmt.Errorf("get problem analysis data: submissions: %w", err)
@@ -220,19 +241,29 @@ FROM submissions WHERE problem_id = ? ORDER BY submitted_at ASC`, problemID)
 	defer subRows.Close()
 	d.Submissions = make([]map[string]any, 0)
 	for subRows.Next() {
-		var verdict, lang, submittedAt string
+		var externalSubmissionID, verdict, lang, submittedAt, sourceCode string
 		var execMs, memKb int
-		if err := subRows.Scan(&verdict, &lang, &submittedAt, &execMs, &memKb); err != nil {
+		if err := subRows.Scan(&externalSubmissionID, &verdict, &lang, &submittedAt, &execMs, &memKb, &sourceCode); err != nil {
 			return nil, err
 		}
 		d.Submissions = append(d.Submissions, map[string]any{
-			"verdict":         verdict,
-			"language":        lang,
-			"submittedAt":     submittedAt,
-			"executionTimeMs": execMs,
-			"memoryKb":        memKb,
+			"externalSubmissionId": externalSubmissionID,
+			"verdict":              verdict,
+			"language":             lang,
+			"submittedAt":          submittedAt,
+			"executionTimeMs":      execMs,
+			"memoryKb":             memKb,
+			"sourceCode":           truncateAnalysisSource(sourceCode),
 		})
 	}
 
 	return &d, nil
+}
+
+func truncateAnalysisSource(source string) string {
+	const maxSourceChars = 20000
+	if len(source) <= maxSourceChars {
+		return source
+	}
+	return source[:maxSourceChars] + "\n\n/* truncated for analysis */"
 }

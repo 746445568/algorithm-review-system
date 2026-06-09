@@ -28,6 +28,8 @@ type codeforcesSubmissionRaw struct {
 	CreationTimeSeconds int64             `json:"creationTimeSeconds"`
 	ProgrammingLanguage string            `json:"programmingLanguage"`
 	Verdict             string            `json:"verdict"`
+	Source              string            `json:"source"`
+	SourceBase64        string            `json:"sourceBase64"`
 	TimeConsumedMillis  int               `json:"timeConsumedMillis"`
 	MemoryConsumedBytes int               `json:"memoryConsumedBytes"`
 	Problem             codeforcesProblem `json:"problem"`

@@ -45,6 +45,9 @@ apps/server/bin/
 .idea/
 .worktrees/
 
+# Code intelligence
+.codegraph/
+
 # Local agent/tool state
 .claude/
 .claudeignore
@@ -57,6 +60,9 @@ apps/server/bin/
 /.github/
 /_deprecated/
 /docs/
+!/docs/
+/docs/*
+!/docs/oj-fetch-matrix.md
 /packaging/
 /scripts/
 /AGENTS.md

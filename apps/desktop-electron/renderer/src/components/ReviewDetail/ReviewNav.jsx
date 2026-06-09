@@ -1,4 +1,5 @@
 import React from "react";
+import { useTranslation } from 'react-i18next';
 
 export const ReviewNav = React.memo(function ReviewNav({
   currentIndex,
@@ -8,6 +9,8 @@ export const ReviewNav = React.memo(function ReviewNav({
   goNext,
   goPrev,
 }) {
+  const { t } = useTranslation();
+
   return (
     <div className="rd-nav-bar">
       <span className="rd-nav-pos">
@@ -19,7 +22,7 @@ export const ReviewNav = React.memo(function ReviewNav({
           className="rd-nav-btn"
           disabled={!hasPrev}
           onClick={goPrev}
-          title="上一题 (K)"
+          title={t('review.detail.prevProblem')}
         >
           <svg
             width="13"
@@ -39,7 +42,7 @@ export const ReviewNav = React.memo(function ReviewNav({
           className="rd-nav-btn"
           disabled={!hasNext}
           onClick={goNext}
-          title="下一题 (J)"
+          title={t('review.detail.nextProblem')}
         >
           <svg
             width="13"

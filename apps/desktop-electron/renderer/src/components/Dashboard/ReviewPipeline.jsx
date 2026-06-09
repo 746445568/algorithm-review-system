@@ -1,6 +1,8 @@
 import { memo } from "react";
+import { useTranslation } from 'react-i18next';
 
 export const ReviewPipeline = memo(function ReviewPipeline({ reviewSummary }) {
+  const { t } = useTranslation();
   if (!reviewSummary) {
     return null;
   }
@@ -8,28 +10,28 @@ export const ReviewPipeline = memo(function ReviewPipeline({ reviewSummary }) {
   return (
     <section className="panel">
       <div className="panel-header">
-        <h3>复习管线</h3>
-        <span className="caption">当前队列概况</span>
+        <h3>{t('dashboard.pipeline.title')}</h3>
+        <span className="caption">{t('dashboard.pipeline.caption')}</span>
       </div>
       <div className="stack-list">
         <article className="inline-card">
           <div>
-            <strong>已排期</strong>
-            <p>设置了下次复习时间的题目</p>
+            <strong>{t('dashboard.pipeline.scheduled')}</strong>
+            <p>{t('dashboard.pipeline.scheduledDesc')}</p>
           </div>
           <div className="meta-pill">{reviewSummary.scheduledReviewCount ?? 0}</div>
         </article>
         <article className="inline-card">
           <div>
-            <strong>待复习</strong>
-            <p>复习时间已到的题目</p>
+            <strong>{t('dashboard.pipeline.dueReview')}</strong>
+            <p>{t('dashboard.pipeline.dueReviewDesc')}</p>
           </div>
           <div className="meta-pill">{reviewSummary.dueReviewCount ?? 0}</div>
         </article>
         <article className="inline-card">
           <div>
-            <strong>已恢复</strong>
-            <p>最终通过 (AC) 的题目</p>
+            <strong>{t('dashboard.pipeline.recovered')}</strong>
+            <p>{t('dashboard.pipeline.recoveredDesc')}</p>
           </div>
           <div className="meta-pill">
             {reviewSummary.problemSummaries?.filter((item) => item.solvedLater).length ?? 0}

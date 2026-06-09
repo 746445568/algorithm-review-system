@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from 'react-i18next';
 import { api } from "../lib/api.js";
 import { StatCard } from "../components/statistics/StatCard.jsx";
 import { SubmissionChart } from "../components/statistics/SubmissionChart.jsx";
@@ -110,6 +111,7 @@ function normalizeTagData(reviewStats) {
 }
 
 export function StatisticsPage() {
+  const { t } = useTranslation();
   const [submissionStats, setSubmissionStats] = useState(null);
   const [reviewStats, setReviewStats] = useState(null);
   const [reviewSummary, setReviewSummary] = useState(null);
@@ -135,7 +137,7 @@ export function StatisticsPage() {
       })
       .catch((err) => {
         if (cancelled) return;
-        setError(err?.message ?? "加载失败");
+        setError(err?.message ?? t('errors.loadFailed'));
       })
       .finally(() => {
         if (!cancelled) setLoading(false);
@@ -152,7 +154,7 @@ export function StatisticsPage() {
   );
   const weeklyData = useMemo(() => normalizeWeeklyData(submissionStats), [submissionStats]);
   const tagData = useMemo(() => normalizeTagData(reviewStats), [reviewStats]);
-  const trendSubtitle = period === "month" ? "按月视图（沿用当前统计接口）" : "按周视图";
+  const trendSubtitle = period === "month" ? t('statistics.monthlyView') : t('statistics.weeklyView');
 
   if (loading) {
     return (
@@ -189,35 +191,35 @@ export function StatisticsPage() {
   return (
     <div className="page-content statistics-page stats-page">
       <div className="stats-summary-grid stats-grid4">
-        <StatCard title="总提交数" value={stats.totalSubmissions} subtitle="近 12 周累计" icon={<SubmissionIcon />} />
+        <StatCard title={t('statistics.totalSubmissions')} value={stats.totalSubmissions} subtitle={t('statistics.last12Weeks')} icon={<SubmissionIcon />} />
         <StatCard
-          title="AC 率"
+          title={t('statistics.acRate')}
           value={`${stats.acRate}%`}
-          subtitle={`${stats.acCount}/${stats.totalSubmissions} 次通过`}
+          subtitle={t('statistics.acPassCount', { ac: stats.acCount, total: stats.totalSubmissions })}
           icon={<AccuracyIcon />}
-          trend={stats.acRate >= 50 ? "良好" : "待提升"}
+          trend={stats.acRate >= 50 ? t('statistics.trendGood') : t('statistics.trendNeedsImprovement')}
           trendUp={stats.acRate >= 50}
         />
         <StatCard
-          title="复习完成率"
+          title={t('statistics.reviewCompletionRate')}
           value={`${stats.reviewRate}%`}
-          subtitle={`${reviewSummary?.completed ?? 0}/${reviewSummary?.total ?? 0} 题`}
+          subtitle={t('statistics.reviewCompletionCount', { completed: reviewSummary?.completed ?? 0, total: reviewSummary?.total ?? 0 })}
           icon={<ReviewIcon />}
         />
         <StatCard
-          title="连续复习"
-          value={`${stats.streak} 天`}
-          subtitle={stats.streak > 0 ? "保持节奏" : "今日可开始"}
+          title={t('statistics.streak')}
+          value={t('statistics.streakDays', { count: stats.streak })}
+          subtitle={stats.streak > 0 ? t('statistics.keepGoing') : t('statistics.startToday')}
           icon={<StreakIcon />}
-          trend={stats.streak >= 7 ? "优秀" : null}
+          trend={stats.streak >= 7 ? t('statistics.trendExcellent') : null}
           trendUp={stats.streak >= 7}
         />
       </div>
 
-      <div className="switch-row stats-switch-row" role="tablist" aria-label="统计周期">
+      <div className="switch-row stats-switch-row" role="tablist" aria-label={t('statistics.periodLabel')}>
         {[
-          ["week", "本周"],
-          ["month", "本月"],
+          ["week", t('statistics.thisWeek')],
+          ["month", t('statistics.thisMonth')],
         ].map(([value, label]) => (
           <button
             key={value}
@@ -235,32 +237,32 @@ export function StatisticsPage() {
       <div className="stats-grid2 stats-trend-grid">
         <section className="panel chart-wrap stats-panel chart-panel">
           <div className="stats-panel-head">
-            <h3>总提交趋势</h3>
+            <h3>{t('statistics.submissionTrend')}</h3>
             <span>{trendSubtitle}</span>
           </div>
-          <SubmissionChart data={weeklyData} valueKey="count" variant="total" emptyText="暂无提交数据" />
+          <SubmissionChart data={weeklyData} valueKey="count" variant="total" emptyText={t('statistics.noSubmissionData')} />
         </section>
         <section className="panel chart-wrap stats-panel chart-panel">
           <div className="stats-panel-head">
-            <h3>AC 趋势</h3>
+            <h3>{t('statistics.acTrend')}</h3>
             <span>{trendSubtitle}</span>
           </div>
-          <SubmissionChart data={weeklyData} valueKey="acCount" variant="ac" emptyText="暂无 AC 数据" />
+          <SubmissionChart data={weeklyData} valueKey="acCount" variant="ac" emptyText={t('statistics.noAcData')} />
         </section>
       </div>
 
       <div className="stats-grid2">
         <section className="panel chart-wrap stats-panel">
           <div className="stats-panel-head">
-            <h3>标签正确率</h3>
-            <span>按标签聚合</span>
+            <h3>{t('statistics.tagAccuracy')}</h3>
+            <span>{t('statistics.byTag')}</span>
           </div>
           <TagAccuracyChart data={tagData} />
         </section>
         <section className="panel chart-wrap stats-panel">
           <div className="stats-panel-head">
-            <h3>复习热力图</h3>
-            <span>近 91 天</span>
+            <h3>{t('statistics.reviewHeatmap')}</h3>
+            <span>{t('statistics.last91Days')}</span>
           </div>
           <ReviewHeatmap data={reviewStats?.daily ?? []} />
         </section>

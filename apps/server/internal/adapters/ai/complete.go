@@ -20,7 +20,13 @@ func Complete(systemPrompt, userPrompt string, s Settings) (string, error) {
 	case openAIProviderName:
 		return completeOpenAICompatible(systemPrompt, userPrompt, s, defaultOpenAIBaseURL)
 	case deepSeekProviderName:
-		return completeOpenAICompatible(systemPrompt, userPrompt, s, deepSeekDefaultBase)
+		baseURL, err := normalizeDeepSeekOpenAIBaseURL(s.BaseURL)
+		if err != nil {
+			return "", fmt.Errorf("invalid DeepSeek baseUrl: %w", err)
+		}
+		settings := s
+		settings.BaseURL = baseURL
+		return completeOpenAICompatible(systemPrompt, userPrompt, settings, deepSeekDefaultBase)
 	case ollamaProviderName:
 		return completeOllama(systemPrompt, userPrompt, s)
 	default:

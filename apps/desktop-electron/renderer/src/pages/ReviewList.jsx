@@ -1,4 +1,5 @@
 import { memo, useCallback } from "react";
+import { useTranslation } from "react-i18next";
 import { formatDate, platformLabel, verdictTone } from "../lib/format.js";
 
 function SkeletonCard() {
@@ -24,6 +25,7 @@ export const ReviewList = memo(function ReviewList({
   doneCount,
   totalCount,
 }) {
+  const { t } = useTranslation();
   const progress = totalCount > 0 ? Math.round((doneCount / totalCount) * 100) : 0;
 
   const setFilter = useCallback((key, value) => {
@@ -42,10 +44,12 @@ export const ReviewList = memo(function ReviewList({
     <section className="panel rl-panel">
       <div className="rl-header">
         <div>
-          <h3 className="rl-title">今日复习队列</h3>
+          <h3 className="rl-title">{t("review.list.title")}</h3>
           <p className="rl-subtitle">
-            {problems.length} 道待处理 ·{" "}
-            <span className="rl-due-badge">{dueCount} 道今日到期</span>
+            {t("review.list.pendingSummary", { count: problems.length })} ·{" "}
+            <span className="rl-due-badge">
+              {t("review.list.dueSummary", { count: dueCount })}
+            </span>
           </p>
         </div>
         <button
@@ -53,7 +57,7 @@ export const ReviewList = memo(function ReviewList({
           className="rl-refresh-btn"
           onClick={handleRefresh}
           disabled={serviceUnavailable}
-          title="刷新"
+          title={t("actions.refresh")}
         >
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
             <polyline points="23 4 23 10 17 10" />
@@ -72,13 +76,13 @@ export const ReviewList = memo(function ReviewList({
           <input
             className="rl-search"
             value={filters.search}
-            placeholder="搜索题目 / 题号 / 标签"
+            placeholder={t("review.list.searchPlaceholder")}
             onChange={handleSearchChange}
           />
         </div>
       </div>
 
-      {serviceUnavailable && <p className="rl-state-msg">等待服务就绪…</p>}
+      {serviceUnavailable && <p className="rl-state-msg">{t("review.list.waitingService")}</p>}
       {error && <p className="rl-state-msg rl-state-error">{error}</p>}
 
       <div className="rl-list">
@@ -90,7 +94,7 @@ export const ReviewList = memo(function ReviewList({
               <path d="M9 11l3 3L22 4" />
               <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
             </svg>
-            <p>没有符合条件的题目</p>
+            <p>{t("review.list.empty")}</p>
           </div>
         ) : (
           problems.map((item, idx) => (
@@ -100,38 +104,47 @@ export const ReviewList = memo(function ReviewList({
               active={item.problemId === selectedProblemId}
               index={idx}
               onSelect={onSelect}
+              t={t}
             />
           ))
         )}
       </div>
 
       <div className="rl-kb-hint">
-        <kbd>J</kbd><kbd>K</kbd> 导航
+        <kbd>J</kbd><kbd>K</kbd> {t("review.list.keyboard.navigation")}
         <span className="rl-kb-sep">·</span>
-        <kbd>1–4</kbd> 状态
+        <kbd>1–4</kbd> {t("review.list.keyboard.status")}
         <span className="rl-kb-sep">·</span>
-        <kbd>⌘S</kbd> 保存
+        <kbd>⌘S</kbd> {t("actions.save")}
       </div>
     </section>
   );
 });
 
-const ProblemCard = memo(function ProblemCard({ item, active, index, onSelect }) {
+const ProblemCard = memo(function ProblemCard({ item, active, index, onSelect, t }) {
   const verdictClass = verdictTone(item.latestVerdict) === "good"
     ? "rl-chip-good"
     : verdictTone(item.latestVerdict) === "bad"
       ? "rl-chip-bad"
       : "rl-chip-neutral";
 
+  const handleKeyDown = (event) => {
+    if (event.key !== "Enter" && event.key !== " ") return;
+    event.preventDefault();
+    onSelect(item.problemId);
+  };
+
   return (
-    <button
-      type="button"
+    <div
+      role="button"
+      tabIndex={0}
       className={[
         "rl-card",
         active ? "rl-card--active" : "",
         item.reviewDue ? "rl-card--due" : "",
       ].filter(Boolean).join(" ")}
       onClick={() => onSelect(item.problemId)}
+      onKeyDown={handleKeyDown}
       style={{ animationDelay: `${Math.min(index * 18, 180)}ms` }}
     >
       <div className="rl-card-body">
@@ -145,15 +158,17 @@ const ProblemCard = memo(function ProblemCard({ item, active, index, onSelect })
         <span className="rl-card-id">
           {platformLabel(item.platform)} {item.externalProblemId}
         </span>
-        <span className="rl-card-attempts">尝试 {item.attemptCount} 次</span>
+        <span className="rl-card-attempts">
+          {t("review.list.attempts", { count: item.attemptCount })}
+        </span>
         <span className={`rl-card-schedule ${item.reviewDue ? "rl-card-schedule--due" : ""}`}>
           {item.reviewDue
-            ? "到期"
+            ? t("review.list.due")
             : item.nextReviewAt
               ? formatDate(item.nextReviewAt)
-              : "未排期"}
+              : t("review.list.unscheduled")}
         </span>
       </div>
-    </button>
+    </div>
   );
 });

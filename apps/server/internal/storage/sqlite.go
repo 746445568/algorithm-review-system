@@ -32,6 +32,7 @@ var allowedTables = map[string]bool{
 	"problem_chats":         true,
 	"contests":              true,
 	"goals":                 true,
+	"error_patterns":        true,
 }
 
 // DB is the SQLite database connection
@@ -130,6 +131,18 @@ func (db *DB) MigrateWithBackup() error {
 	if err := db.addColumnIfMissing("review_snapshots", "problem_id", "INTEGER"); err != nil {
 		return err
 	}
+	if err := db.addColumnIfMissing("problems", "statement_text", "TEXT NOT NULL DEFAULT ''"); err != nil {
+		return err
+	}
+	if err := db.addColumnIfMissing("problems", "statement_fetched_at", "TEXT"); err != nil {
+		return err
+	}
+	if err := db.addColumnIfMissing("submissions", "source_code", "TEXT NOT NULL DEFAULT ''"); err != nil {
+		return err
+	}
+	if err := db.addColumnIfMissing("submissions", "source_fetched_at", "TEXT"); err != nil {
+		return err
+	}
 	// SM-2 spaced repetition columns
 	if err := db.addColumnIfMissing("problem_review_states", "ease_factor", "REAL NOT NULL DEFAULT 2.5"); err != nil {
 		return err
@@ -181,6 +194,8 @@ CREATE TABLE IF NOT EXISTS problems (
   url TEXT,
   difficulty TEXT,
   raw_tags_json TEXT NOT NULL DEFAULT '[]',
+  statement_text TEXT NOT NULL DEFAULT '',
+  statement_fetched_at TEXT,
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   UNIQUE(platform, external_problem_id)
@@ -214,6 +229,8 @@ CREATE TABLE IF NOT EXISTS submissions (
   exec_time_ms INTEGER,
   memory_kb INTEGER,
   source_contest_id TEXT,
+  source_code TEXT NOT NULL DEFAULT '',
+  source_fetched_at TEXT,
   raw_json TEXT NOT NULL,
   created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -291,7 +308,18 @@ CREATE TABLE IF NOT EXISTS app_settings (
   key TEXT PRIMARY KEY,
   value TEXT NOT NULL,
   updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-);`
+);
+CREATE TABLE IF NOT EXISTS error_patterns (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  problem_id INTEGER REFERENCES problems(id),
+  submission_id TEXT DEFAULT '',
+  pattern_type TEXT NOT NULL,
+  description TEXT DEFAULT '',
+  ai_confidence REAL DEFAULT 0,
+  created_at TEXT DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_error_patterns_problem ON error_patterns(problem_id);
+CREATE INDEX IF NOT EXISTS idx_error_patterns_type ON error_patterns(pattern_type);`
 	if _, err := db.conn.Exec(schema); err != nil {
 		return err
 	}
