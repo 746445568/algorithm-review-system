@@ -2,9 +2,7 @@ package api
 
 import (
 	"encoding/json"
-	"io"
 	"net/http"
-	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -48,17 +46,38 @@ func (s *Server) Router() http.Handler { return s.corsMiddleware(s.mux) }
 
 func (s *Server) corsMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Use configured allowed origins, default to "*" if not set
 		origins := s.cfg.AllowedOrigins
 		if len(origins) == 0 {
 			origins = []string{"*"}
 		}
-		// For simplicity, use the first origin in the list or "*"
-		origin := origins[0]
-		if origin == "" {
-			origin = "*"
+
+		// Check if wildcard is allowed
+		wildcard := false
+		for _, o := range origins {
+			if o == "*" {
+				wildcard = true
+				break
+			}
 		}
-		w.Header().Set("Access-Control-Allow-Origin", origin)
+
+		reqOrigin := r.Header.Get("Origin")
+		if wildcard {
+			w.Header().Set("Access-Control-Allow-Origin", "*")
+		} else if reqOrigin != "" {
+			matched := false
+			for _, o := range origins {
+				if o == reqOrigin {
+					matched = true
+					break
+				}
+			}
+			if !matched {
+				w.WriteHeader(http.StatusForbidden)
+				return
+			}
+			w.Header().Set("Access-Control-Allow-Origin", reqOrigin)
+		}
+
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
 		if r.Method == http.MethodOptions {
@@ -108,6 +127,7 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("DELETE /api/goals/{id}", s.handleDeleteGoal)
 	s.mux.HandleFunc("GET /api/statistics/submissions", s.handleSubmissionStats)
 	s.mux.HandleFunc("GET /api/statistics/reviews", s.handleReviewStats)
+	s.mux.HandleFunc("GET /api/statistics/verdicts", s.handleVerdictStats)
 	s.mux.HandleFunc("GET /api/problems/{problemId}/chats", s.handleListChats)
 	s.mux.HandleFunc("POST /api/problems/{problemId}/chats", s.handleSendChat)
 	s.mux.HandleFunc("DELETE /api/problems/{problemId}/chats", s.handleDeleteChats)
@@ -207,21 +227,7 @@ func (s *Server) handleExportDiagnostics(w http.ResponseWriter, _ *http.Request)
 func (s *Server) handleBackup(w http.ResponseWriter, _ *http.Request) {
 	backupPath := s.cfg.DBPath + ".bak." + time.Now().Format("20060102-150405")
 
-	src, err := os.Open(s.cfg.DBPath)
-	if err != nil {
-		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": err.Error()})
-		return
-	}
-	defer src.Close()
-
-	dst, err := os.Create(backupPath)
-	if err != nil {
-		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": err.Error()})
-		return
-	}
-	defer dst.Close()
-
-	if _, err := io.Copy(dst, src); err != nil {
+	if err := s.db.Backup(backupPath); err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": err.Error()})
 		return
 	}
@@ -243,21 +249,7 @@ func (s *Server) handleRestore(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	src, err := os.Open(body.BackupPath)
-	if err != nil {
-		writeJSON(w, http.StatusNotFound, map[string]any{"error": err.Error()})
-		return
-	}
-	defer src.Close()
-
-	dst, err := os.Create(s.cfg.DBPath)
-	if err != nil {
-		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": err.Error()})
-		return
-	}
-	defer dst.Close()
-
-	if _, err := io.Copy(dst, src); err != nil {
+	if err := s.db.Restore(body.BackupPath); err != nil {
 		writeJSON(w, http.StatusInternalServerError, map[string]any{"error": err.Error()})
 		return
 	}
@@ -399,6 +391,18 @@ func (s *Server) handleReviewStats(w http.ResponseWriter, _ *http.Request) {
 		daily = []map[string]any{}
 	}
 	writeJSON(w, http.StatusOK, map[string]any{"daily": daily})
+}
+
+func (s *Server) handleVerdictStats(w http.ResponseWriter, _ *http.Request) {
+	verdicts, err := s.db.GetVerdictStats()
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	if verdicts == nil {
+		verdicts = []map[string]any{}
+	}
+	writeJSON(w, http.StatusOK, map[string]any{"verdicts": verdicts})
 }
 
 // handleListChats returns all chat messages for a problem.

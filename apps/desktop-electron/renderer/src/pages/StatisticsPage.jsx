@@ -4,6 +4,7 @@ import { StatCard } from "../components/statistics/StatCard.jsx";
 import { SubmissionChart } from "../components/statistics/SubmissionChart.jsx";
 import { TagAccuracyChart } from "../components/statistics/TagAccuracyChart.jsx";
 import { ReviewHeatmap } from "../components/statistics/ReviewHeatmap.jsx";
+import { ErrorPatternChart } from "../components/statistics/ErrorPatternChart.jsx";
 import "../styles/ui-statistics.css";
 
 function SubmissionIcon() {
@@ -113,6 +114,7 @@ export function StatisticsPage() {
   const [submissionStats, setSubmissionStats] = useState(null);
   const [reviewStats, setReviewStats] = useState(null);
   const [reviewSummary, setReviewSummary] = useState(null);
+  const [verdictStats, setVerdictStats] = useState(null);
   const [period, setPeriod] = useState("week");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -126,12 +128,14 @@ export function StatisticsPage() {
       api.getSubmissionStats(),
       api.getReviewStats(),
       api.getReviewSummary(),
+      api.getVerdictStats(),
     ])
-      .then(([sub, rev, summary]) => {
+      .then(([sub, rev, summary, verdicts]) => {
         if (cancelled) return;
         setSubmissionStats(sub);
         setReviewStats(rev);
         setReviewSummary(summary);
+        setVerdictStats(verdicts);
       })
       .catch((err) => {
         if (cancelled) return;
@@ -265,6 +269,14 @@ export function StatisticsPage() {
           <ReviewHeatmap data={reviewStats?.daily ?? []} />
         </section>
       </div>
+
+      <section className="panel chart-wrap stats-panel">
+        <div className="stats-panel-head">
+          <h3>错误类型分布</h3>
+          <span>按判定结果聚合</span>
+        </div>
+        <ErrorPatternChart data={verdictStats?.verdicts ?? []} />
+      </section>
     </div>
   );
 }

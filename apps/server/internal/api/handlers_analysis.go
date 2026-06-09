@@ -5,6 +5,7 @@ import (
 	"database/sql"
 	"encoding/json"
 	"errors"
+	"log/slog"
 	"net/http"
 	"strconv"
 	"strings"
@@ -77,14 +78,16 @@ func (s *Server) handleAnalysisGenerate(w http.ResponseWriter, r *http.Request) 
 		}
 		if !reused {
 			taskID := task.ID
-			_ = s.queue.Enqueue(jobs.Job{
+			if !s.queue.Enqueue(jobs.Job{
 				Key:      jobs.AnalysisJobKey(taskID),
 				TaskType: models.TaskTypeAnalysis,
 				TaskID:   taskID,
 				Run: func(ctx context.Context) error {
 					return s.runAnalysisTask(ctx, taskID)
 				},
-			})
+			}) {
+				slog.Warn("analysis job already queued", "taskID", taskID)
+			}
 		}
 		writeJSON(w, http.StatusAccepted, map[string]any{
 			"task":   task,
@@ -99,14 +102,16 @@ func (s *Server) handleAnalysisGenerate(w http.ResponseWriter, r *http.Request) 
 	}
 	if !reused {
 		taskID := task.ID
-		_ = s.queue.Enqueue(jobs.Job{
+		if !s.queue.Enqueue(jobs.Job{
 			Key:      jobs.AnalysisJobKey(taskID),
 			TaskType: models.TaskTypeAnalysis,
 			TaskID:   taskID,
 			Run: func(ctx context.Context) error {
 				return s.runAnalysisTask(ctx, taskID)
 			},
-		})
+		}) {
+			slog.Warn("analysis job already queued", "taskID", taskID)
+		}
 	}
 	writeJSON(w, http.StatusAccepted, map[string]any{
 		"task":   task,
@@ -211,14 +216,16 @@ func (s *Server) handleAnalysisGenerateComparison(w http.ResponseWriter, r *http
 	}
 	if !reused {
 		taskID := task.ID
-		_ = s.queue.Enqueue(jobs.Job{
+		if !s.queue.Enqueue(jobs.Job{
 			Key:      jobs.AnalysisJobKey(taskID),
 			TaskType: models.TaskTypeAnalysis,
 			TaskID:   taskID,
 			Run: func(ctx context.Context) error {
 				return s.runAnalysisTask(ctx, taskID)
 			},
-		})
+		}) {
+			slog.Warn("analysis job already queued", "taskID", taskID)
+		}
 	}
 	writeJSON(w, http.StatusAccepted, map[string]any{"task": task, "reused": reused})
 }
@@ -288,14 +295,16 @@ func (s *Server) handleAnalysisGenerateProblem(w http.ResponseWriter, r *http.Re
 	}
 	if !reused {
 		taskID := task.ID
-		_ = s.queue.Enqueue(jobs.Job{
+		if !s.queue.Enqueue(jobs.Job{
 			Key:      jobs.AnalysisJobKey(taskID),
 			TaskType: models.TaskTypeAnalysis,
 			TaskID:   taskID,
 			Run: func(ctx context.Context) error {
 				return s.runAnalysisTask(ctx, taskID)
 			},
-		})
+		}) {
+			slog.Warn("analysis job already queued", "taskID", taskID)
+		}
 	}
 	writeJSON(w, http.StatusAccepted, map[string]any{"task": task, "reused": reused})
 }

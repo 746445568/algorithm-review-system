@@ -7,7 +7,6 @@ import (
 	"io"
 	"net/http"
 	"strings"
-	"time"
 )
 
 // Complete sends a single-turn completion request to the configured AI provider.
@@ -59,8 +58,7 @@ func completeOpenAICompatible(systemPrompt, userPrompt string, s Settings, defau
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+strings.TrimSpace(s.APIKey))
 
-	client := &http.Client{Timeout: 300 * time.Second}
-	resp, err := client.Do(req)
+	resp, err := completeClient.Do(req)
 	if err != nil {
 		return "", fmt.Errorf("AI request failed: %w", err)
 	}
@@ -125,8 +123,7 @@ func completeOllama(systemPrompt, userPrompt string, s Settings) (string, error)
 	}
 	req.Header.Set("Content-Type", "application/json")
 
-	client := &http.Client{Timeout: 300 * time.Second}
-	resp, err := client.Do(req)
+	resp, err := completeClient.Do(req)
 	if err != nil {
 		return "", fmt.Errorf("Ollama request failed: %w", err)
 	}

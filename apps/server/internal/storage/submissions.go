@@ -208,6 +208,29 @@ func (db *DB) GetSubmissionStatsByWeek(weeks int) ([]map[string]any, error) {
 	return result, rows.Err()
 }
 
+// GetVerdictStats returns submission counts grouped by verdict
+func (db *DB) GetVerdictStats() ([]map[string]any, error) {
+	rows, err := db.conn.Query(`
+	SELECT verdict, COUNT(*) AS count
+	FROM submissions
+	GROUP BY verdict
+	ORDER BY count DESC`)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+	var result []map[string]any
+	for rows.Next() {
+		var verdict string
+		var count int
+		if err := rows.Scan(&verdict, &count); err != nil {
+			return nil, err
+		}
+		result = append(result, map[string]any{"verdict": verdict, "count": count})
+	}
+	return result, rows.Err()
+}
+
 // GetTagAccuracyStats returns accuracy statistics per tag
 func (db *DB) GetTagAccuracyStats() ([]map[string]any, error) {
 	rows, err := db.conn.Query(`

@@ -7,9 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
-	"net/url"
 	"strings"
-	"time"
 )
 
 const (
@@ -52,14 +50,14 @@ type openAIChatCompletionResponse struct {
 }
 
 func (p *OpenAIProvider) ValidateConfig(s Settings) error {
-	return validateOpenAICompatibleConfig(s, "openai", defaultOpenAIBaseURL)
+	return validateOpenAICompatibleConfig(s, openAIProviderName, defaultOpenAIBaseURL)
 }
 
 func (p *OpenAIProvider) Analyze(ctx context.Context, input string, s Settings) (string, string, error) {
-	return analyzeOpenAICompatible(ctx, input, s, "openai", defaultOpenAIBaseURL)
+	return analyzeOpenAICompatible(ctx, input, s, openAIProviderName, defaultOpenAIBaseURL)
 }
 
-func validateOpenAICompatibleConfig(s Settings, expectedProvider, defaultBaseURL string) error {
+func validateOpenAICompatibleConfig(s Settings, expectedProvider, defaultBase string) error {
 	provider := normalizeProviderName(s.Provider)
 	if provider != expectedProvider {
 		return fmt.Errorf("unsupported provider %q for %s provider", s.Provider, expectedProvider)
@@ -73,26 +71,22 @@ func validateOpenAICompatibleConfig(s Settings, expectedProvider, defaultBaseURL
 		return fmt.Errorf("apiKey is required for %s provider", expectedProvider)
 	}
 
-	if _, err := normalizeBaseURL(s.BaseURL, defaultBaseURL); err != nil {
+	if err := validateBaseURL(s.BaseURL, defaultBase); err != nil {
 		return fmt.Errorf("invalid baseUrl: %w", err)
 	}
 
 	return nil
 }
 
-func analyzeOpenAICompatible(ctx context.Context, input string, s Settings, expectedProvider, defaultBaseURL string) (string, string, error) {
-	if err := validateOpenAICompatibleConfig(s, expectedProvider, defaultBaseURL); err != nil {
+func analyzeOpenAICompatible(ctx context.Context, input string, s Settings, expectedProvider, defaultBase string) (string, string, error) {
+	if err := validateOpenAICompatibleConfig(s, expectedProvider, defaultBase); err != nil {
 		return "", "", err
 	}
 
-	baseURL, err := normalizeBaseURL(s.BaseURL, defaultBaseURL)
+	baseURL := defaultBaseURL(s.BaseURL, defaultBase)
+	endpoint, err := buildEndpoint(baseURL, "/chat/completions")
 	if err != nil {
-		return "", "", fmt.Errorf("resolve baseUrl: %w", err)
-	}
-
-	endpoint, err := url.JoinPath(baseURL, "chat/completions")
-	if err != nil {
-		return "", "", fmt.Errorf("build endpoint URL: %w", err)
+		return "", "", err
 	}
 
 	reqBody := openAIChatCompletionRequest{
@@ -122,8 +116,7 @@ func analyzeOpenAICompatible(ctx context.Context, input string, s Settings, expe
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Authorization", "Bearer "+strings.TrimSpace(s.APIKey))
 
-	client := &http.Client{Timeout: 120 * time.Second}
-	resp, err := client.Do(req)
+	resp, err := analysisClient.Do(req)
 	if err != nil {
 		return "", "", fmt.Errorf("perform API request: %w", err)
 	}
@@ -169,22 +162,3 @@ func buildAnalysisPrompt(input string) string {
 
 %s`, input)
 }
-
-func normalizeBaseURL(rawBaseURL, defaultBaseURL string) (string, error) {
-	base := strings.TrimSpace(rawBaseURL)
-	if base == "" {
-		base = defaultBaseURL
-	}
-
-	parsed, err := url.Parse(base)
-	if err != nil {
-		return "", err
-	}
-
-	if parsed.Scheme == "" || parsed.Host == "" {
-		return "", fmt.Errorf("baseUrl must include scheme and host")
-	}
-
-	return strings.TrimRight(parsed.String(), "/"), nil
-}
-

@@ -10,6 +10,8 @@ import (
 	"time"
 
 	_ "modernc.org/sqlite"
+	sqlite3 "modernc.org/sqlite"
+
 	"ojreviewdesktop/internal/app"
 	cryptovault "ojreviewdesktop/internal/crypto"
 	"ojreviewdesktop/internal/models"
@@ -333,6 +335,70 @@ func copyFile(src, dst string) error {
 		return err
 	}
 	return os.WriteFile(dst, input, 0o644)
+}
+
+// backuper is the interface exposed by modernc.org/sqlite's driver connection
+// for online backup and restore operations.
+type backuper interface {
+	NewBackup(string) (*sqlite3.Backup, error)
+	NewRestore(string) (*sqlite3.Backup, error)
+}
+
+// Backup creates a consistent snapshot of the database at dstPath using the
+// SQLite Online Backup API. It holds the write lock for the duration so no
+// concurrent writes can interfere.
+func (db *DB) Backup(dstPath string) error {
+	db.writeMu.Lock()
+	defer db.writeMu.Unlock()
+
+	conn, err := db.conn.Conn(context.Background())
+	if err != nil {
+		return fmt.Errorf("backup: acquire connection: %w", err)
+	}
+	defer conn.Close()
+
+	return conn.Raw(func(driverConn any) error {
+		bck, err := driverConn.(backuper).NewBackup(dstPath)
+		if err != nil {
+			return fmt.Errorf("backup: init: %w", err)
+		}
+		for more := true; more; {
+			more, err = bck.Step(-1)
+			if err != nil {
+				bck.Finish()
+				return fmt.Errorf("backup: step: %w", err)
+			}
+		}
+		return bck.Finish()
+	})
+}
+
+// Restore replaces the current database with the contents of srcPath using the
+// SQLite Online Backup API. It holds the write lock for the duration.
+func (db *DB) Restore(srcPath string) error {
+	db.writeMu.Lock()
+	defer db.writeMu.Unlock()
+
+	conn, err := db.conn.Conn(context.Background())
+	if err != nil {
+		return fmt.Errorf("restore: acquire connection: %w", err)
+	}
+	defer conn.Close()
+
+	return conn.Raw(func(driverConn any) error {
+		bck, err := driverConn.(backuper).NewRestore(srcPath)
+		if err != nil {
+			return fmt.Errorf("restore: init: %w", err)
+		}
+		for more := true; more; {
+			more, err = bck.Step(-1)
+			if err != nil {
+				bck.Finish()
+				return fmt.Errorf("restore: step: %w", err)
+			}
+		}
+		return bck.Finish()
+	})
 }
 
 // HealthCheck returns a simple health check result

@@ -2,8 +2,10 @@ package ai
 
 import (
 	"fmt"
+	"net/http"
 	"net/url"
 	"strings"
+	"time"
 )
 
 const (
@@ -12,6 +14,15 @@ const (
 	deepSeekProviderName    = "deepseek-compatible"
 	deepSeekAliasProvider   = "deepseek"
 	ollamaProviderName      = "ollama"
+
+	analysisHTTPTimeout = 120 * time.Second
+	completeHTTPTimeout = 300 * time.Second
+)
+
+var (
+	// Shared HTTP clients — one per timeout tier — to avoid creating a new client per request.
+	analysisClient = &http.Client{Timeout: analysisHTTPTimeout}
+	completeClient = &http.Client{Timeout: completeHTTPTimeout}
 )
 
 func normalizeProviderName(provider string) string {
@@ -23,6 +34,24 @@ func normalizeProviderName(provider string) string {
 	default:
 		return strings.ToLower(strings.TrimSpace(provider))
 	}
+}
+
+func normalizeBaseURL(rawBaseURL, defaultBaseURL string) (string, error) {
+	base := strings.TrimSpace(rawBaseURL)
+	if base == "" {
+		base = defaultBaseURL
+	}
+
+	parsed, err := url.Parse(base)
+	if err != nil {
+		return "", err
+	}
+
+	if parsed.Scheme == "" || parsed.Host == "" {
+		return "", fmt.Errorf("baseUrl must include scheme and host")
+	}
+
+	return strings.TrimRight(parsed.String(), "/"), nil
 }
 
 func validateBaseURL(rawBaseURL string, defaultBase string) error {
@@ -44,8 +73,4 @@ func buildEndpoint(baseURL, path string) (string, error) {
 		return "", fmt.Errorf("build endpoint URL: %w", err)
 	}
 	return endpoint, nil
-}
-
-func analysisUserPrompt(input string) string {
-	return buildAnalysisPrompt(input)
 }

@@ -8,7 +8,6 @@ import (
 	"io"
 	"net/http"
 	"strings"
-	"time"
 )
 
 const (
@@ -31,7 +30,11 @@ func (p *OllamaProvider) ValidateConfig(s Settings) error {
 }
 
 func (p *OllamaProvider) Analyze(ctx context.Context, input string, s Settings) (string, string, error) {
-	if err := p.ValidateConfig(s); err != nil {
+	return analyzeOllama(ctx, input, s)
+}
+
+func analyzeOllama(ctx context.Context, input string, s Settings) (string, string, error) {
+	if err := (&OllamaProvider{}).ValidateConfig(s); err != nil {
 		return "", "", err
 	}
 
@@ -43,7 +46,7 @@ func (p *OllamaProvider) Analyze(ctx context.Context, input string, s Settings) 
 
 	payload := map[string]any{
 		"model":  s.Model,
-		"prompt": analysisUserPrompt(input),
+		"prompt": buildAnalysisPrompt(input),
 		"stream": false,
 	}
 
@@ -58,8 +61,7 @@ func (p *OllamaProvider) Analyze(ctx context.Context, input string, s Settings) 
 	}
 	req.Header.Set("Content-Type", "application/json")
 
-	client := &http.Client{Timeout: 120 * time.Second}
-	resp, err := client.Do(req)
+	resp, err := analysisClient.Do(req)
 	if err != nil {
 		return "", "", fmt.Errorf("Ollama request failed: %w", err)
 	}

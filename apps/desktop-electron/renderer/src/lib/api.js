@@ -217,6 +217,7 @@ export const api = {
     request(`/api/accounts/${accountId}/refresh-rating`, { method: "POST", body: JSON.stringify({}) }),
   getSubmissionStats: () => request("/api/statistics/submissions"),
   getReviewStats: () => request("/api/statistics/reviews"),
+  getVerdictStats: () => request("/api/statistics/verdicts"),
 
   getProblemChats: (problemId) => request(`/api/problems/${problemId}/chats`),
   sendProblemChat: (problemId, message) =>

@@ -38,7 +38,7 @@ func LoadConfig() (Config, error) {
 		DBPath:         filepath.Join(base, "data", "ojreview.db"),
 		ListenAddr:     "0.0.0.0:38473",
 		MasterKeyPath:  filepath.Join(base, "secure", "master.key"),
-		AllowedOrigins: []string{"*"},
+		AllowedOrigins: []string{"http://localhost:5180", "http://127.0.0.1:5180"},
 	}
 
 	for _, dir := range []string{cfg.AppDir, cfg.DataDir, cfg.LogDir, cfg.CacheDir, cfg.ExportDir, cfg.SecureDir} {
