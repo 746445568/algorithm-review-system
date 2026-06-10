@@ -66,7 +66,7 @@ func TestExtractAnalysisMetadata_NormalizesAliasesAndConfidence(t *testing.T) {
 	}
 }
 
-func TestExtractAnalysisMetadata_UsesFinalMetadataBlock(t *testing.T) {
+func TestExtractAnalysisMetadata_NonWhitespaceAfterMetadataPreservesOriginalContent(t *testing.T) {
 	input := `Intro
 <!-- OJREVIEW_METADATA
 {"error_patterns":[{"pattern_type":"first","description":"ignored","confidence":0.25}]}
@@ -78,13 +78,35 @@ Middle
 Tail`
 
 	clean, patterns := extractAnalysisMetadata(input, 99)
+	if clean != input {
+		t.Fatalf("clean text = %q, want original", clean)
+	}
+	if len(patterns) != 0 {
+		t.Fatalf("len(patterns) = %d, want 0", len(patterns))
+	}
+}
+
+func TestExtractAnalysisMetadata_AllowsTrailingWhitespaceAfterFinalMetadataBlock(t *testing.T) {
+	input := `Intro
+<!-- OJREVIEW_METADATA
+{"error_patterns":[{"pattern_type":"first","description":"ignored","confidence":0.25}]}
+-->
+Middle
+<!-- OJREVIEW_METADATA
+{"error_patterns":[{"pattern_type":"final","description":"kept","confidence":0.75}]}
+-->
+  
+	`
+
+	clean, patterns := extractAnalysisMetadata(input, 99)
 	wantClean := `Intro
 <!-- OJREVIEW_METADATA
 {"error_patterns":[{"pattern_type":"first","description":"ignored","confidence":0.25}]}
 -->
 Middle
 
-Tail`
+  
+	`
 	if clean != wantClean {
 		t.Fatalf("clean text = %q, want %q", clean, wantClean)
 	}

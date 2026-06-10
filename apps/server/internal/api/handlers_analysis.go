@@ -449,6 +449,11 @@ func extractAnalysisMetadata(content string, problemID int64) (string, []models.
 	}
 
 	end := afterStart + endRel
+	afterEnd := end + len(analysisMetadataEnd)
+	if strings.TrimSpace(content[afterEnd:]) != "" {
+		return content, nil
+	}
+
 	rawMetadata := strings.TrimSpace(content[afterStart:end])
 
 	var payload analysisMetadataPayload
@@ -479,7 +484,7 @@ func extractAnalysisMetadata(content string, problemID int64) (string, []models.
 		})
 	}
 
-	clean := content[:start] + content[end+len(analysisMetadataEnd):]
+	clean := content[:start] + content[afterEnd:]
 	return clean, patterns
 }
 
