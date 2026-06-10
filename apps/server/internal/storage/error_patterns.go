@@ -22,9 +22,6 @@ func (db *DB) SaveErrorPatterns(problemID int64, patterns []models.ErrorPattern)
 	}
 
 	for _, p := range patterns {
-		if p.PatternType == "" {
-			continue
-		}
 		_, err := tx.Exec(`
 INSERT INTO error_patterns(problem_id, submission_id, pattern_type, description, ai_confidence)
 VALUES (?, ?, ?, ?, ?)`,
