@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"log"
+	"math"
 	"net/http"
 	"strconv"
 	"strings"
@@ -415,6 +416,70 @@ func normalizeAnalysisCreationError(err error) error {
 	}
 
 	return err
+}
+
+const (
+	analysisMetadataStart = "<!-- OJREVIEW_METADATA"
+	analysisMetadataEnd   = "-->"
+)
+
+type analysisMetadataPayload struct {
+	ErrorPatterns []analysisMetadataPattern `json:"error_patterns"`
+}
+
+type analysisMetadataPattern struct {
+	Type         string  `json:"type"`
+	PatternType  string  `json:"pattern_type"`
+	Description  string  `json:"description"`
+	Confidence   float64 `json:"confidence"`
+	AIConfidence float64 `json:"ai_confidence"`
+	SubmissionID string  `json:"submission_id"`
+}
+
+func extractAnalysisMetadata(text string) (string, []models.ErrorPattern, error) {
+	start := strings.Index(text, analysisMetadataStart)
+	if start < 0 {
+		return strings.TrimSpace(text), []models.ErrorPattern{}, nil
+	}
+
+	afterStart := start + len(analysisMetadataStart)
+	endRel := strings.Index(text[afterStart:], analysisMetadataEnd)
+	if endRel < 0 {
+		return strings.TrimSpace(text), []models.ErrorPattern{}, nil
+	}
+
+	end := afterStart + endRel
+	rawMetadata := strings.TrimSpace(text[afterStart:end])
+	clean := strings.TrimSpace(text[:start] + text[end+len(analysisMetadataEnd):])
+
+	var payload analysisMetadataPayload
+	if err := json.Unmarshal([]byte(rawMetadata), &payload); err != nil {
+		return clean, nil, err
+	}
+
+	patterns := make([]models.ErrorPattern, 0, len(payload.ErrorPatterns))
+	for _, item := range payload.ErrorPatterns {
+		patternType := strings.TrimSpace(item.PatternType)
+		if patternType == "" {
+			patternType = strings.TrimSpace(item.Type)
+		}
+		if patternType == "" {
+			continue
+		}
+		confidence := item.Confidence
+		if confidence == 0 && item.AIConfidence != 0 {
+			confidence = item.AIConfidence
+		}
+		confidence = math.Max(0, math.Min(1, confidence))
+		patterns = append(patterns, models.ErrorPattern{
+			PatternType:  patternType,
+			Description:  strings.TrimSpace(item.Description),
+			Confidence:   confidence,
+			SubmissionID: strings.TrimSpace(item.SubmissionID),
+		})
+	}
+
+	return clean, patterns, nil
 }
 
 // handleErrorPatternStats returns aggregated error pattern statistics.
