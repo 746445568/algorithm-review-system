@@ -133,6 +133,8 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("GET /api/review/calendar", s.handleReviewCalendar)
 	s.mux.HandleFunc("GET /api/error-patterns/stats", s.handleErrorPatternStats)
 	s.mux.HandleFunc("GET /api/error-patterns/problem/{problemId}", s.handleErrorPatternsByProblem)
+	s.mux.HandleFunc("GET /api/accounts/{id}/rating-history", s.handleRatingHistory)
+	s.mux.HandleFunc("POST /api/accounts/{id}/rating-history/refresh", s.handleRefreshRatingHistory)
 }
 func (s *Server) handleGetAISettings(w http.ResponseWriter, _ *http.Request) {
 	settings, err := s.db.LoadAISettings()

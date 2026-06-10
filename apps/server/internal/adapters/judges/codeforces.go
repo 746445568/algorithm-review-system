@@ -284,6 +284,31 @@ func (a *CodeforcesAdapter) FetchStatement(ctx context.Context, problemID string
 	return fetchProblemStatement(ctx, a.client, mirrorURL)
 }
 
+func (a *CodeforcesAdapter) FetchRatingHistory(ctx context.Context, handle string) ([]RatingHistoryEntry, error) {
+	params := url.Values{"handle": []string{handle}}
+	var resp struct {
+		Result []struct {
+			ContestName string `json:"contestName"`
+			Rating      int    `json:"newRating"`
+			Seconds     int64  `json:"ratingUpdateTimeSeconds"`
+		} `json:"result"`
+	}
+	if err := a.getJSON(ctx, "user.rating", params, &resp); err != nil {
+		return nil, fmt.Errorf("fetch CF rating history: %w", err)
+	}
+
+	entries := make([]RatingHistoryEntry, 0, len(resp.Result))
+	for _, r := range resp.Result {
+		ts := time.Unix(r.Seconds, 0).UTC().Format(time.RFC3339)
+		entries = append(entries, RatingHistoryEntry{
+			ContestName: r.ContestName,
+			Rating:      r.Rating,
+			Timestamp:   ts,
+		})
+	}
+	return entries, nil
+}
+
 func (a *CodeforcesAdapter) FetchSubmissionSource(ctx context.Context, submission models.Submission) (string, error) {
 	submissionID := strings.TrimSpace(submission.ExternalSubmissionID)
 	if submissionID == "" {

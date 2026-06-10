@@ -69,6 +69,10 @@ func (a *artifactRecordingAdapter) FetchSubmissionSource(ctx context.Context, su
 	return a.source, nil
 }
 
+func (a *artifactRecordingAdapter) FetchRatingHistory(ctx context.Context, handle string) ([]judges.RatingHistoryEntry, error) {
+	return nil, nil
+}
+
 func TestJudgesEndpointReturnsRegisteredAdapterCapabilities(t *testing.T) {
 	server := newTestServer(t)
 

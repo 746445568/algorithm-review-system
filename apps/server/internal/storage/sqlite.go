@@ -16,7 +16,7 @@ import (
 	"ojreviewdesktop/internal/models"
 )
 
-const schemaVersion = 5
+const schemaVersion = 6
 
 // allowedTables is a whitelist of table names that can be modified by addColumnIfMissing.
 // This prevents SQL injection attacks through malicious table names.
@@ -36,6 +36,7 @@ var allowedTables = map[string]bool{
 	"error_patterns":        true,
 	"knowledge_nodes":       true,
 	"problem_knowledge":     true,
+	"rating_history":        true,
 }
 
 // DB is the SQLite database connection
@@ -454,6 +455,20 @@ CREATE TABLE IF NOT EXISTS problem_knowledge (
 	if currentVersion < 5 {
 		if err := db.addColumnIfMissing("problem_review_states", "quality_history", "TEXT DEFAULT '[]'"); err != nil {
 			return fmt.Errorf("migrate v4->v5 add quality_history: %w", err)
+		}
+	}
+	if currentVersion < 6 {
+		if _, err := db.conn.Exec(`
+CREATE TABLE IF NOT EXISTS rating_history (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  account_id INTEGER NOT NULL,
+  contest_name TEXT NOT NULL DEFAULT '',
+  rating INTEGER NOT NULL,
+  timestamp TEXT NOT NULL,
+  FOREIGN KEY(account_id) REFERENCES platform_accounts(id) ON DELETE CASCADE
+);
+CREATE INDEX IF NOT EXISTS idx_rating_history_account ON rating_history(account_id);`); err != nil {
+			return fmt.Errorf("migrate v5->v6 create rating_history: %w", err)
 		}
 	}
 	_, err := db.conn.Exec(`

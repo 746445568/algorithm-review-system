@@ -507,6 +507,69 @@
   font-size: 12px;
 }
 
+.rating-curve-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.rating-account-select {
+  align-self: flex-start;
+  background: var(--input-bg, #1e1e2e);
+  color: var(--text, #e0e0e0);
+  border: 1px solid var(--border, #2a2a3a);
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 13px;
+}
+
+.rating-curve-svg {
+  width: 100%;
+  max-width: 500px;
+  height: auto;
+}
+
+.curve-grid {
+  stroke: var(--border, #2a2a3a);
+  stroke-width: 0.5;
+  stroke-dasharray: 4 2;
+}
+
+.curve-line {
+  fill: none;
+  stroke: rgba(99, 102, 241, 0.9);
+  stroke-width: 2;
+}
+
+.curve-dot {
+  fill: rgba(99, 102, 241, 1);
+}
+
+.curve-empty {
+  color: var(--text-secondary, #9ca3af);
+  font-size: 13px;
+}
+
+.curve-refresh-btn {
+  align-self: flex-start;
+  background: var(--surface2, #3b3b5c);
+  color: var(--text, #e0e0e0);
+  border: 1px solid var(--border, #2a2a3a);
+  border-radius: 6px;
+  padding: 4px 12px;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.curve-refresh-btn:hover {
+  background: var(--surface3, #4a4a6a);
+}
+
+.curve-refresh-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
 @media (max-width: 960px) {
   .stats-grid4,
   .stats-grid2 {

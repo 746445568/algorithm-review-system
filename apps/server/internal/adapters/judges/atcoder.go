@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"strconv"
 	"strings"
 	"sync"
@@ -283,4 +284,52 @@ func (a *AtCoderAdapter) FetchStatement(ctx context.Context, problemID string) (
 
 func (a *AtCoderAdapter) FetchSubmissionSource(ctx context.Context, submission models.Submission) (string, error) {
 	return "", errors.New("atcoder submission source fetching is not supported")
+}
+
+func (a *AtCoderAdapter) FetchRatingHistory(ctx context.Context, handle string) ([]RatingHistoryEntry, error) {
+	u := fmt.Sprintf("https://atcoder.jp/users/%s/history/json", url.PathEscape(handle))
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
+	if err != nil {
+		return nil, err
+	}
+	setAtCoderHeaders(req)
+
+	resp, err := a.client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("fetch AtCoder rating history: %w", err)
+	}
+	defer resp.Body.Close()
+
+	body, err := atCoderBody(resp)
+	if err != nil {
+		return nil, fmt.Errorf("read AtCoder rating history body: %w", err)
+	}
+	defer body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return nil, fmt.Errorf("AtCoder rating history: HTTP %d", resp.StatusCode)
+	}
+
+	var history []struct {
+		IsRated     bool   `json:"IsRated"`
+		ContestName string `json:"ContestName"`
+		NewRating   int    `json:"NewRating"`
+		EndTime     string `json:"EndTime"`
+	}
+	if err := json.NewDecoder(body).Decode(&history); err != nil {
+		return nil, fmt.Errorf("decode AtCoder rating history: %w", err)
+	}
+
+	entries := make([]RatingHistoryEntry, 0)
+	for _, h := range history {
+		if !h.IsRated {
+			continue
+		}
+		entries = append(entries, RatingHistoryEntry{
+			ContestName: h.ContestName,
+			Rating:      h.NewRating,
+			Timestamp:   h.EndTime,
+		})
+	}
+	return entries, nil
 }
