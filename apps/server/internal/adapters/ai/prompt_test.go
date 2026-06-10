@@ -11,7 +11,9 @@ func TestAnalysisSystemPromptRequiresChineseMarkdownOutput(t *testing.T) {
 		"Markdown",
 		"##",
 		"###",
-		"不要输出 JSON",
+		"正文不要输出 JSON",
+		"OJREVIEW_METADATA",
+		"error_patterns",
 	}
 
 	for _, part := range required {
@@ -28,7 +30,10 @@ func TestBuildAnalysisPromptRequiresMarkdownAndEmbedsInput(t *testing.T) {
 	required := []string{
 		"错题复盘数据",
 		"Markdown",
-		"不要输出 JSON",
+		"正文不要输出 JSON",
+		"OJREVIEW_METADATA",
+		"pattern_type",
+		"confidence",
 		input,
 	}
 

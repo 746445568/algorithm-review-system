@@ -28,7 +28,15 @@ const (
 
 5. **给出代码**：提供一份正确的代码实现（使用 C++，因为大多数 OJ 支持 C++）。
 
-请用中文输出Markdown格式，每道题用 ## 题目标题 分隔，使用 ### 作为小节标题，**加粗**标注关键词。**不要输出 JSON**。`
+请用中文输出 Markdown 格式，每道题用 ## 题目标题 分隔，使用 ### 作为小节标题，**加粗**标注关键词。正文不要输出 JSON。
+
+在回答最后追加一个机器可读的元数据块，格式必须严格如下：
+
+<!-- OJREVIEW_METADATA
+{"error_patterns":[{"pattern_type":"boundary","description":"边界条件处理错误","confidence":0.9,"submission_id":"可选提交ID"}]}
+-->
+
+error_patterns 只能使用这些 pattern_type：boundary、overflow、wrong_approach、tle_complexity、edge_case、implementation、understanding、logic、other。confidence 必须是 0 到 1 之间的小数。没有可识别错误模式时输出 {"error_patterns":[]}。`
 )
 
 type OpenAIProvider struct{}
@@ -164,7 +172,7 @@ func buildAnalysisPrompt(input string) string {
 - tags: 知识点标签
 - submissions: 提交记录（包含 sourceCode、结果、语言、耗时等；sourceCode 可能为空）
 
-请只基于这些已提供的信息分析，不要编造缺失的题面或源码。请分析错误原因，给出解题思路、代码问题定位、修改建议和正确参考代码。**请用中文 Markdown 格式输出，不要输出 JSON**：
+请只基于这些已提供的信息分析，不要编造缺失的题面或源码。请分析错误原因，给出解题思路、代码问题定位、修改建议和正确参考代码。正文请用中文 Markdown 格式输出，正文不要输出 JSON；仅在最后追加 OJREVIEW_METADATA 元数据块，包含 error_patterns 数组，每个元素使用 pattern_type、description、confidence、submission_id 字段：
 
 %s`, input)
 }
