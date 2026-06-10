@@ -436,25 +436,24 @@ type analysisMetadataPattern struct {
 	SubmissionID string  `json:"submission_id"`
 }
 
-func extractAnalysisMetadata(text string) (string, []models.ErrorPattern, error) {
-	start := strings.Index(text, analysisMetadataStart)
+func extractAnalysisMetadata(content string, problemID int64) (string, []models.ErrorPattern) {
+	start := strings.LastIndex(content, analysisMetadataStart)
 	if start < 0 {
-		return strings.TrimSpace(text), []models.ErrorPattern{}, nil
+		return content, nil
 	}
 
 	afterStart := start + len(analysisMetadataStart)
-	endRel := strings.Index(text[afterStart:], analysisMetadataEnd)
+	endRel := strings.Index(content[afterStart:], analysisMetadataEnd)
 	if endRel < 0 {
-		return strings.TrimSpace(text), []models.ErrorPattern{}, nil
+		return content, nil
 	}
 
 	end := afterStart + endRel
-	rawMetadata := strings.TrimSpace(text[afterStart:end])
-	clean := strings.TrimSpace(text[:start] + text[end+len(analysisMetadataEnd):])
+	rawMetadata := strings.TrimSpace(content[afterStart:end])
 
 	var payload analysisMetadataPayload
 	if err := json.Unmarshal([]byte(rawMetadata), &payload); err != nil {
-		return clean, nil, err
+		return content, nil
 	}
 
 	patterns := make([]models.ErrorPattern, 0, len(payload.ErrorPatterns))
@@ -472,6 +471,7 @@ func extractAnalysisMetadata(text string) (string, []models.ErrorPattern, error)
 		}
 		confidence = math.Max(0, math.Min(1, confidence))
 		patterns = append(patterns, models.ErrorPattern{
+			ProblemID:    problemID,
 			PatternType:  patternType,
 			Description:  strings.TrimSpace(item.Description),
 			Confidence:   confidence,
@@ -479,7 +479,8 @@ func extractAnalysisMetadata(text string) (string, []models.ErrorPattern, error)
 		})
 	}
 
-	return clean, patterns, nil
+	clean := content[:start] + content[end+len(analysisMetadataEnd):]
+	return clean, patterns
 }
 
 // handleErrorPatternStats returns aggregated error pattern statistics.
