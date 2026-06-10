@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"strconv"
 	"time"
@@ -52,12 +53,20 @@ func (s *Server) handlePutProblemReviewState(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	state, err := s.db.SaveProblemReviewState(models.ProblemReviewState{
+	state := models.ProblemReviewState{
 		ProblemID:    problemID,
 		Status:       payload.Status,
 		Notes:        payload.Notes,
 		NextReviewAt: payload.NextReviewAt,
-	})
+	}
+
+	// Preserve existing QualityHistory
+	existing, err := s.db.GetProblemReviewState(problemID)
+	if err == nil {
+		state.QualityHistory = existing.QualityHistory
+	}
+
+	state, err = s.db.SaveProblemReviewState(state)
 	if err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
@@ -104,6 +113,14 @@ func (s *Server) handleRateReview(w http.ResponseWriter, r *http.Request) {
 	current.RepetitionCount = result.RepetitionCount
 	current.LastQuality = &payload.Quality
 	current.NextReviewAt = &result.NextReviewAt
+
+	// Append quality to history
+	if current.QualityHistory == "" || current.QualityHistory == "[]" {
+		current.QualityHistory = fmt.Sprintf("[%d]", payload.Quality)
+	} else {
+		// Trim trailing ] and append
+		current.QualityHistory = current.QualityHistory[:len(current.QualityHistory)-1] + fmt.Sprintf(",%d]", payload.Quality)
+	}
 
 	saved, err := s.db.SaveProblemReviewState(current)
 	if err != nil {

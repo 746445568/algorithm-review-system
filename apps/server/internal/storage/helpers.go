@@ -88,9 +88,11 @@ func scanProblemReviewState(scanner interface{ Scan(dest ...any) error }) (model
 	var nextReviewAtRaw sql.NullString
 	var lastUpdatedAtRaw string
 	var lastQuality sql.NullInt64
+	var qualityHistory sql.NullString
 	if err := scanner.Scan(
 		&state.ProblemID, &state.Status, &state.Notes, &nextReviewAtRaw, &lastUpdatedAtRaw,
 		&state.EaseFactor, &state.IntervalDays, &state.RepetitionCount, &lastQuality,
+		&qualityHistory,
 	); err != nil {
 		return state, err
 	}
@@ -112,6 +114,10 @@ func scanProblemReviewState(scanner interface{ Scan(dest ...any) error }) (model
 	if lastQuality.Valid {
 		q := int(lastQuality.Int64)
 		state.LastQuality = &q
+	}
+
+	if qualityHistory.Valid {
+		state.QualityHistory = qualityHistory.String
 	}
 
 	return state, nil
