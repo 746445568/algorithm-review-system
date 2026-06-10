@@ -358,6 +358,18 @@ func (s *Server) runAnalysisTask(ctx context.Context, taskID int64) error {
 		return s.db.MarkAnalysisTaskFinished(taskID, models.TaskFailed, "", resultJSON, err.Error())
 	}
 
+	problemID, err := s.db.GetReviewSnapshotProblemID(task.InputSnapshotID)
+	if err != nil {
+		return s.db.MarkAnalysisTaskFinished(taskID, models.TaskFailed, resultText, resultJSON, "load snapshot problem id failed: "+err.Error())
+	}
+	if problemID != nil {
+		cleanResultText, patterns := extractAnalysisMetadata(resultText, *problemID)
+		if err := s.db.SaveErrorPatterns(*problemID, patterns); err != nil {
+			return s.db.MarkAnalysisTaskFinished(taskID, models.TaskFailed, cleanResultText, resultJSON, "save error patterns failed: "+err.Error())
+		}
+		return s.db.MarkAnalysisTaskFinished(taskID, models.TaskSuccess, cleanResultText, resultJSON, "")
+	}
+
 	return s.db.MarkAnalysisTaskFinished(taskID, models.TaskSuccess, resultText, resultJSON, "")
 }
 

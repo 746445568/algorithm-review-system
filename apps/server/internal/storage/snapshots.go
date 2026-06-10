@@ -31,6 +31,19 @@ func (db *DB) GetReviewSnapshot(id int64) (models.ReviewSnapshot, error) {
 	return scanReviewSnapshot(row)
 }
 
+// GetReviewSnapshotProblemID returns the optional problem_id for a review snapshot.
+func (db *DB) GetReviewSnapshotProblemID(snapshotID int64) (*int64, error) {
+	row := db.conn.QueryRow(`SELECT problem_id FROM review_snapshots WHERE id = ?`, snapshotID)
+	var problemID sql.NullInt64
+	if err := row.Scan(&problemID); err != nil {
+		return nil, err
+	}
+	if !problemID.Valid {
+		return nil, nil
+	}
+	return &problemID.Int64, nil
+}
+
 // CreateTypedSnapshotJSON stores a pre-serialised JSON blob with explicit snapshot_type and optional problem_id
 func (db *DB) CreateTypedSnapshotJSON(summaryJSON, snapshotType string, problemID *int64) (models.ReviewSnapshot, error) {
 	var err error
