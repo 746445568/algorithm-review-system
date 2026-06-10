@@ -219,6 +219,7 @@ export const api = {
   getSubmissionStats: () => request("/api/statistics/submissions"),
   getReviewStats: () => request("/api/statistics/reviews"),
   getVerdictStats: () => request("/api/statistics/verdicts"),
+  getRadarData: () => request("/api/statistics/radar"),
   getKnowledgeGraph: () => request("/api/knowledge-graph"),
   syncKnowledgeGraph: () =>
     request("/api/knowledge-graph/sync", {

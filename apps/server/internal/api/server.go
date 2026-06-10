@@ -122,6 +122,7 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("GET /api/statistics/submissions", s.handleSubmissionStats)
 	s.mux.HandleFunc("GET /api/statistics/reviews", s.handleReviewStats)
 	s.mux.HandleFunc("GET /api/statistics/verdicts", s.handleVerdictStats)
+	s.mux.HandleFunc("GET /api/statistics/radar", s.handleRadarData)
 	s.mux.HandleFunc("GET /api/knowledge-graph", s.handleKnowledgeGraph)
 	s.mux.HandleFunc("POST /api/knowledge-graph/sync", s.handleKnowledgeGraphSync)
 	s.mux.HandleFunc("GET /api/problems/{problemId}/chats", s.handleListChats)

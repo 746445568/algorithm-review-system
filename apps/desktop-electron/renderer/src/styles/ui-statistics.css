@@ -577,6 +577,37 @@
   }
 }
 
+.radar-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+.radar-svg {
+  width: 300px;
+  height: 300px;
+}
+.radar-grid-ring {
+  fill: none;
+  stroke: var(--border, #2a2a3a);
+  stroke-width: 0.5;
+}
+.radar-axis {
+  stroke: var(--border, #2a2a3a);
+  stroke-width: 0.5;
+}
+.radar-area {
+  fill: rgba(99, 102, 241, 0.25);
+  stroke: rgba(99, 102, 241, 0.8);
+  stroke-width: 1.5;
+}
+.radar-dot {
+  fill: rgba(99, 102, 241, 1);
+}
+.radar-label {
+  fill: var(--text-secondary, #9ca3af);
+  font-size: 10px;
+}
+
 @media (max-width: 720px) {
   .stats-page {
     padding-top: 18px;
