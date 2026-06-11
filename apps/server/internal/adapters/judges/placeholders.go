@@ -3,6 +3,7 @@ package judges
 import (
 	"context"
 	"errors"
+	"fmt"
 
 	"ojreviewdesktop/internal/models"
 )
@@ -73,4 +74,8 @@ func (a *PlaceholderAdapter) FetchEditorial(problemID string) (string, error) {
 
 func (a *PlaceholderAdapter) FetchContests(ctx context.Context) ([]models.Contest, error) {
 	return []models.Contest{}, nil
+}
+
+func (a *PlaceholderAdapter) FetchRatingHistory(ctx context.Context, handle string) ([]RatingHistoryEntry, error) {
+	return nil, fmt.Errorf("platform does not support rating history")
 }

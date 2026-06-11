@@ -7,6 +7,7 @@ import { TagAccuracyChart } from "../components/statistics/TagAccuracyChart.jsx"
 import { ReviewHeatmap } from "../components/statistics/ReviewHeatmap.jsx";
 import { VerdictDistributionChart } from "../components/statistics/VerdictDistributionChart.jsx";
 import { KnowledgeGraph } from "../components/statistics/KnowledgeGraph.jsx";
+import { RatingCurve } from "../components/statistics/RatingCurve.jsx";
 import "../styles/ui-statistics.css";
 
 function SubmissionIcon() {
@@ -314,6 +315,10 @@ export function StatisticsPage() {
           </button>
         </div>
         <KnowledgeGraph nodes={knowledgeGraph?.nodes ?? []} />
+      </section>
+
+      <section className="panel chart-wrap stats-panel">
+        <RatingCurve />
       </section>
     </div>
   );

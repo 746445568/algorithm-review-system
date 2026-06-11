@@ -11,6 +11,12 @@ type UserProfile struct {
 	Rank      string
 }
 
+type RatingHistoryEntry struct {
+	ContestName string
+	Rating      int
+	Timestamp   string
+}
+
 type JudgeCapabilityStatus string
 
 const (
@@ -55,6 +61,7 @@ type Adapter interface {
 	FetchProfile(ctx context.Context, handle string) (UserProfile, error)
 	FetchStatement(ctx context.Context, problemID string) (string, error)
 	FetchSubmissionSource(ctx context.Context, submission models.Submission) (string, error)
+	FetchRatingHistory(ctx context.Context, handle string) ([]RatingHistoryEntry, error)
 }
 
 type ContestAdapter interface {

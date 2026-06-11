@@ -246,6 +246,8 @@ export const api = {
   getErrorPatternStats: () => request('/api/error-patterns/stats'),
   getErrorPatternsByProblem: (problemId) =>
     request(`/api/error-patterns/problem/${problemId}`),
+  getRatingHistory: (accountId) => request(`/api/accounts/${accountId}/rating-history`),
+  refreshRatingHistory: (accountId) => request(`/api/accounts/${accountId}/rating-history/refresh`, { method: "POST" }),
 
   getProblems: async (query = {}) => {
     const cached = await getCachedProblems(query);

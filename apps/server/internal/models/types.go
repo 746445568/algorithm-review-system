@@ -216,3 +216,11 @@ type ProblemKnowledge struct {
 	KnowledgeID  int64   `json:"knowledgeId"`
 	MasteryLevel float64 `json:"masteryLevel"`
 }
+
+type RatingEntry struct {
+	ID          int64  `json:"id"`
+	AccountID   int64  `json:"accountId"`
+	ContestName string `json:"contestName"`
+	Rating      int    `json:"rating"`
+	Timestamp   string `json:"timestamp"`
+}
