@@ -214,6 +214,50 @@ func (a *CodeforcesAdapter) FetchProblemMetadata(ctx context.Context, problemID 
 	return models.Problem{}, nil, fmt.Errorf("codeforces problem not found: %s", formatCodeforcesProblemID(contestID, index))
 }
 
+func (a *CodeforcesAdapter) FetchProblemCatalog(ctx context.Context) ([]models.ProblemPoolItem, error) {
+	var result codeforcesProblemSetResult
+	if err := a.getJSON(ctx, "problemset.problems", nil, &result); err != nil {
+		return nil, fmt.Errorf("fetch codeforces problem catalog: %w", err)
+	}
+
+	items := make([]models.ProblemPoolItem, 0, len(result.Problems))
+	for _, problem := range result.Problems {
+		if problem.ContestID <= 0 || strings.TrimSpace(problem.Index) == "" || strings.TrimSpace(problem.Name) == "" {
+			continue
+		}
+
+		externalID := formatCodeforcesProblemID(problem.ContestID, problem.Index)
+		item := models.ProblemPoolItem{
+			Platform:          models.PlatformCodeforces,
+			ExternalProblemID: externalID,
+			ExternalContestID: strconv.Itoa(problem.ContestID),
+			ProblemIndex:      strings.ToUpper(strings.TrimSpace(problem.Index)),
+			Title:             problem.Name,
+			URL:               fmt.Sprintf("https://codeforces.com/problemset/problem/%d/%s", problem.ContestID, problem.Index),
+			DifficultyScale:   DifficultyScaleCodeforces,
+			Source:            SourceCodeforcesProblemset,
+			Tags:              make([]models.ProblemPoolTag, 0, len(problem.Tags)),
+		}
+		if problem.Rating > 0 {
+			rating := problem.Rating
+			item.DifficultyValue = &rating
+		}
+		for _, tag := range problem.Tags {
+			tag = strings.TrimSpace(tag)
+			if tag == "" {
+				continue
+			}
+			item.Tags = append(item.Tags, models.ProblemPoolTag{
+				Name:       tag,
+				Source:     TagSourceCodeforcesOfficial,
+				Confidence: 1,
+			})
+		}
+		items = append(items, item)
+	}
+	return items, nil
+}
+
 func (a *CodeforcesAdapter) NormalizeSubmission(raw any) (models.Submission, error) {
 	rawSubmission, err := toCodeforcesSubmissionRaw(raw)
 	if err != nil {
