@@ -6,7 +6,7 @@ import (
 	"ojreviewdesktop/internal/models"
 )
 
-// SaveErrorPatterns inserts error patterns for a problem.
+// SaveErrorPatterns replaces error patterns for a problem.
 func (db *DB) SaveErrorPatterns(problemID int64, patterns []models.ErrorPattern) error {
 	db.writeMu.Lock()
 	defer db.writeMu.Unlock()
@@ -16,6 +16,10 @@ func (db *DB) SaveErrorPatterns(problemID int64, patterns []models.ErrorPattern)
 		return fmt.Errorf("begin tx: %w", err)
 	}
 	defer tx.Rollback()
+
+	if _, err := tx.Exec(`DELETE FROM error_patterns WHERE problem_id = ?`, problemID); err != nil {
+		return fmt.Errorf("delete existing error patterns: %w", err)
+	}
 
 	for _, p := range patterns {
 		_, err := tx.Exec(`

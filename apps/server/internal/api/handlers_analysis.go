@@ -6,6 +6,7 @@ import (
 	"encoding/json"
 	"errors"
 	"log"
+	"math"
 	"net/http"
 	"strconv"
 	"strings"
@@ -357,6 +358,20 @@ func (s *Server) runAnalysisTask(ctx context.Context, taskID int64) error {
 		return s.db.MarkAnalysisTaskFinished(taskID, models.TaskFailed, "", resultJSON, err.Error())
 	}
 
+	problemID, err := s.db.GetReviewSnapshotProblemID(task.InputSnapshotID)
+	if err != nil {
+		return s.db.MarkAnalysisTaskFinished(taskID, models.TaskFailed, resultText, resultJSON, "load snapshot problem id failed: "+err.Error())
+	}
+	if problemID != nil {
+		cleanResultText, patterns, hasMetadata := extractAnalysisMetadataForPersistence(resultText, *problemID)
+		if hasMetadata {
+			if err := s.db.SaveErrorPatterns(*problemID, patterns); err != nil {
+				return s.db.MarkAnalysisTaskFinished(taskID, models.TaskFailed, cleanResultText, resultJSON, "save error patterns failed: "+err.Error())
+			}
+			return s.db.MarkAnalysisTaskFinished(taskID, models.TaskSuccess, cleanResultText, resultJSON, "")
+		}
+	}
+
 	return s.db.MarkAnalysisTaskFinished(taskID, models.TaskSuccess, resultText, resultJSON, "")
 }
 
@@ -415,6 +430,84 @@ func normalizeAnalysisCreationError(err error) error {
 	}
 
 	return err
+}
+
+const (
+	analysisMetadataStart = "<!-- OJREVIEW_METADATA"
+	analysisMetadataEnd   = "-->"
+)
+
+type analysisMetadataPayload struct {
+	ErrorPatterns []analysisMetadataPattern `json:"error_patterns"`
+}
+
+type analysisMetadataPattern struct {
+	Type         string  `json:"type"`
+	PatternType  string  `json:"pattern_type"`
+	Description  string  `json:"description"`
+	Confidence   float64 `json:"confidence"`
+	AIConfidence float64 `json:"ai_confidence"`
+	SubmissionID string  `json:"submission_id"`
+}
+
+func extractAnalysisMetadata(content string, problemID int64) (string, []models.ErrorPattern) {
+	clean, patterns, hasMetadata := extractAnalysisMetadataForPersistence(content, problemID)
+	if !hasMetadata {
+		return content, nil
+	}
+	return clean, patterns
+}
+
+func extractAnalysisMetadataForPersistence(content string, problemID int64) (string, []models.ErrorPattern, bool) {
+	start := strings.LastIndex(content, analysisMetadataStart)
+	if start < 0 {
+		return content, nil, false
+	}
+
+	afterStart := start + len(analysisMetadataStart)
+	endRel := strings.Index(content[afterStart:], analysisMetadataEnd)
+	if endRel < 0 {
+		return content, nil, false
+	}
+
+	end := afterStart + endRel
+	afterEnd := end + len(analysisMetadataEnd)
+	if strings.TrimSpace(content[afterEnd:]) != "" {
+		return content, nil, false
+	}
+
+	rawMetadata := strings.TrimSpace(content[afterStart:end])
+
+	var payload analysisMetadataPayload
+	if err := json.Unmarshal([]byte(rawMetadata), &payload); err != nil {
+		return content, nil, false
+	}
+
+	patterns := make([]models.ErrorPattern, 0, len(payload.ErrorPatterns))
+	for _, item := range payload.ErrorPatterns {
+		patternType := strings.TrimSpace(item.PatternType)
+		if patternType == "" {
+			patternType = strings.TrimSpace(item.Type)
+		}
+		if patternType == "" {
+			continue
+		}
+		confidence := item.Confidence
+		if confidence == 0 && item.AIConfidence != 0 {
+			confidence = item.AIConfidence
+		}
+		confidence = math.Max(0, math.Min(1, confidence))
+		patterns = append(patterns, models.ErrorPattern{
+			ProblemID:    problemID,
+			PatternType:  patternType,
+			Description:  strings.TrimSpace(item.Description),
+			Confidence:   confidence,
+			SubmissionID: strings.TrimSpace(item.SubmissionID),
+		})
+	}
+
+	clean := content[:start] + content[afterEnd:]
+	return clean, patterns, true
 }
 
 // handleErrorPatternStats returns aggregated error pattern statistics.
