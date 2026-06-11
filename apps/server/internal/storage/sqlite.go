@@ -16,27 +16,30 @@ import (
 	"ojreviewdesktop/internal/models"
 )
 
-const schemaVersion = 7
+const schemaVersion = 8
 
 // allowedTables is a whitelist of table names that can be modified by addColumnIfMissing.
 // This prevents SQL injection attacks through malicious table names.
 var allowedTables = map[string]bool{
-	"platform_accounts":     true,
-	"problems":              true,
-	"submissions":           true,
-	"problem_review_states": true,
-	"review_snapshots":      true,
-	"analysis_tasks":        true,
-	"sync_tasks":            true,
-	"owner_profile":         true,
-	"schema_meta":           true,
-	"problem_chats":         true,
-	"contests":              true,
-	"goals":                 true,
-	"error_patterns":        true,
-	"knowledge_nodes":       true,
-	"problem_knowledge":     true,
-	"rating_history":        true,
+	"platform_accounts":       true,
+	"problems":                true,
+	"submissions":             true,
+	"problem_review_states":   true,
+	"review_snapshots":        true,
+	"analysis_tasks":          true,
+	"sync_tasks":              true,
+	"owner_profile":           true,
+	"schema_meta":             true,
+	"problem_chats":           true,
+	"contests":                true,
+	"goals":                   true,
+	"error_patterns":          true,
+	"knowledge_nodes":         true,
+	"problem_knowledge":       true,
+	"rating_history":          true,
+	"problem_pool":            true,
+	"problem_pool_tags":       true,
+	"problem_pool_sync_tasks": true,
 }
 
 // DB is the SQLite database connection
@@ -265,6 +268,50 @@ CREATE TABLE IF NOT EXISTS problems (
   updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
   UNIQUE(platform, external_problem_id)
 );
+CREATE TABLE IF NOT EXISTS problem_pool (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  platform TEXT NOT NULL,
+  external_problem_id TEXT NOT NULL,
+  external_contest_id TEXT,
+  problem_index TEXT NOT NULL DEFAULT '',
+  title TEXT NOT NULL,
+  url TEXT,
+  difficulty_value INTEGER,
+  difficulty_raw_value INTEGER,
+  difficulty_scale TEXT NOT NULL DEFAULT '',
+  source TEXT NOT NULL DEFAULT '',
+  solver_count INTEGER,
+  is_experimental INTEGER NOT NULL DEFAULT 0,
+  fetched_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  last_seen_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(platform, external_problem_id)
+);
+CREATE TABLE IF NOT EXISTS problem_pool_tags (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  problem_pool_id INTEGER NOT NULL,
+  tag_name TEXT NOT NULL,
+  tag_source TEXT NOT NULL,
+  confidence REAL NOT NULL DEFAULT 1.0,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(problem_pool_id, tag_name, tag_source),
+  FOREIGN KEY(problem_pool_id) REFERENCES problem_pool(id) ON DELETE CASCADE
+);
+CREATE TABLE IF NOT EXISTS problem_pool_sync_tasks (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  status TEXT NOT NULL,
+  platforms_json TEXT NOT NULL DEFAULT '[]',
+  fetched_count INTEGER NOT NULL DEFAULT 0,
+  inserted_count INTEGER NOT NULL DEFAULT 0,
+  updated_count INTEGER NOT NULL DEFAULT 0,
+  error_message TEXT,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  started_at TEXT,
+  finished_at TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_problem_pool_platform ON problem_pool(platform);
+CREATE INDEX IF NOT EXISTS idx_problem_pool_difficulty ON problem_pool(platform, difficulty_value);
+CREATE INDEX IF NOT EXISTS idx_problem_pool_tags_name ON problem_pool_tags(tag_name, tag_source);
 CREATE TABLE IF NOT EXISTS problem_tags (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
   problem_id INTEGER NOT NULL,
@@ -492,6 +539,55 @@ ALTER TABLE error_patterns_v7 RENAME TO error_patterns;
 CREATE INDEX IF NOT EXISTS idx_error_patterns_problem ON error_patterns(problem_id);
 CREATE INDEX IF NOT EXISTS idx_error_patterns_type ON error_patterns(pattern_type);`); err != nil {
 			return fmt.Errorf("migrate v6->v7 add error_patterns cascade: %w", err)
+		}
+	}
+	if currentVersion < 8 {
+		if _, err := db.conn.Exec(`
+CREATE TABLE IF NOT EXISTS problem_pool (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  platform TEXT NOT NULL,
+  external_problem_id TEXT NOT NULL,
+  external_contest_id TEXT,
+  problem_index TEXT NOT NULL DEFAULT '',
+  title TEXT NOT NULL,
+  url TEXT,
+  difficulty_value INTEGER,
+  difficulty_raw_value INTEGER,
+  difficulty_scale TEXT NOT NULL DEFAULT '',
+  source TEXT NOT NULL DEFAULT '',
+  solver_count INTEGER,
+  is_experimental INTEGER NOT NULL DEFAULT 0,
+  fetched_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  last_seen_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(platform, external_problem_id)
+);
+CREATE TABLE IF NOT EXISTS problem_pool_tags (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  problem_pool_id INTEGER NOT NULL,
+  tag_name TEXT NOT NULL,
+  tag_source TEXT NOT NULL,
+  confidence REAL NOT NULL DEFAULT 1.0,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  UNIQUE(problem_pool_id, tag_name, tag_source),
+  FOREIGN KEY(problem_pool_id) REFERENCES problem_pool(id) ON DELETE CASCADE
+);
+CREATE TABLE IF NOT EXISTS problem_pool_sync_tasks (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  status TEXT NOT NULL,
+  platforms_json TEXT NOT NULL DEFAULT '[]',
+  fetched_count INTEGER NOT NULL DEFAULT 0,
+  inserted_count INTEGER NOT NULL DEFAULT 0,
+  updated_count INTEGER NOT NULL DEFAULT 0,
+  error_message TEXT,
+  created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  started_at TEXT,
+  finished_at TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_problem_pool_platform ON problem_pool(platform);
+CREATE INDEX IF NOT EXISTS idx_problem_pool_difficulty ON problem_pool(platform, difficulty_value);
+CREATE INDEX IF NOT EXISTS idx_problem_pool_tags_name ON problem_pool_tags(tag_name, tag_source);`); err != nil {
+			return fmt.Errorf("migrate v7->v8 create problem pool: %w", err)
 		}
 	}
 	_, err := db.conn.Exec(`
