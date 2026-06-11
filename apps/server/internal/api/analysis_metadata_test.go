@@ -290,6 +290,52 @@ func TestRunAnalysisTask_GlobalSnapshotDoesNotStripOrPersistMetadata(t *testing.
 	}
 }
 
+func TestErrorPatternStats_ReturnsPersistedPatterns(t *testing.T) {
+	server := newTestServer(t)
+	problem, err := server.db.UpsertProblem(models.Problem{
+		Platform:          models.PlatformCodeforces,
+		ExternalProblemID: "1000/A",
+		Title:             "A",
+	})
+	if err != nil {
+		t.Fatalf("upsert problem: %v", err)
+	}
+	if err := server.db.SaveErrorPatterns(problem.ID, []models.ErrorPattern{
+		{PatternType: "boundary", Confidence: 0.8},
+		{PatternType: "boundary", Confidence: 1.0},
+	}); err != nil {
+		t.Fatalf("save error patterns: %v", err)
+	}
+
+	req := httptest.NewRequest(http.MethodGet, "/api/error-patterns/stats", nil)
+	rec := httptest.NewRecorder()
+	server.Router().ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d, want %d; body=%s", rec.Code, http.StatusOK, rec.Body.String())
+	}
+	var stats []struct {
+		PatternType   string  `json:"pattern_type"`
+		Count         int     `json:"count"`
+		AvgConfidence float64 `json:"avg_confidence"`
+	}
+	if err := json.NewDecoder(rec.Body).Decode(&stats); err != nil {
+		t.Fatalf("decode stats: %v", err)
+	}
+	if len(stats) != 1 {
+		t.Fatalf("len(stats) = %d, want 1", len(stats))
+	}
+	if stats[0].PatternType != "boundary" {
+		t.Fatalf("PatternType = %q, want boundary", stats[0].PatternType)
+	}
+	if stats[0].Count != 2 {
+		t.Fatalf("Count = %d, want 2", stats[0].Count)
+	}
+	if stats[0].AvgConfidence != 0.9 {
+		t.Fatalf("AvgConfidence = %v, want 0.9", stats[0].AvgConfidence)
+	}
+}
+
 func newAnalysisProviderServer(t *testing.T, resultText string) *httptest.Server {
 	t.Helper()
 
