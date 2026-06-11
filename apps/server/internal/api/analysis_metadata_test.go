@@ -103,9 +103,7 @@ func TestExtractAnalysisMetadata_AllowsTrailingWhitespaceAfterFinalMetadataBlock
 Middle
 <!-- OJREVIEW_METADATA
 {"error_patterns":[{"pattern_type":"final","description":"kept","confidence":0.75}]}
--->
-  
-	`
+-->` + "\n  \n\t"
 
 	clean, patterns := extractAnalysisMetadata(input, 99)
 	wantClean := `Intro
@@ -113,9 +111,7 @@ Middle
 {"error_patterns":[{"pattern_type":"first","description":"ignored","confidence":0.25}]}
 -->
 Middle
-
-  
-	`
+` + "\n  \n\t"
 	if clean != wantClean {
 		t.Fatalf("clean text = %q, want %q", clean, wantClean)
 	}
