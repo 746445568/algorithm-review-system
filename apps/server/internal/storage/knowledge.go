@@ -179,6 +179,40 @@ JOIN knowledge_nodes kn ON kn.name = pt.tag_name`)
 	return int(nodesCreated64), int(linksCreated64), nil
 }
 
+type RadarItem struct {
+	Name     string  `json:"name"`
+	Mastery  float64 `json:"mastery"`
+	Problems int     `json:"problems"`
+}
+
+func (db *DB) GetRadarData(limit int) ([]RadarItem, error) {
+	if limit <= 0 {
+		limit = 8
+	}
+	rows, err := db.conn.Query(`
+SELECT kn.name, COALESCE(AVG(pk.mastery_level), 0) AS avg_mastery, COUNT(pk.problem_id) AS problem_count
+FROM knowledge_nodes kn
+LEFT JOIN problem_knowledge pk ON pk.knowledge_id = kn.id
+GROUP BY kn.id
+HAVING problem_count > 0
+ORDER BY problem_count DESC
+LIMIT ?`, limit)
+	if err != nil {
+		return nil, fmt.Errorf("query radar data: %w", err)
+	}
+	defer rows.Close()
+
+	items := make([]RadarItem, 0)
+	for rows.Next() {
+		var item RadarItem
+		if err := rows.Scan(&item.Name, &item.Mastery, &item.Problems); err != nil {
+			return nil, fmt.Errorf("scan radar item: %w", err)
+		}
+		items = append(items, item)
+	}
+	return items, rows.Err()
+}
+
 const masteryUpdateSQL = `
 UPDATE problem_knowledge
 SET mastery_level = (
