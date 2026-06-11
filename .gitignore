@@ -63,6 +63,7 @@ apps/server/bin/
 !/docs/
 /docs/*
 !/docs/oj-fetch-matrix.md
+!/docs/superpowers/
 /packaging/
 /scripts/
 /AGENTS.md
