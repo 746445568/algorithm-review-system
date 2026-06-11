@@ -98,14 +98,15 @@ body {
 }
 
 .app-shell-v2 {
-  display: block;
-  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  min-height: 0;
   background: var(--bg);
 }
 
 .app-shell-v2 .top-nav.nav {
-  position: fixed;
-  inset: 0 0 auto 0;
+  position: relative;
   z-index: 50;
   display: flex;
   align-items: center;
@@ -297,9 +298,10 @@ body {
 }
 
 .app-shell-v2 .workspace-v2 {
-  height: calc(100vh - var(--nav-h));
+  flex: 1;
+  height: auto;
   min-height: 0;
-  margin-top: var(--nav-h);
+  margin-top: 0;
   padding: 24px;
   overflow: auto;
   background: var(--bg);

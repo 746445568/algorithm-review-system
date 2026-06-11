@@ -135,8 +135,23 @@ export function ContestsPage() {
   }, []);
 
   useEffect(() => {
-    void api.syncContests().catch(() => {});
-    void loadContests(statusFilter);
+    let cancelled = false;
+
+    async function refreshContests() {
+      try {
+        await api.syncContests();
+      } catch {
+        // Keep local cached contests usable when remote contest sync is unavailable.
+      }
+      if (!cancelled) {
+        await loadContests(statusFilter);
+      }
+    }
+
+    void refreshContests();
+    return () => {
+      cancelled = true;
+    };
   }, [statusFilter, loadContests]);
 
   const summary = {

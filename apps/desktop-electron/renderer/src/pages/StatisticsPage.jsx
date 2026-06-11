@@ -9,6 +9,7 @@ import { VerdictDistributionChart } from "../components/statistics/VerdictDistri
 import { KnowledgeGraph } from "../components/statistics/KnowledgeGraph.jsx";
 import { AbilityRadar } from "../components/statistics/AbilityRadar.jsx";
 import { RatingCurve } from "../components/statistics/RatingCurve.jsx";
+import { collectStatisticsData } from "../lib/statisticsData.js";
 import "../styles/ui-statistics.css";
 
 function SubmissionIcon() {
@@ -98,22 +99,6 @@ function calculateStats(submissionStats, reviewStats, reviewSummary) {
   return { totalSubmissions, acCount, acRate, reviewRate, streak };
 }
 
-function normalizeWeeklyData(submissionStats) {
-  return (submissionStats?.weekly ?? []).map((w, index) => ({
-    label: w.label || w.week || `W${index + 1}`,
-    count: w.total || w.count || 0,
-    acCount: w.acCount || 0,
-  }));
-}
-
-function normalizeTagData(reviewStats) {
-  return (reviewStats?.tagAccuracy ?? []).map((t) => ({
-    tag: t.tag,
-    total: t.attempts || t.total || 0,
-    correct: t.acCount || t.correct || 0,
-  }));
-}
-
 export function StatisticsPage() {
   const { t } = useTranslation();
   const [submissionStats, setSubmissionStats] = useState(null);
@@ -131,20 +116,15 @@ export function StatisticsPage() {
     setLoading(true);
     setError(null);
 
-    Promise.all([
-      api.getSubmissionStats(),
-      api.getReviewStats(),
-      api.getReviewSummary(),
-      api.getVerdictStats(),
-      api.getKnowledgeGraph(),
-    ])
-      .then(([sub, rev, summary, verdicts, knowledge]) => {
+    collectStatisticsData(api)
+      .then((data) => {
         if (cancelled) return;
-        setSubmissionStats(sub);
-        setReviewStats(rev);
-        setReviewSummary(summary);
-        setVerdictStats(verdicts);
-        setKnowledgeGraph(knowledge);
+        setSubmissionStats(data.submissionStats);
+        setReviewStats(data.reviewStats);
+        setReviewSummary(data.reviewSummary);
+        setVerdictStats(data.verdictStats);
+        setKnowledgeGraph(data.knowledgeGraph);
+        setError(data.error);
       })
       .catch((err) => {
         if (cancelled) return;
@@ -163,8 +143,8 @@ export function StatisticsPage() {
     () => calculateStats(submissionStats, reviewStats, reviewSummary),
     [submissionStats, reviewStats, reviewSummary],
   );
-  const weeklyData = useMemo(() => normalizeWeeklyData(submissionStats), [submissionStats]);
-  const tagData = useMemo(() => normalizeTagData(reviewStats), [reviewStats]);
+  const weeklyData = useMemo(() => submissionStats?.weekly ?? [], [submissionStats]);
+  const tagData = useMemo(() => submissionStats?.tagAccuracy ?? [], [submissionStats]);
   const trendSubtitle = period === "month" ? t('statistics.monthlyView') : t('statistics.weeklyView');
 
   async function handleSyncKnowledgeGraph() {
@@ -205,16 +185,10 @@ export function StatisticsPage() {
     );
   }
 
-  if (error) {
-    return (
-      <div className="page-content statistics-page stats-page">
-        <p className="error-text">{error}</p>
-      </div>
-    );
-  }
-
   return (
     <div className="page-content statistics-page stats-page">
+      {error ? <p className="error-text">{error}</p> : null}
+
       <div className="stats-summary-grid stats-grid4">
         <StatCard title={t('statistics.totalSubmissions')} value={stats.totalSubmissions} subtitle={t('statistics.last12Weeks')} icon={<SubmissionIcon />} />
         <StatCard

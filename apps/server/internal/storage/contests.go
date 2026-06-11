@@ -49,14 +49,11 @@ WHERE platform = ? AND external_contest_id = ?`, c.Platform, c.ExternalContestID
 func (db *DB) GetContests(opts ContestQueryOptions) ([]models.Contest, error) {
 	var conditions []string
 	args := make([]any, 0)
+	statusFilter := strings.TrimSpace(strings.ToUpper(opts.Status))
 
 	if opts.Platform != nil {
 		conditions = append(conditions, "platform = ?")
 		args = append(args, *opts.Platform)
-	}
-	if strings.TrimSpace(opts.Status) != "" {
-		conditions = append(conditions, "status = ?")
-		args = append(args, strings.TrimSpace(strings.ToUpper(opts.Status)))
 	}
 
 	query := `
@@ -66,14 +63,6 @@ FROM contests`
 		query += " WHERE " + strings.Join(conditions, " AND ")
 	}
 	query += " ORDER BY start_time ASC, id ASC"
-	if opts.Limit > 0 {
-		query += " LIMIT ?"
-		args = append(args, opts.Limit)
-		if opts.Offset > 0 {
-			query += " OFFSET ?"
-			args = append(args, opts.Offset)
-		}
-	}
 
 	rows, err := db.conn.Query(query, args...)
 	if err != nil {
@@ -82,12 +71,35 @@ FROM contests`
 	defer rows.Close()
 
 	items := make([]models.Contest, 0)
+	now := time.Now().UTC()
 	for rows.Next() {
 		item, err := scanContestRecord(rows)
 		if err != nil {
 			return nil, fmt.Errorf("get contests: scan row: %w", err)
 		}
+		item.Status = currentContestStatus(item, now)
+		if statusFilter != "" && item.Status != statusFilter {
+			continue
+		}
+		if opts.Offset > 0 {
+			opts.Offset--
+			continue
+		}
 		items = append(items, item)
+		if opts.Limit > 0 && len(items) >= opts.Limit {
+			break
+		}
 	}
 	return items, rows.Err()
+}
+
+func currentContestStatus(contest models.Contest, now time.Time) string {
+	start := contest.StartTime.UTC()
+	if start.After(now) {
+		return "UPCOMING"
+	}
+	if contest.DurationMinutes > 0 && start.Add(time.Duration(contest.DurationMinutes)*time.Minute).After(now) {
+		return "ONGOING"
+	}
+	return "FINISHED"
 }
