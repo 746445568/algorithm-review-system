@@ -72,31 +72,9 @@ func (a *AtCoderAdapter) loadProblems(ctx context.Context) (map[string]atCoderPr
 		return a.problemsByID, nil
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, atCoderProblemsURL, nil)
-	if err != nil {
-		return nil, fmt.Errorf("create atcoder problems request: %w", err)
-	}
-	setAtCoderHeaders(req)
-
-	resp, err := a.client.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("request atcoder problems: %w", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode != http.StatusOK {
-		return nil, fmt.Errorf("atcoder problems returned status %d", resp.StatusCode)
-	}
-
-	body, err := atCoderBody(resp)
-	if err != nil {
-		return nil, err
-	}
-	defer body.Close()
-
 	var problems []atCoderProblem
-	if err := json.NewDecoder(body).Decode(&problems); err != nil {
-		return nil, fmt.Errorf("decode atcoder problems response: %w", err)
+	if err := a.fetchAtCoderResource(ctx, atCoderProblemsURLPath, &problems); err != nil {
+		return nil, err
 	}
 
 	a.problemsByID = make(map[string]atCoderProblem, len(problems))
