@@ -62,7 +62,7 @@ func main() {
 	queue := jobs.NewQueue(db)
 	apiServer := api.NewServer(cfg, db, queue)
 	queue.SetAdapters(apiServer.Adapters())
-	queue.SetTaskRunners(apiServer.ResumeSyncTask, apiServer.ResumeAnalysisTask)
+	queue.SetTaskRunners(apiServer.ResumeSyncTask, apiServer.ResumeAnalysisTask, apiServer.ResumeProblemPoolSyncTask)
 
 	queue.Start(ctx)
 	if err := queue.ResumePending(ctx); err != nil {

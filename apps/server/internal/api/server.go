@@ -100,6 +100,8 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("POST /api/review/items/{problemId}/rate", s.handleRateReview)
 	s.mux.HandleFunc("GET /api/contests", s.handleContests)
 	s.mux.HandleFunc("POST /api/contests/sync", s.handleSyncContests)
+	s.mux.HandleFunc("POST /api/problem-pool/sync", s.handleSyncProblemPool)
+	s.mux.HandleFunc("GET /api/problem-pool/sync-tasks", s.handleProblemPoolSyncTasks)
 	s.mux.HandleFunc("POST /api/import/problem-statement", s.handleImportProblemStatement)
 	s.mux.HandleFunc("POST /api/import/submission-source", s.handleImportSubmissionSource)
 	s.mux.HandleFunc("POST /api/analysis/generate", s.handleAnalysisGenerate)
