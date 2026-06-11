@@ -6,6 +6,7 @@ import { useNavigation } from "../../lib/NavigationContext.jsx";
 import { useDashboardData } from "../../hooks/useDashboardData.js";
 import { HeroSection } from "./HeroSection.jsx";
 import { GoalProgress } from "./GoalProgress.jsx";
+import { LearningRecommendationCard } from "./LearningRecommendationCard.jsx";
 import { SubmissionChart } from "../statistics/SubmissionChart.jsx";
 import { ReviewCalendar } from "../ReviewCalendar.jsx";
 import "../../styles/ui-dashboard-review.css";
@@ -112,6 +113,8 @@ export function DashboardPage({ serviceStatus }) {
         navigateTo={navigateTo}
         loading={isLoading}
       />
+
+      <LearningRecommendationCard serviceStatus={serviceStatus} navigateTo={navigateTo} />
 
       <ReviewCalendar />
 
