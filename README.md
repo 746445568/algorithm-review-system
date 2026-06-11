@@ -1,61 +1,91 @@
 # OJ Review Desktop
 
-OJ Review Desktop is a local-first desktop app for algorithm practice review. It syncs online judge submissions, analyzes wrong attempts with an OpenAI-compatible LLM provider, stores data locally in SQLite, and schedules follow-up reviews.
+[![Release](https://github.com/746445568/algorithm-review-system/actions/workflows/release.yml/badge.svg)](https://github.com/746445568/algorithm-review-system/releases)
 
-This repository keeps only the software needed to run and build the desktop product:
+OJ Review Desktop is a local-first desktop app for algorithm competition review. It syncs online judge submissions (Codeforces / AtCoder), analyzes wrong attempts with an OpenAI-compatible LLM provider, stores data locally in SQLite, and schedules follow-up reviews using the SM-2 spaced repetition algorithm.
 
-```text
-algorithm-review-system/
-├── apps/
-│   ├── desktop-electron/  # Electron shell and React/Vite renderer
-│   └── server/            # Go ojreviewd service
-├── .env.example
-├── package.json
-└── package-lock.json
-```
+## Features
+
+- 🔄 **Multi-platform sync** — Codeforces and AtCoder submission history
+- 🤖 **AI-powered analysis** — Automatic error pattern detection, knowledge graph, and problem analysis
+- 📅 **Spaced repetition** — Adaptive SM-2 algorithm with review calendar and streak tracking
+- 📊 **Statistics & visualization** — Verdict distribution, ability radar, rating curve, knowledge graph
+- 💬 **Chat with AI** — Socratic tutoring mode and direct Q&A for each problem
+- 🌐 **Cross-platform** — Windows, macOS, Linux
+
+## Installation
+
+Download the latest release from the [Releases page](https://github.com/746445568/algorithm-review-system/releases).
+
+| Platform | Package |
+|----------|---------|
+| Windows  | `OJReviewDesktop-x.x.x-win-x64.exe` (NSIS installer) |
+| macOS    | `OJReviewDesktop-x.x.x-mac-x64.dmg` |
+| Linux    | `OJReviewDesktop-x.x.x-linux-x64.AppImage` |
+
+## Quick Start
+
+1. Install and launch the app
+2. Add your Codeforces or AtCoder account in Settings
+3. Configure an AI provider (OpenAI / DeepSeek / Ollama) in Settings
+4. Sync your submissions — the app will fetch your history
+5. Review problems and get AI-powered analysis
 
 ## Development
 
-Install desktop dependencies:
+See [CONTRIBUTING.md](./CONTRIBUTING.md) for detailed setup instructions.
+
+### Prerequisites
+
+- Go 1.22+
+- Node.js 20+
+
+### Quick Start
 
 ```bash
+# Backend
+cd apps/server
+go run ./cmd/ojreviewd
+
+# Frontend (in another terminal)
 cd apps/desktop-electron
 npm install
+npm run dev
 ```
 
-Run the desktop app from the repository root:
+### Run Tests
 
 ```bash
-npm run desktop:dev
+# Backend tests
+cd apps/server && go test ./...
+
+# Frontend tests
+cd apps/desktop-electron && npm test
 ```
 
-Run the Go service directly:
+## Architecture
 
-```bash
-npm run server:dev
+```
+[browser extension]  --HTTP POST--> [Go Server :38473] <--HTTP REST-- [Electron renderer]
+                                        |
+                                  [SQLite + AES Vault]
 ```
 
-Run checks:
+- **Go server** (`apps/server`) — REST API, SQLite storage, AI integration, sync engine
+- **Electron app** (`apps/desktop-electron`) — React 19 + Vite renderer, offline-first with IndexedDB cache
+- **Browser extension** (`apps/browser-extension`) — Import problem statements and submission sources
 
-```bash
-npm run server:test
-npm run desktop:build
-```
+See [CLAUDE.md](./CLAUDE.md) for the full architecture overview.
 
-## Service
+## Tech Stack
 
-The Electron app starts `ojreviewd` through its ServiceManager. The service listens on `127.0.0.1:38473`, exposes `GET /health`, and serves REST APIs under `/api/*`.
-
-## Environment
-
-Common settings are configured from `.env` or the desktop settings UI:
-
-| Variable | Purpose |
-| --- | --- |
-| `LLM_API_KEY` | API key for the LLM provider |
-| `LLM_API_BASE` | OpenAI-compatible API base URL |
-| `LLM_MODEL` | Model used for analysis |
-| `OJREVIEW_SERVICE_PATH` | Optional explicit path to the Go service binary |
+| Layer | Technology |
+|-------|-----------|
+| Backend | Go 1.22+, standard `net/http`, SQLite (pure-Go via `modernc.org/sqlite`) |
+| Frontend | React 19, Vite 7, SWR, react-i18next |
+| Desktop | Electron 37, electron-builder, electron-updater |
+| AI | OpenAI-compatible API (OpenAI / DeepSeek / Ollama) |
+| Testing | Go stdlib `testing`, Playwright |
 
 ## License
 
