@@ -58,3 +58,35 @@ func TestProblemPoolSyncEndpointRejectsDuplicateActiveTask(t *testing.T) {
 		t.Fatalf("status = %d, want %d; body=%s", rec.Code, http.StatusConflict, rec.Body.String())
 	}
 }
+
+func TestProblemPoolSyncEndpointMarksTaskFailedWhenQueueRejects(t *testing.T) {
+	server := newTestServer(t)
+	server.queue = &recordingQueue{reject: true}
+
+	req := httptest.NewRequest(http.MethodPost, "/api/problem-pool/sync", nil)
+	rec := httptest.NewRecorder()
+	server.Router().ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusConflict {
+		t.Fatalf("status = %d, want %d; body=%s", rec.Code, http.StatusConflict, rec.Body.String())
+	}
+
+	tasks, err := server.db.ListProblemPoolSyncTasks()
+	if err != nil {
+		t.Fatalf("list tasks: %v", err)
+	}
+	if len(tasks) != 1 {
+		t.Fatalf("tasks = %d, want 1", len(tasks))
+	}
+	if tasks[0].Status != models.TaskFailed {
+		t.Fatalf("task status = %s, want FAILED", tasks[0].Status)
+	}
+
+	server.queue = &recordingQueue{}
+	req = httptest.NewRequest(http.MethodPost, "/api/problem-pool/sync", nil)
+	rec = httptest.NewRecorder()
+	server.Router().ServeHTTP(rec, req)
+	if rec.Code != http.StatusAccepted {
+		t.Fatalf("second status = %d, want %d; body=%s", rec.Code, http.StatusAccepted, rec.Body.String())
+	}
+}

@@ -36,6 +36,7 @@ type AtCoderAdapter struct {
 	client          *http.Client
 	resourceBaseURL string
 	requestSpacing  time.Duration
+	sleep           func(context.Context, time.Duration) error
 
 	problemsMu     sync.RWMutex
 	problemsByID   map[string]atCoderProblem
@@ -47,6 +48,7 @@ func NewAtCoderAdapter() Adapter {
 		client:          &http.Client{Timeout: 30 * time.Second},
 		resourceBaseURL: atCoderResourceBaseURL,
 		requestSpacing:  atCoderResourceMinSpacing,
+		sleep:           sleepWithContext,
 	}
 }
 
@@ -223,6 +225,9 @@ func (a *AtCoderAdapter) FetchProblemCatalog(ctx context.Context) ([]models.Prob
 	problemsByID, err := a.loadProblems(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("load atcoder problems: %w", err)
+	}
+	if err := a.sleepBetweenAtCoderResources(ctx); err != nil {
+		return nil, err
 	}
 
 	var mergedProblems []atCoderMergedProblem
@@ -462,7 +467,15 @@ func (a *AtCoderAdapter) sleepBetweenAtCoderResources(ctx context.Context) error
 	if a.requestSpacing <= 0 {
 		return nil
 	}
-	timer := time.NewTimer(a.requestSpacing)
+	sleep := a.sleep
+	if sleep == nil {
+		sleep = sleepWithContext
+	}
+	return sleep(ctx, a.requestSpacing)
+}
+
+func sleepWithContext(ctx context.Context, duration time.Duration) error {
+	timer := time.NewTimer(duration)
 	defer timer.Stop()
 
 	select {

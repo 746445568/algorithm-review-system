@@ -72,7 +72,10 @@ func TestAtCoderFetchProblemCatalogMergesDifficulty(t *testing.T) {
 	adapter := &AtCoderAdapter{
 		client:          server.Client(),
 		resourceBaseURL: server.URL + "/resources",
-		requestSpacing:  0,
+		requestSpacing:  time.Millisecond,
+		sleep: func(_ context.Context, _ time.Duration) error {
+			return nil
+		},
 	}
 	items, err := adapter.FetchProblemCatalog(context.Background())
 	if err != nil {
@@ -90,6 +93,44 @@ func TestAtCoderFetchProblemCatalogMergesDifficulty(t *testing.T) {
 	}
 	if len(item.Tags) != 1 || item.Tags[0].Name != "ABC" || item.Tags[0].Source != TagSourceAtCoderContestCategory {
 		t.Fatalf("tags = %+v", item.Tags)
+	}
+}
+
+func TestAtCoderFetchProblemCatalogSpacesResourceRequests(t *testing.T) {
+	mux := http.NewServeMux()
+	mux.HandleFunc("/resources/problems.json", func(w http.ResponseWriter, _ *http.Request) {
+		_ = json.NewEncoder(w).Encode([]atCoderProblem{{ID: "abc300_a", Title: "A", ContestID: "abc300"}})
+	})
+	mux.HandleFunc("/resources/merged-problems.json", func(w http.ResponseWriter, _ *http.Request) {
+		_ = json.NewEncoder(w).Encode([]atCoderMergedProblem{{ID: "abc300_a", ContestID: "abc300", Title: "A"}})
+	})
+	mux.HandleFunc("/resources/problem-models.json", func(w http.ResponseWriter, _ *http.Request) {
+		_ = json.NewEncoder(w).Encode(map[string]atCoderProblemModel{})
+	})
+	mux.HandleFunc("/resources/contest-problem.json", func(w http.ResponseWriter, _ *http.Request) {
+		_ = json.NewEncoder(w).Encode([]atCoderContestProblem{{ContestID: "abc300", ProblemID: "abc300_a"}})
+	})
+	server := httptest.NewServer(mux)
+	defer server.Close()
+
+	sleepCalls := 0
+	adapter := &AtCoderAdapter{
+		client:          server.Client(),
+		resourceBaseURL: server.URL + "/resources",
+		requestSpacing:  time.Millisecond,
+		sleep: func(_ context.Context, duration time.Duration) error {
+			sleepCalls++
+			if duration != time.Millisecond {
+				t.Fatalf("duration = %s, want %s", duration, time.Millisecond)
+			}
+			return nil
+		},
+	}
+	if _, err := adapter.FetchProblemCatalog(context.Background()); err != nil {
+		t.Fatalf("fetch atcoder catalog: %v", err)
+	}
+	if sleepCalls != 3 {
+		t.Fatalf("sleep calls = %d, want 3", sleepCalls)
 	}
 }
 

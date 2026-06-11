@@ -13,10 +13,14 @@ import (
 )
 
 type recordingQueue struct {
-	jobs []jobs.Job
+	jobs   []jobs.Job
+	reject bool
 }
 
 func (q *recordingQueue) Enqueue(job jobs.Job) bool {
+	if q.reject {
+		return false
+	}
 	q.jobs = append(q.jobs, job)
 	return true
 }

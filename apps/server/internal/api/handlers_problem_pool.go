@@ -49,6 +49,7 @@ func (s *Server) handleSyncProblemPool(w http.ResponseWriter, r *http.Request) {
 			return s.runProblemPoolSyncTask(ctx, taskID)
 		},
 	}) {
+		_ = s.db.MarkProblemPoolSyncTaskFinished(taskID, models.TaskFailed, 0, 0, 0, "problem pool sync queue rejected job")
 		writeError(w, http.StatusConflict, "problem pool sync task already queued")
 		return
 	}
