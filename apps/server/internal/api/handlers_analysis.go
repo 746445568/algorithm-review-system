@@ -363,11 +363,13 @@ func (s *Server) runAnalysisTask(ctx context.Context, taskID int64) error {
 		return s.db.MarkAnalysisTaskFinished(taskID, models.TaskFailed, resultText, resultJSON, "load snapshot problem id failed: "+err.Error())
 	}
 	if problemID != nil {
-		cleanResultText, patterns := extractAnalysisMetadata(resultText, *problemID)
-		if err := s.db.SaveErrorPatterns(*problemID, patterns); err != nil {
-			return s.db.MarkAnalysisTaskFinished(taskID, models.TaskFailed, cleanResultText, resultJSON, "save error patterns failed: "+err.Error())
+		cleanResultText, patterns, hasMetadata := extractAnalysisMetadataForPersistence(resultText, *problemID)
+		if hasMetadata {
+			if err := s.db.SaveErrorPatterns(*problemID, patterns); err != nil {
+				return s.db.MarkAnalysisTaskFinished(taskID, models.TaskFailed, cleanResultText, resultJSON, "save error patterns failed: "+err.Error())
+			}
+			return s.db.MarkAnalysisTaskFinished(taskID, models.TaskSuccess, cleanResultText, resultJSON, "")
 		}
-		return s.db.MarkAnalysisTaskFinished(taskID, models.TaskSuccess, cleanResultText, resultJSON, "")
 	}
 
 	return s.db.MarkAnalysisTaskFinished(taskID, models.TaskSuccess, resultText, resultJSON, "")
@@ -449,28 +451,36 @@ type analysisMetadataPattern struct {
 }
 
 func extractAnalysisMetadata(content string, problemID int64) (string, []models.ErrorPattern) {
+	clean, patterns, hasMetadata := extractAnalysisMetadataForPersistence(content, problemID)
+	if !hasMetadata {
+		return content, nil
+	}
+	return clean, patterns
+}
+
+func extractAnalysisMetadataForPersistence(content string, problemID int64) (string, []models.ErrorPattern, bool) {
 	start := strings.LastIndex(content, analysisMetadataStart)
 	if start < 0 {
-		return content, nil
+		return content, nil, false
 	}
 
 	afterStart := start + len(analysisMetadataStart)
 	endRel := strings.Index(content[afterStart:], analysisMetadataEnd)
 	if endRel < 0 {
-		return content, nil
+		return content, nil, false
 	}
 
 	end := afterStart + endRel
 	afterEnd := end + len(analysisMetadataEnd)
 	if strings.TrimSpace(content[afterEnd:]) != "" {
-		return content, nil
+		return content, nil, false
 	}
 
 	rawMetadata := strings.TrimSpace(content[afterStart:end])
 
 	var payload analysisMetadataPayload
 	if err := json.Unmarshal([]byte(rawMetadata), &payload); err != nil {
-		return content, nil
+		return content, nil, false
 	}
 
 	patterns := make([]models.ErrorPattern, 0, len(payload.ErrorPatterns))
@@ -497,7 +507,7 @@ func extractAnalysisMetadata(content string, problemID int64) (string, []models.
 	}
 
 	clean := content[:start] + content[afterEnd:]
-	return clean, patterns
+	return clean, patterns, true
 }
 
 // handleErrorPatternStats returns aggregated error pattern statistics.

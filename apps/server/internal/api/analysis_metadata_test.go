@@ -286,6 +286,164 @@ func TestRunAnalysisTask_GlobalSnapshotDoesNotStripOrPersistMetadata(t *testing.
 	}
 }
 
+func TestRunAnalysisTask_InvalidOrMissingMetadataPreservesExistingPatterns(t *testing.T) {
+	testCases := []struct {
+		name       string
+		resultText string
+	}{
+		{
+			name:       "missing metadata",
+			resultText: "## Analysis\n\nNo metadata.",
+		},
+		{
+			name: "invalid metadata",
+			resultText: `## Analysis
+
+<!-- OJREVIEW_METADATA
+{"error_patterns":[}
+-->`,
+		},
+	}
+
+	for _, testCase := range testCases {
+		t.Run(testCase.name, func(t *testing.T) {
+			server := newTestServer(t)
+			provider := newAnalysisProviderServer(t, testCase.resultText)
+			defer provider.Close()
+
+			if err := server.db.SaveAISettings(models.AISettings{
+				Provider: "deepseek",
+				Model:    "deepseek-chat",
+				BaseURL:  provider.URL,
+				APIKey:   "test-key",
+			}); err != nil {
+				t.Fatalf("save AI settings: %v", err)
+			}
+
+			problem, err := server.db.UpsertProblem(models.Problem{
+				Platform:          models.PlatformCodeforces,
+				ExternalProblemID: "1000/A",
+				Title:             "A",
+			})
+			if err != nil {
+				t.Fatalf("upsert problem: %v", err)
+			}
+			if err := server.db.SaveErrorPatterns(problem.ID, []models.ErrorPattern{
+				{PatternType: "boundary", Description: "existing", Confidence: 0.75},
+			}); err != nil {
+				t.Fatalf("seed error patterns: %v", err)
+			}
+
+			problemID := problem.ID
+			task, _, err := server.db.CreateAnalysisTaskWithTypedSnapshot(
+				"deepseek",
+				"deepseek-chat",
+				`{"summary":"ok"}`,
+				"problem",
+				&problemID,
+			)
+			if err != nil {
+				t.Fatalf("create task: %v", err)
+			}
+
+			if err := server.runAnalysisTask(context.Background(), task.ID); err != nil {
+				t.Fatalf("run analysis task: %v", err)
+			}
+
+			finished, err := server.db.GetAnalysisTask(task.ID)
+			if err != nil {
+				t.Fatalf("get task: %v", err)
+			}
+			if finished.Status != models.TaskSuccess {
+				t.Fatalf("status = %s, want %s: %s", finished.Status, models.TaskSuccess, finished.ErrorMessage)
+			}
+			if finished.ResultText != testCase.resultText {
+				t.Fatalf("result text = %q, want original %q", finished.ResultText, testCase.resultText)
+			}
+
+			patterns, err := server.db.GetErrorPatternsByProblem(problem.ID)
+			if err != nil {
+				t.Fatalf("get error patterns: %v", err)
+			}
+			if len(patterns) != 1 {
+				t.Fatalf("len(patterns) = %d, want 1", len(patterns))
+			}
+			if patterns[0].PatternType != "boundary" || patterns[0].Description != "existing" {
+				t.Fatalf("patterns[0] = %#v, want existing boundary pattern", patterns[0])
+			}
+		})
+	}
+}
+
+func TestRunAnalysisTask_ValidEmptyMetadataClearsExistingPatterns(t *testing.T) {
+	server := newTestServer(t)
+	resultText := `## Analysis
+
+<!-- OJREVIEW_METADATA
+{"error_patterns":[]}
+-->`
+	provider := newAnalysisProviderServer(t, resultText)
+	defer provider.Close()
+
+	if err := server.db.SaveAISettings(models.AISettings{
+		Provider: "deepseek",
+		Model:    "deepseek-chat",
+		BaseURL:  provider.URL,
+		APIKey:   "test-key",
+	}); err != nil {
+		t.Fatalf("save AI settings: %v", err)
+	}
+
+	problem, err := server.db.UpsertProblem(models.Problem{
+		Platform:          models.PlatformCodeforces,
+		ExternalProblemID: "1000/A",
+		Title:             "A",
+	})
+	if err != nil {
+		t.Fatalf("upsert problem: %v", err)
+	}
+	if err := server.db.SaveErrorPatterns(problem.ID, []models.ErrorPattern{
+		{PatternType: "boundary", Description: "existing", Confidence: 0.75},
+	}); err != nil {
+		t.Fatalf("seed error patterns: %v", err)
+	}
+
+	problemID := problem.ID
+	task, _, err := server.db.CreateAnalysisTaskWithTypedSnapshot(
+		"deepseek",
+		"deepseek-chat",
+		`{"summary":"ok"}`,
+		"problem",
+		&problemID,
+	)
+	if err != nil {
+		t.Fatalf("create task: %v", err)
+	}
+
+	if err := server.runAnalysisTask(context.Background(), task.ID); err != nil {
+		t.Fatalf("run analysis task: %v", err)
+	}
+
+	finished, err := server.db.GetAnalysisTask(task.ID)
+	if err != nil {
+		t.Fatalf("get task: %v", err)
+	}
+	if finished.Status != models.TaskSuccess {
+		t.Fatalf("status = %s, want %s: %s", finished.Status, models.TaskSuccess, finished.ErrorMessage)
+	}
+	if strings.Contains(finished.ResultText, analysisMetadataStart) {
+		t.Fatalf("result text still contains metadata: %q", finished.ResultText)
+	}
+
+	patterns, err := server.db.GetErrorPatternsByProblem(problem.ID)
+	if err != nil {
+		t.Fatalf("get error patterns: %v", err)
+	}
+	if len(patterns) != 0 {
+		t.Fatalf("len(patterns) = %d, want 0", len(patterns))
+	}
+}
+
 func TestErrorPatternStats_ReturnsPersistedPatterns(t *testing.T) {
 	server := newTestServer(t)
 	problem, err := server.db.UpsertProblem(models.Problem{
