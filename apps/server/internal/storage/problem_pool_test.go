@@ -2,6 +2,7 @@ package storage
 
 import (
 	"testing"
+	"time"
 
 	"ojreviewdesktop/internal/app"
 	cryptovault "ojreviewdesktop/internal/crypto"
@@ -108,5 +109,102 @@ func TestProblemPoolSyncTaskLifecycle(t *testing.T) {
 	}
 	if got.Status != models.TaskSuccess || got.FetchedCount != 10 || got.InsertedCount != 7 || got.UpdatedCount != 3 {
 		t.Fatalf("task = %+v", got)
+	}
+}
+
+func TestGetRecommendationPrefersWeakKnowledgePoolItem(t *testing.T) {
+	db := openProblemPoolTestDB(t)
+	problem, err := db.UpsertProblem(models.Problem{
+		Platform:          models.PlatformCodeforces,
+		ExternalProblemID: "100/A",
+		Title:             "Solved DP",
+		RawTagsJSON:       `["dp"]`,
+	})
+	if err != nil {
+		t.Fatalf("upsert problem: %v", err)
+	}
+	knowledgeID, err := db.UpsertKnowledgeNode("dp", nil, "")
+	if err != nil {
+		t.Fatalf("upsert knowledge: %v", err)
+	}
+	if err := db.SaveProblemKnowledge(problem.ID, []int64{knowledgeID}); err != nil {
+		t.Fatalf("save problem knowledge: %v", err)
+	}
+	if _, err := db.UpsertSubmission(models.Submission{
+		Platform:             models.PlatformCodeforces,
+		ExternalSubmissionID: "1",
+		ProblemID:            problem.ID,
+		Verdict:              models.VerdictWA,
+		SubmittedAt:          time.Now().UTC(),
+		RawJSON:              "{}",
+	}); err != nil {
+		t.Fatalf("upsert submission: %v", err)
+	}
+	if err := db.UpdateMasteryLevels(); err != nil {
+		t.Fatalf("update mastery: %v", err)
+	}
+	if _, err := db.UpsertProblemPoolItems([]models.ProblemPoolItem{{
+		Platform:          models.PlatformCodeforces,
+		ExternalProblemID: "200/A",
+		Title:             "New DP",
+		DifficultyValue:   intPtr(1200),
+		DifficultyScale:   "CODEFORCES_RATING",
+		Source:            "CODEFORCES_PROBLEMSET",
+		Tags: []models.ProblemPoolTag{
+			{Name: "dp", Source: "CODEFORCES_OFFICIAL", Confidence: 1},
+		},
+	}}); err != nil {
+		t.Fatalf("upsert pool: %v", err)
+	}
+
+	recommendation, err := db.GetRecommendation("")
+	if err != nil {
+		t.Fatalf("get recommendation: %v", err)
+	}
+	if recommendation.Problem == nil {
+		t.Fatal("expected recommendation")
+	}
+	if recommendation.Problem.ExternalProblemID != "200/A" || !recommendation.Problem.IsNew {
+		t.Fatalf("recommendation = %+v", recommendation.Problem)
+	}
+	if recommendation.Problem.Reason != "weakest_knowledge" || recommendation.Problem.KnowledgeName != "dp" {
+		t.Fatalf("reason = %s knowledge = %s", recommendation.Problem.Reason, recommendation.Problem.KnowledgeName)
+	}
+}
+
+func TestGetRecommendationFallsBackToRetryFailed(t *testing.T) {
+	db := openProblemPoolTestDB(t)
+	problem, err := db.UpsertProblem(models.Problem{
+		Platform:          models.PlatformCodeforces,
+		ExternalProblemID: "100/B",
+		Title:             "Retry Me",
+		RawTagsJSON:       `["greedy"]`,
+	})
+	if err != nil {
+		t.Fatalf("upsert problem: %v", err)
+	}
+	if _, err := db.UpsertSubmission(models.Submission{
+		Platform:             models.PlatformCodeforces,
+		ExternalSubmissionID: "2",
+		ProblemID:            problem.ID,
+		Verdict:              models.VerdictTLE,
+		SubmittedAt:          time.Now().UTC(),
+		RawJSON:              "{}",
+	}); err != nil {
+		t.Fatalf("upsert submission: %v", err)
+	}
+
+	recommendation, err := db.GetRecommendation("")
+	if err != nil {
+		t.Fatalf("get recommendation: %v", err)
+	}
+	if recommendation.Problem == nil {
+		t.Fatal("expected recommendation")
+	}
+	if recommendation.Problem.ID != problem.ID || recommendation.Problem.IsNew {
+		t.Fatalf("recommendation = %+v", recommendation.Problem)
+	}
+	if recommendation.Problem.Reason != "retry_failed" {
+		t.Fatalf("reason = %s, want retry_failed", recommendation.Problem.Reason)
 	}
 }
