@@ -10,7 +10,8 @@ $ErrorActionPreference = "Stop"
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $serverRoot = Resolve-Path (Join-Path $scriptDir "..")
 $outDir = Join-Path $serverRoot "bin"
-$outPath = Join-Path $outDir "ojreviewd.exe"
+$ext = if ($GOOS -eq "windows" -or -not $GOOS) { ".exe" } else { "" }
+$outPath = Join-Path $outDir "ojreviewd$ext"
 
 if (-not $Version) {
     try {
