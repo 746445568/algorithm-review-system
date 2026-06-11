@@ -149,6 +149,7 @@ type ProblemReviewState struct {
 	IntervalDays    int          `json:"intervalDays"`
 	RepetitionCount int          `json:"repetitionCount"`
 	LastQuality     *int         `json:"lastQuality,omitempty"`
+	QualityHistory  string       `json:"qualityHistory,omitempty"`
 }
 
 type AnalysisTask struct {

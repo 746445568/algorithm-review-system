@@ -16,7 +16,7 @@ import (
 	"ojreviewdesktop/internal/models"
 )
 
-const schemaVersion = 4
+const schemaVersion = 5
 
 // allowedTables is a whitelist of table names that can be modified by addColumnIfMissing.
 // This prevents SQL injection attacks through malicious table names.
@@ -449,6 +449,11 @@ CREATE TABLE IF NOT EXISTS problem_knowledge (
   FOREIGN KEY(knowledge_id) REFERENCES knowledge_nodes(id) ON DELETE CASCADE
 );`); err != nil {
 			return fmt.Errorf("migrate v3->v4 create knowledge graph: %w", err)
+		}
+	}
+	if currentVersion < 5 {
+		if err := db.addColumnIfMissing("problem_review_states", "quality_history", "TEXT DEFAULT '[]'"); err != nil {
+			return fmt.Errorf("migrate v4->v5 add quality_history: %w", err)
 		}
 	}
 	_, err := db.conn.Exec(`

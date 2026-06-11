@@ -14,7 +14,8 @@ import (
 func (db *DB) GetProblemReviewState(problemID int64) (models.ProblemReviewState, error) {
 	row := db.conn.QueryRow(`
 SELECT problem_id, status, notes, next_review_at, last_updated_at,
-       COALESCE(ease_factor, 2.5), COALESCE(interval_days, 0), COALESCE(repetition_count, 0), last_quality
+       COALESCE(ease_factor, 2.5), COALESCE(interval_days, 0), COALESCE(repetition_count, 0), last_quality,
+	       COALESCE(quality_history, '[]')
 FROM problem_review_states
 WHERE problem_id = ?`, problemID)
 
@@ -57,10 +58,15 @@ func (db *DB) SaveProblemReviewState(state models.ProblemReviewState) (models.Pr
 		lastQuality = *state.LastQuality
 	}
 
+	qh := state.QualityHistory
+	if qh == "" {
+		qh = "[]"
+	}
+
 	_, err := db.conn.Exec(`
 INSERT INTO problem_review_states(problem_id, status, notes, next_review_at, last_updated_at,
-	ease_factor, interval_days, repetition_count, last_quality)
-VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, ?, ?, ?, ?)
+	ease_factor, interval_days, repetition_count, last_quality, quality_history)
+VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP, ?, ?, ?, ?, ?)
 ON CONFLICT(problem_id) DO UPDATE SET
 	status = excluded.status,
 	notes = excluded.notes,
@@ -69,7 +75,8 @@ ON CONFLICT(problem_id) DO UPDATE SET
 	ease_factor = excluded.ease_factor,
 	interval_days = excluded.interval_days,
 	repetition_count = excluded.repetition_count,
-	last_quality = excluded.last_quality`,
+	last_quality = excluded.last_quality,
+		quality_history = excluded.quality_history`,
 		state.ProblemID,
 		status,
 		notes,
@@ -78,6 +85,7 @@ ON CONFLICT(problem_id) DO UPDATE SET
 		state.IntervalDays,
 		state.RepetitionCount,
 		lastQuality,
+		qh,
 	)
 	if err != nil {
 		return models.ProblemReviewState{}, err

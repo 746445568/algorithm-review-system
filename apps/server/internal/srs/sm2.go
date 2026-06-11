@@ -84,3 +84,48 @@ func Calculate(input ReviewInput, now time.Time) ReviewResult {
 		NextReviewAt:    nextReview,
 	}
 }
+
+// AdaptiveCalculate adjusts the ease factor decay based on review quality history.
+// With fewer than 3 reviews it falls back to standard Calculate.
+func AdaptiveCalculate(input ReviewInput, qualityHistory []int, now time.Time) ReviewResult {
+	if len(qualityHistory) < 3 {
+		return Calculate(input, now)
+	}
+
+	forgotCount := 0
+	for _, q := range qualityHistory {
+		if q < QualityResetThresh {
+			forgotCount++
+		}
+	}
+	forgettingRate := float64(forgotCount) / float64(len(qualityHistory))
+
+	decayMultiplier := 1.0 - forgettingRate
+	if decayMultiplier < 0.5 {
+		decayMultiplier = 0.5
+	}
+
+	result := Calculate(input, now)
+
+	standardEF := result.EaseFactor
+	baseEF := standardEF * decayMultiplier
+	if baseEF < MinEaseFactor {
+		baseEF = MinEaseFactor
+	}
+	result.EaseFactor = baseEF
+
+	if input.RepetitionCount == 0 {
+		result.IntervalDays = InitialInterval
+	} else if input.RepetitionCount == 1 {
+		result.IntervalDays = SecondInterval
+	} else {
+		calculated := float64(result.IntervalDays) * result.EaseFactor / standardEF
+		result.IntervalDays = int(calculated)
+		if result.IntervalDays < 1 {
+			result.IntervalDays = 1
+		}
+	}
+	result.NextReviewAt = now.UTC().Truncate(time.Second).Add(time.Duration(result.IntervalDays) * 24 * time.Hour)
+
+	return result
+}
