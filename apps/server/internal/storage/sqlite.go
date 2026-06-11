@@ -16,7 +16,7 @@ import (
 	"ojreviewdesktop/internal/models"
 )
 
-const schemaVersion = 6
+const schemaVersion = 7
 
 // allowedTables is a whitelist of table names that can be modified by addColumnIfMissing.
 // This prevents SQL injection attacks through malicious table names.
@@ -393,7 +393,7 @@ CREATE TABLE IF NOT EXISTS app_settings (
 );
 CREATE TABLE IF NOT EXISTS error_patterns (
   id INTEGER PRIMARY KEY AUTOINCREMENT,
-  problem_id INTEGER REFERENCES problems(id),
+  problem_id INTEGER REFERENCES problems(id) ON DELETE CASCADE,
   submission_id TEXT DEFAULT '',
   pattern_type TEXT NOT NULL,
   description TEXT DEFAULT '',
@@ -469,6 +469,29 @@ CREATE TABLE IF NOT EXISTS rating_history (
 );
 CREATE INDEX IF NOT EXISTS idx_rating_history_account ON rating_history(account_id);`); err != nil {
 			return fmt.Errorf("migrate v5->v6 create rating_history: %w", err)
+		}
+	}
+	if currentVersion < 7 {
+		if _, err := db.conn.Exec(`
+DROP TABLE IF EXISTS error_patterns_v7;
+CREATE TABLE error_patterns_v7 (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  problem_id INTEGER REFERENCES problems(id) ON DELETE CASCADE,
+  submission_id TEXT DEFAULT '',
+  pattern_type TEXT NOT NULL,
+  description TEXT DEFAULT '',
+  ai_confidence REAL DEFAULT 0,
+  created_at TEXT DEFAULT (datetime('now'))
+);
+INSERT INTO error_patterns_v7(id, problem_id, submission_id, pattern_type, description, ai_confidence, created_at)
+SELECT ep.id, ep.problem_id, ep.submission_id, ep.pattern_type, ep.description, ep.ai_confidence, ep.created_at
+FROM error_patterns ep
+WHERE ep.problem_id IS NULL OR EXISTS (SELECT 1 FROM problems p WHERE p.id = ep.problem_id);
+DROP TABLE error_patterns;
+ALTER TABLE error_patterns_v7 RENAME TO error_patterns;
+CREATE INDEX IF NOT EXISTS idx_error_patterns_problem ON error_patterns(problem_id);
+CREATE INDEX IF NOT EXISTS idx_error_patterns_type ON error_patterns(pattern_type);`); err != nil {
+			return fmt.Errorf("migrate v6->v7 add error_patterns cascade: %w", err)
 		}
 	}
 	_, err := db.conn.Exec(`

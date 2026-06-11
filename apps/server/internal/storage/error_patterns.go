@@ -2,14 +2,25 @@ package storage
 
 import (
 	"fmt"
+	"math"
 
 	"ojreviewdesktop/internal/models"
 )
 
-// SaveErrorPatterns replaces error patterns for a problem.
+// SaveErrorPatterns replaces all error patterns for a problem.
+// Passing an empty slice deletes all existing patterns for that problem.
 func (db *DB) SaveErrorPatterns(problemID int64, patterns []models.ErrorPattern) error {
 	db.writeMu.Lock()
 	defer db.writeMu.Unlock()
+
+	valid := make([]models.ErrorPattern, 0, len(patterns))
+	for _, p := range patterns {
+		if p.PatternType == "" {
+			continue
+		}
+		p.Confidence = math.Max(0, math.Min(1, p.Confidence))
+		valid = append(valid, p)
+	}
 
 	tx, err := db.conn.Begin()
 	if err != nil {
@@ -21,7 +32,7 @@ func (db *DB) SaveErrorPatterns(problemID int64, patterns []models.ErrorPattern)
 		return fmt.Errorf("delete existing error patterns: %w", err)
 	}
 
-	for _, p := range patterns {
+	for _, p := range valid {
 		_, err := tx.Exec(`
 INSERT INTO error_patterns(problem_id, submission_id, pattern_type, description, ai_confidence)
 VALUES (?, ?, ?, ?, ?)`,
@@ -32,7 +43,10 @@ VALUES (?, ?, ?, ?, ?)`,
 		}
 	}
 
-	return tx.Commit()
+	if err := tx.Commit(); err != nil {
+		return fmt.Errorf("commit save error patterns: %w", err)
+	}
+	return nil
 }
 
 // GetErrorPatternStats returns aggregated stats grouped by pattern type.
@@ -64,7 +78,7 @@ func (db *DB) GetErrorPatternsByProblem(problemID int64) ([]models.ErrorPattern,
 SELECT id, problem_id, submission_id, pattern_type, description, ai_confidence, created_at
 FROM error_patterns
 WHERE problem_id = ?
-ORDER BY created_at DESC`, problemID)
+ORDER BY created_at DESC, id DESC`, problemID)
 	if err != nil {
 		return nil, fmt.Errorf("query error patterns by problem: %w", err)
 	}
