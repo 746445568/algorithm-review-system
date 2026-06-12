@@ -594,6 +594,23 @@
     "showingCount": "Showing {{count}}",
     "totalSubmissions": "Total Submissions",
     "upcomingContests": "Upcoming Contests",
+    "recommendation": {
+      "empty": "No recommendation yet. Sync the problem pool or run a submission sync first.",
+      "loadFailed": "Failed to load recommendation: {{error}}",
+      "next": "Try Another",
+      "reasons": {
+        "retryFailed": "Reason: this problem is not AC yet and is worth retrying",
+        "stretchZone": "Reason: difficulty is close to your current rating",
+        "weakestKnowledge": "Reason: strengthens a weak knowledge area"
+      },
+      "start": "Start Review",
+      "subtitle": "Generated from mastery, failed submissions, and current rating",
+      "syncFailed": "Failed to sync problem pool",
+      "syncing": "Syncing...",
+      "syncPool": "Refresh Pool",
+      "syncQueued": "Problem pool sync started. More recommendations will appear soon.",
+      "title": "Today's Recommendation"
+    },
     "weakTags": {
       "acCount": "AC {{count}} times",
       "attempts": "{{count}} attempts",

@@ -594,6 +594,23 @@
     "showingCount": "显示 {{count}} 条",
     "totalSubmissions": "总提交数",
     "upcomingContests": "近期比赛",
+    "recommendation": {
+      "empty": "暂无推荐，请先同步题目池或完成一次提交同步",
+      "loadFailed": "推荐加载失败：{{error}}",
+      "next": "换一题",
+      "reasons": {
+        "retryFailed": "推荐理由：这道题尚未 AC，适合回炉复盘",
+        "stretchZone": "推荐理由：难度接近当前 rating",
+        "weakestKnowledge": "推荐理由：补当前薄弱知识点"
+      },
+      "start": "开始复习",
+      "subtitle": "根据知识点掌握度、失败提交和当前 rating 生成",
+      "syncFailed": "同步题目池失败",
+      "syncing": "同步中...",
+      "syncPool": "刷新题目池",
+      "syncQueued": "题目池同步已开始，稍后会出现更多推荐",
+      "title": "今日推荐"
+    },
     "weakTags": {
       "acCount": "AC {{count}} 次",
       "attempts": "尝试 {{count}} 次",

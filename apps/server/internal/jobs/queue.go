@@ -20,17 +20,18 @@ type Job struct {
 }
 
 type Queue struct {
-	ctx              context.Context
-	db               *storage.DB
-	workerCh         chan Job
-	wg               sync.WaitGroup
-	once             sync.Once
-	analysisParallel int
-	mu               sync.Mutex
-	inflight         map[string]struct{}
-	adapters         map[models.Platform]judges.Adapter
-	syncRunner       func(context.Context, int64) error
-	analysisRunner   func(context.Context, int64) error
+	ctx               context.Context
+	db                *storage.DB
+	workerCh          chan Job
+	wg                sync.WaitGroup
+	once              sync.Once
+	analysisParallel  int
+	mu                sync.Mutex
+	inflight          map[string]struct{}
+	adapters          map[models.Platform]judges.Adapter
+	syncRunner        func(context.Context, int64) error
+	analysisRunner    func(context.Context, int64) error
+	problemPoolRunner func(context.Context, int64) error
 }
 
 func NewQueue(db *storage.DB) *Queue {
@@ -50,11 +51,12 @@ func (q *Queue) SetAdapters(adapters map[models.Platform]judges.Adapter) {
 	q.adapters = adapters
 }
 
-func (q *Queue) SetTaskRunners(syncRunner func(context.Context, int64) error, analysisRunner func(context.Context, int64) error) {
+func (q *Queue) SetTaskRunners(syncRunner func(context.Context, int64) error, analysisRunner func(context.Context, int64) error, problemPoolRunner func(context.Context, int64) error) {
 	q.mu.Lock()
 	defer q.mu.Unlock()
 	q.syncRunner = syncRunner
 	q.analysisRunner = analysisRunner
+	q.problemPoolRunner = problemPoolRunner
 }
 
 func (q *Queue) Start(ctx context.Context) {
@@ -163,6 +165,28 @@ func (q *Queue) ResumePending(ctx context.Context) error {
 			},
 		})
 	}
+
+	problemPoolTasks, err := q.db.ListRecoverableProblemPoolSyncTasks()
+	if err != nil {
+		return err
+	}
+	for _, task := range problemPoolTasks {
+		taskCopy := task
+		q.Enqueue(Job{
+			Key:      problemPoolSyncJobKey(),
+			TaskType: models.TaskTypeProblemPoolSync,
+			TaskID:   taskCopy.ID,
+			Run: func(ctx context.Context) error {
+				q.mu.Lock()
+				runner := q.problemPoolRunner
+				q.mu.Unlock()
+				if runner == nil {
+					return q.db.MarkProblemPoolSyncTaskFinished(taskCopy.ID, models.TaskFailed, taskCopy.FetchedCount, taskCopy.InsertedCount, taskCopy.UpdatedCount, "problem pool sync runner unavailable during recovery")
+				}
+				return runner(ctx, taskCopy.ID)
+			},
+		})
+	}
 	return nil
 }
 
@@ -184,6 +208,11 @@ func (q *Queue) runJob(ctx context.Context, job Job) {
 			log.Printf("mark analysis task running failed: %v", err)
 			return
 		}
+	case models.TaskTypeProblemPoolSync:
+		if err := q.db.MarkProblemPoolSyncTaskRunning(job.TaskID); err != nil {
+			log.Printf("mark problem pool sync task running failed: %v", err)
+			return
+		}
 	}
 
 	if err := job.Run(ctx); err != nil {
@@ -193,6 +222,8 @@ func (q *Queue) runJob(ctx context.Context, job Job) {
 			_ = q.db.MarkSyncTaskFinished(job.TaskID, models.TaskFailed, 0, 0, err.Error())
 		case models.TaskTypeAnalysis:
 			_ = q.db.MarkAnalysisTaskFinished(job.TaskID, models.TaskFailed, "", "", err.Error())
+		case models.TaskTypeProblemPoolSync:
+			_ = q.db.MarkProblemPoolSyncTaskFinished(job.TaskID, models.TaskFailed, 0, 0, 0, err.Error())
 		}
 	}
 }
@@ -205,10 +236,18 @@ func AnalysisJobKey(taskID int64) string {
 	return analysisJobKey(taskID)
 }
 
+func ProblemPoolSyncJobKey() string {
+	return problemPoolSyncJobKey()
+}
+
 func syncJobKey(platformAccountID int64) string {
 	return fmt.Sprintf("sync:%d", platformAccountID)
 }
 
 func analysisJobKey(taskID int64) string {
 	return fmt.Sprintf("analysis:%d", taskID)
+}
+
+func problemPoolSyncJobKey() string {
+	return "problem-pool-sync"
 }

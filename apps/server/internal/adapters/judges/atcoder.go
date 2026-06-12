@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"math"
 	"net/http"
 	"net/url"
 	"strconv"
@@ -19,14 +20,23 @@ import (
 const (
 	atCoderBaseURL     = "https://kenkoooo.com/atcoder"
 	atCoderResultsPath = "/atcoder-api/v3/user/submissions"
-	atCoderProblemsURL = "https://kenkoooo.com/atcoder/resources/problems.json"
 	atCoderContestsURL = "https://kenkoooo.com/atcoder/resources/contests.json"
+
+	atCoderResourceBaseURL       = "https://kenkoooo.com/atcoder/resources"
+	atCoderProblemsURLPath       = "/problems.json"
+	atCoderMergedProblemsURLPath = "/merged-problems.json"
+	atCoderProblemModelsURLPath  = "/problem-models.json"
+	atCoderContestProblemURLPath = "/contest-problem.json"
+	atCoderResourceMinSpacing    = time.Second
 )
 
 var _ Adapter = (*AtCoderAdapter)(nil)
 
 type AtCoderAdapter struct {
-	client *http.Client
+	client          *http.Client
+	resourceBaseURL string
+	requestSpacing  time.Duration
+	sleep           func(context.Context, time.Duration) error
 
 	problemsMu     sync.RWMutex
 	problemsByID   map[string]atCoderProblem
@@ -35,7 +45,10 @@ type AtCoderAdapter struct {
 
 func NewAtCoderAdapter() Adapter {
 	return &AtCoderAdapter{
-		client: &http.Client{Timeout: 30 * time.Second},
+		client:          &http.Client{Timeout: 30 * time.Second},
+		resourceBaseURL: atCoderResourceBaseURL,
+		requestSpacing:  atCoderResourceMinSpacing,
+		sleep:           sleepWithContext,
 	}
 }
 
@@ -208,6 +221,89 @@ func (a *AtCoderAdapter) FetchProblemMetadata(ctx context.Context, problemID str
 	return problem, []string{}, nil
 }
 
+func (a *AtCoderAdapter) FetchProblemCatalog(ctx context.Context) ([]models.ProblemPoolItem, error) {
+	problemsByID, err := a.loadProblems(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("load atcoder problems: %w", err)
+	}
+	if err := a.sleepBetweenAtCoderResources(ctx); err != nil {
+		return nil, err
+	}
+
+	var mergedProblems []atCoderMergedProblem
+	if err := a.fetchAtCoderResource(ctx, atCoderMergedProblemsURLPath, &mergedProblems); err != nil {
+		return nil, err
+	}
+	if err := a.sleepBetweenAtCoderResources(ctx); err != nil {
+		return nil, err
+	}
+
+	var problemModels map[string]atCoderProblemModel
+	if err := a.fetchAtCoderResource(ctx, atCoderProblemModelsURLPath, &problemModels); err != nil {
+		return nil, err
+	}
+	if err := a.sleepBetweenAtCoderResources(ctx); err != nil {
+		return nil, err
+	}
+
+	var contestProblems []atCoderContestProblem
+	if err := a.fetchAtCoderResource(ctx, atCoderContestProblemURLPath, &contestProblems); err != nil {
+		return nil, err
+	}
+
+	mergedByID := make(map[string]atCoderMergedProblem, len(mergedProblems))
+	for _, problem := range mergedProblems {
+		if problem.ID != "" {
+			mergedByID[problem.ID] = problem
+		}
+	}
+	contestByID := make(map[string]atCoderContestProblem, len(contestProblems))
+	for _, problem := range contestProblems {
+		if problem.ProblemID != "" {
+			contestByID[problem.ProblemID] = problem
+		}
+	}
+
+	items := make([]models.ProblemPoolItem, 0, len(problemsByID))
+	for _, problem := range problemsByID {
+		merged := mergedByID[problem.ID]
+		contestProblem := contestByID[problem.ID]
+		model := problemModels[problem.ID]
+
+		contestID := firstNonEmpty(problem.ContestID, merged.ContestID, contestProblem.ContestID)
+		title := firstNonEmpty(merged.Title, merged.Name, problem.Title)
+		if problem.ID == "" || title == "" || contestID == "" || isAtCoderHeuristicContest(contestID) {
+			continue
+		}
+
+		item := models.ProblemPoolItem{
+			Platform:          models.PlatformAtCoder,
+			ExternalProblemID: problem.ID,
+			ExternalContestID: contestID,
+			ProblemIndex:      firstNonEmpty(problem.ProblemIndex, merged.ProblemIndex, contestProblem.ProblemIndex),
+			Title:             title,
+			URL:               atCoderTaskURL(contestID, problem.ID),
+			DifficultyScale:   DifficultyScaleAtCoder,
+			Source:            SourceAtCoderProblems,
+			SolverCount:       merged.SolverCount,
+			IsExperimental:    model.IsExperimental,
+			Tags: []models.ProblemPoolTag{{
+				Name:       atCoderContestCategory(contestID),
+				Source:     TagSourceAtCoderContestCategory,
+				Confidence: 0.4,
+			}},
+		}
+		if model.Difficulty != nil {
+			raw := *model.Difficulty
+			clipped := clipAtCoderDifficulty(raw)
+			item.DifficultyRaw = &raw
+			item.DifficultyValue = &clipped
+		}
+		items = append(items, item)
+	}
+	return items, nil
+}
+
 func (a *AtCoderAdapter) NormalizeSubmission(raw any) (models.Submission, error) {
 	parsed, rawJSON, err := parseAtCoderSubmission(raw)
 	if err != nil {
@@ -332,4 +428,99 @@ func (a *AtCoderAdapter) FetchRatingHistory(ctx context.Context, handle string) 
 		})
 	}
 	return entries, nil
+}
+
+func (a *AtCoderAdapter) fetchAtCoderResource(ctx context.Context, path string, target any) error {
+	resourceBaseURL := strings.TrimRight(a.resourceBaseURL, "/")
+	if resourceBaseURL == "" {
+		resourceBaseURL = atCoderResourceBaseURL
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, resourceBaseURL+path, nil)
+	if err != nil {
+		return fmt.Errorf("create atcoder resource request: %w", err)
+	}
+	setAtCoderHeaders(req)
+
+	resp, err := a.client.Do(req)
+	if err != nil {
+		return fmt.Errorf("request atcoder resource %s: %w", path, err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		return fmt.Errorf("atcoder resource %s returned status %d", path, resp.StatusCode)
+	}
+
+	body, err := atCoderBody(resp)
+	if err != nil {
+		return err
+	}
+	defer body.Close()
+
+	if err := json.NewDecoder(body).Decode(target); err != nil {
+		return fmt.Errorf("decode atcoder resource %s: %w", path, err)
+	}
+	return nil
+}
+
+func (a *AtCoderAdapter) sleepBetweenAtCoderResources(ctx context.Context) error {
+	if a.requestSpacing <= 0 {
+		return nil
+	}
+	sleep := a.sleep
+	if sleep == nil {
+		sleep = sleepWithContext
+	}
+	return sleep(ctx, a.requestSpacing)
+}
+
+func sleepWithContext(ctx context.Context, duration time.Duration) error {
+	timer := time.NewTimer(duration)
+	defer timer.Stop()
+
+	select {
+	case <-ctx.Done():
+		return ctx.Err()
+	case <-timer.C:
+		return nil
+	}
+}
+
+func clipAtCoderDifficulty(difficulty int) int {
+	if difficulty >= 400 {
+		return difficulty
+	}
+	return int(math.Round(400 / math.Exp(1-float64(difficulty)/400)))
+}
+
+func firstNonEmpty(values ...string) string {
+	for _, value := range values {
+		if strings.TrimSpace(value) != "" {
+			return strings.TrimSpace(value)
+		}
+	}
+	return ""
+}
+
+func atCoderContestCategory(contestID string) string {
+	contestID = strings.ToLower(strings.TrimSpace(contestID))
+	switch {
+	case strings.HasPrefix(contestID, "abc"):
+		return "ABC"
+	case strings.HasPrefix(contestID, "arc"):
+		return "ARC"
+	case strings.HasPrefix(contestID, "agc"):
+		return "AGC"
+	case strings.HasPrefix(contestID, "past"):
+		return "PAST"
+	case strings.HasPrefix(contestID, "joi"):
+		return "JOI"
+	default:
+		return "ATCODER_OTHER"
+	}
+}
+
+func isAtCoderHeuristicContest(contestID string) bool {
+	contestID = strings.ToLower(strings.TrimSpace(contestID))
+	return strings.HasPrefix(contestID, "ahc") || strings.Contains(contestID, "marathon") || strings.Contains(contestID, "heuristic")
 }

@@ -128,6 +128,8 @@ export const api = {
     }),
   getSyncTasks: () => request("/api/sync-tasks"),
   getReviewSummary: () => request("/api/review/summary"),
+  getReviewRecommendation: (exclude) =>
+    request(withQuery("/api/review/recommendations", { exclude })),
   getReviewState: (problemId) => request(`/api/review/items/${problemId}`),
   saveReviewState: async (problemId, payload) => {
     const normalizedProblemId = Number(problemId);
@@ -211,6 +213,11 @@ export const api = {
 
   getContests: (query = {}) => request(withQuery("/api/contests", query)),
   syncContests: () => request("/api/contests/sync", { method: "POST", body: JSON.stringify({}) }),
+  syncProblemPool: (platforms) =>
+    request("/api/problem-pool/sync", {
+      method: "POST",
+      body: JSON.stringify(platforms?.length ? { platforms } : {}),
+    }),
   getGoals: () => request("/api/goals"),
   createGoal: (payload) => request("/api/goals", { method: "POST", body: JSON.stringify(payload) }),
   deleteGoal: (id) => request(`/api/goals/${id}`, { method: "DELETE" }),
