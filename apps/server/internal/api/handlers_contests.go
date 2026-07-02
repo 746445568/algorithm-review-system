@@ -30,6 +30,7 @@ func (s *Server) handleContests(w http.ResponseWriter, r *http.Request) {
 func (s *Server) handleSyncContests(w http.ResponseWriter, r *http.Request) {
 	inserted := 0
 	ctx := r.Context()
+	var syncErrors []string
 	for platform, adapter := range s.adapters {
 		contestAdapter, ok := adapter.(judges.ContestAdapter)
 		if !ok {
@@ -37,8 +38,8 @@ func (s *Server) handleSyncContests(w http.ResponseWriter, r *http.Request) {
 		}
 		contests, err := contestAdapter.FetchContests(ctx)
 		if err != nil {
-			writeError(w, http.StatusBadGateway, fmt.Sprintf("sync contests for %s failed: %v", platform, err))
-			return
+			syncErrors = append(syncErrors, fmt.Sprintf("%s: %v", platform, err))
+			continue
 		}
 		for _, contest := range contests {
 			if _, err := s.db.UpsertContest(contest); err == nil {
@@ -46,9 +47,14 @@ func (s *Server) handleSyncContests(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
+	if len(syncErrors) > 0 && inserted == 0 {
+		writeError(w, http.StatusBadGateway, fmt.Sprintf("sync contests failed: %s", strings.Join(syncErrors, "; ")))
+		return
+	}
 	writeJSON(w, http.StatusOK, map[string]any{
 		"status":  "ok",
 		"updated": inserted,
+		"errors":  syncErrors,
 	})
 }
 

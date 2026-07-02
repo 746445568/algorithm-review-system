@@ -74,13 +74,23 @@ export function DashboardPage({ serviceStatus }) {
   const { data, isLoading } = useDashboardData(serviceStatus);
   const dashboardData = data ?? DEFAULT_DASHBOARD_DATA;
 
-  const { data: contestsRaw } = useSWR(
+  const {
+    data: contestsRaw,
+    error: contestsError,
+    mutate: retryContests,
+    isValidating: validatingContests,
+  } = useSWR(
     serviceStatus?.state === "healthy" ? "dashboard-upcoming-contests" : null,
     () => api.getContests({ status: "UPCOMING" }),
     { refreshInterval: 60000, keepPreviousData: true }
   );
 
-  const { data: submissionStatsRaw } = useSWR(
+  const {
+    data: submissionStatsRaw,
+    error: submissionStatsError,
+    mutate: retrySubmissionStats,
+    isValidating: validatingSubmissionStats,
+  } = useSWR(
     serviceStatus?.state === "healthy" ? "dashboard-submission-stats" : null,
     () => api.getSubmissionStats(),
     { refreshInterval: 300000, keepPreviousData: true }
@@ -179,7 +189,19 @@ export function DashboardPage({ serviceStatus }) {
               {t('review.filter.all')}
             </button>
           </div>
-          {upcomingContests.length === 0 ? (
+          {contestsError ? (
+            <div className="dash-empty-action">
+              <p className="dash-muted dash-error-text">{contestsError.message ?? t('errors.loadFailed')}</p>
+              <button
+                type="button"
+                className="dash-btn-ghost dash-btn-compact"
+                onClick={() => void retryContests()}
+                disabled={validatingContests}
+              >
+                {validatingContests ? t('common.loading') : t('actions.retry')}
+              </button>
+            </div>
+          ) : upcomingContests.length === 0 ? (
             <p className="dash-muted">{t('dashboard.noUpcomingContests')}</p>
           ) : (
             upcomingContests.map((c) => (
@@ -202,22 +224,36 @@ export function DashboardPage({ serviceStatus }) {
         </section>
       </div>
 
-      <section className="panel">
-        <div className="dash-panel-head">
-          <div className="dash-panel-title">{t('dashboard.recentSubmissions')}</div>
-          <div className="dash-panel-sub">{t('dashboard.last8Weeks')}</div>
-        </div>
-        <div className="dash-charts-row">
-          <div>
-            <div className="dash-chart-head">{t('dashboard.totalSubmissions')}</div>
-            <SubmissionChart data={weeklyData} valueKey="count" variant="total" emptyText={t('dashboard.noSubmissionData')} />
+        <section className="panel">
+          <div className="dash-panel-head">
+            <div className="dash-panel-title">{t('dashboard.recentSubmissions')}</div>
+            <div className="dash-panel-sub">{t('dashboard.last8Weeks')}</div>
           </div>
-          <div>
-            <div className="dash-chart-head">AC</div>
-            <SubmissionChart data={weeklyData} valueKey="acCount" variant="ac" emptyText={t('dashboard.noAcData')} />
-          </div>
-        </div>
-      </section>
+          {submissionStatsError ? (
+            <div className="dash-empty-action">
+              <p className="dash-muted dash-error-text">{submissionStatsError.message ?? t('errors.loadFailed')}</p>
+              <button
+                type="button"
+                className="dash-btn-ghost dash-btn-compact"
+                onClick={() => void retrySubmissionStats()}
+                disabled={validatingSubmissionStats}
+              >
+                {validatingSubmissionStats ? t('common.loading') : t('actions.retry')}
+              </button>
+            </div>
+          ) : (
+            <div className="dash-charts-row">
+              <div>
+                <div className="dash-chart-head">{t('dashboard.totalSubmissions')}</div>
+                <SubmissionChart data={weeklyData} valueKey="count" variant="total" emptyText={t('dashboard.noSubmissionData')} />
+              </div>
+              <div>
+                <div className="dash-chart-head">AC</div>
+                <SubmissionChart data={weeklyData} valueKey="acCount" variant="ac" emptyText={t('dashboard.noAcData')} />
+              </div>
+            </div>
+          )}
+        </section>
     </div>
   );
 }

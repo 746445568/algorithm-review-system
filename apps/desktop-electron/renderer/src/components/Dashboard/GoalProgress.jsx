@@ -9,7 +9,7 @@ const PLATFORM_CONFIG = {
 
 export const GoalProgress = memo(function GoalProgress({ goals = [], accounts = [] }) {
   const { navigateTo } = useNavigation();
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
 
   if (goals.length === 0) {
     return (
@@ -48,6 +48,11 @@ export const GoalProgress = memo(function GoalProgress({ goals = [], accounts = 
           color: "var(--ojdr-accent)",
         };
 
+        const hasDeadline = Boolean(goal.deadline);
+        const deadlineText = hasDeadline
+          ? new Date(goal.deadline).toLocaleDateString(i18n.language || 'zh-CN')
+          : '';
+
         return (
           <div key={goal.id} className="dash-goal-row">
             <span className={`dash-chip ${cfg.cls}`}>{cfg.chip}</span>
@@ -59,7 +64,14 @@ export const GoalProgress = memo(function GoalProgress({ goals = [], accounts = 
             <div className="dash-goal-bar">
               <div className="dash-goal-fill" style={{ width: `${pct}%`, background: cfg.color }} />
             </div>
-            <div className="dash-goal-pct">{pct}%</div>
+            <div className="dash-goal-meta">
+              <span className="dash-goal-pct">{pct}%</span>
+              {hasDeadline && (
+                <span className="dash-goal-deadline" title={deadlineText}>
+                  {t('settings.goals.deadlineValue', { date: deadlineText })}
+                </span>
+              )}
+            </div>
           </div>
         );
       })}

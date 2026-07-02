@@ -57,7 +57,7 @@ export function RatingCurve() {
           <option key={a.id} value={a.id}>{a.platform} — {a.externalHandle}</option>
         ))}
       </select>
-      {ratings.length > 1 ? (
+      {ratings.length >= 1 ? (
         <svg viewBox={`0 0 ${W} ${H}`} className="rating-curve-svg" role="img" aria-label={t("ratingCurve", "Rating 曲线")}>
           {[0.25, 0.5, 0.75].map((frac) => {
             const y = scaleY(minR + (maxR - minR) * frac);

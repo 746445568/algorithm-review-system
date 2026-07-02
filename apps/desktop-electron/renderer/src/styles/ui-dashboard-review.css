@@ -260,6 +260,10 @@
   margin: 0;
 }
 
+.dash-error-text {
+  color: var(--ojdr-error);
+}
+
 /* ── Platform / verdict chips ── */
 
 .dash-chip {

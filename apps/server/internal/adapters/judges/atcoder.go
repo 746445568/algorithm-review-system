@@ -110,7 +110,7 @@ func (a *AtCoderAdapter) FetchContests(ctx context.Context) ([]models.Contest, e
 			StartTime:         startTime,
 			DurationMinutes:   int(contest.DurationSecond / 60),
 			URL:               fmt.Sprintf("https://atcoder.jp/contests/%s", contest.ID),
-			Status:            normalizeAtCoderContestStatus(startTime),
+			Status:            normalizeAtCoderContestStatus(startTime, int(contest.DurationSecond/60)),
 		})
 	}
 	return items, nil

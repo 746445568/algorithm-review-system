@@ -222,7 +222,7 @@ export function ContestsPage() {
       {error ? <p className="error-text">{error}</p> : null}
 
       {loading ? (
-        <div className="contest-state contest-state--loading">
+        <div className="contest-state contest-state--loading" role="status" aria-live="polite" aria-atomic="true" aria-busy="true">
           <p className="muted-text">{t('common.loading')}</p>
         </div>
       ) : groups.length === 0 ? (
