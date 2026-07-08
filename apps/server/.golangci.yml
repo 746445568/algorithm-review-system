@@ -1,0 +1,39 @@
+# golangci-lint configuration for ojreviewdesktop
+# Docs: https://golangci-lint.run/usage/configuration/
+
+run:
+  timeout: 3m
+  tests: true
+
+linters:
+  enable:
+    - errcheck      # Check unchecked errors
+    - gosimple      # Simplify code
+    - govet         # Report suspicious constructs
+    - ineffassign   # Detect ineffectual assignments
+    - staticcheck   # Static analysis checks
+    - typecheck     # Type-check code
+    - unused        # Find unused code
+    - misspell      # Find spelling mistakes
+    - revive        # Fast, configurable linter (replaces golint)
+
+linters-settings:
+  errcheck:
+    # Don't require error checking for fmt.* and fmt/log.*
+    exclude-functions:
+      - (io.Closer).Close
+  revive:
+    rules:
+      - name: var-naming
+        disabled: true  # Project uses mixed conventions, don't enforce
+
+issues:
+  # Don't auto-exclude any issues
+  exclude-use-default: false
+  max-issues-per-linter: 0
+  max-same-issues: 0
+  # Exclude test files from some checks
+  exclude-rules:
+    - path: _test\.go
+      linters:
+        - errcheck  # Tests often ignore errors from helper setup

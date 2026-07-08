@@ -215,6 +215,38 @@ func findGraphNode(t *testing.T, graph []map[string]any, name string) map[string
 	return nil
 }
 
+func TestSyncTagsToKnowledgeGraph_OrphanedTags(t *testing.T) {
+	db := openTestDBWithMigrate(t)
+
+	// Create a valid problem with tags
+	_, err := db.UpsertProblem(models.Problem{
+		Platform:          models.PlatformCodeforces,
+		ExternalProblemID: "5000/A",
+		Title:             "Valid Problem",
+		RawTagsJSON:       `["dp","greedy"]`,
+	})
+	if err != nil {
+		t.Fatalf("upsert problem: %v", err)
+	}
+
+	// Insert orphaned tag (problem_id doesn't exist) - bypass FK temporarily
+	if _, err := db.conn.Exec(`PRAGMA foreign_keys=OFF`); err != nil {
+		t.Fatalf("disable FK: %v", err)
+	}
+	if _, err := db.conn.Exec(`INSERT INTO problem_tags(problem_id, tag_name) VALUES (999999, 'orphaned_tag')`); err != nil {
+		t.Fatalf("insert orphaned tag: %v", err)
+	}
+	if _, err := db.conn.Exec(`PRAGMA foreign_keys=ON`); err != nil {
+		t.Fatalf("enable FK: %v", err)
+	}
+
+	// Sync should not fail - it should skip orphaned tags gracefully
+	_, _, err = db.SyncTagsToKnowledgeGraph()
+	if err != nil {
+		t.Fatalf("SyncTagsToKnowledgeGraph should handle orphaned tags gracefully: %v", err)
+	}
+}
+
 func graphInt(v any) int {
 	switch n := v.(type) {
 	case int:

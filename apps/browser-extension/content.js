@@ -140,8 +140,7 @@
           sourceContestId: submission.contestId,
           sourceCode: cleanText(sourceElement.textContent),
           language: textFromElement(".submission-info td:nth-child(3)"),
-          pageUrl: window.location.href,
-          pageTitle: document.title,
+          url: window.location.href,
         },
       };
     }
@@ -160,11 +159,10 @@
         payload: {
           platform: "CODEFORCES",
           externalProblemId: problem.externalProblemId,
-          sourceContestId: problem.contestId,
+          externalContestId: problem.contestId,
           title: titleEl ? cleanText(titleEl.textContent) : document.title,
-          statementHtml: statementEl.innerHTML,
-          pageUrl: window.location.href,
-          pageTitle: document.title,
+          statementText: statementEl.innerHTML,
+          url: window.location.href,
         },
       };
     }
@@ -212,9 +210,7 @@
           sourceContestId: submission.contestId,
           sourceCode,
           language,
-          status,
-          pageUrl: window.location.href,
-          pageTitle: document.title,
+          url: window.location.href,
         },
       };
     }
@@ -240,11 +236,10 @@
         payload: {
           platform: "ATCODER",
           externalProblemId: task.externalProblemId,
-          sourceContestId: task.contestId,
+          externalContestId: task.contestId,
           title: titleEl ? cleanText(titleEl.textContent) : document.title,
-          statementHtml: statementEl.innerHTML,
-          pageUrl: window.location.href,
-          pageTitle: document.title,
+          statementText: statementEl.innerHTML,
+          url: window.location.href,
         },
       };
     }

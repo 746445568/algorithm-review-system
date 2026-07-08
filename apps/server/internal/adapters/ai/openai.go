@@ -58,11 +58,11 @@ type openAIChatCompletionResponse struct {
 }
 
 func (p *OpenAIProvider) ValidateConfig(s Settings) error {
-	return validateOpenAICompatibleConfig(s, "openai", defaultOpenAIBaseURL)
+	return validateOpenAICompatibleConfig(s, openAIProviderName, defaultOpenAIBaseURL)
 }
 
 func (p *OpenAIProvider) Analyze(ctx context.Context, input string, s Settings) (string, string, error) {
-	return analyzeOpenAICompatible(ctx, input, s, "openai", defaultOpenAIBaseURL)
+	return analyzeOpenAICompatible(ctx, input, s, openAIProviderName, defaultOpenAIBaseURL)
 }
 
 func validateOpenAICompatibleConfig(s Settings, expectedProvider, defaultBaseURL string) error {
