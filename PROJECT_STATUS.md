@@ -18,7 +18,8 @@ Delivered scope:
 - bearer-token protection for the local API, restricted CORS, redacted AI settings, Electron sandbox/CSP, and navigation/path allowlists;
 - Go-owned background synchronization and one-time migration of pending legacy IndexedDB review-state writes;
 - reproducible Windows x64 service metadata validation and packaging;
-- documentation of the supported platform and local security model.
+- documentation of the supported platform and local security model;
+- a tracked cross-agent entry point with a required status-maintenance completion protocol.
 
 ## Verification state
 
@@ -48,4 +49,4 @@ PR #22 is therefore **not merge-ready**, despite being structurally mergeable.
 
 ## Maintenance rule
 
-Update this snapshot when a milestone changes state, a blocking CI result changes, a release is published, or extension availability changes. Keep durable engineering rules in `agent.md` or the relevant `AGENTS.md`; keep branch, PR, CI, and release progress here.
+Before handing off completed work, update this snapshot in the same change whenever project capabilities, milestone state, verification results, blockers, availability, release state, or next actions changed. Revise stale entries instead of treating this file as an append-only diary; Git history provides the audit trail. If the work does not affect project status, verify that this snapshot remains accurate and leave it unchanged. Keep durable engineering rules in `agent.md` or the relevant `AGENTS.md`; keep branch, PR, CI, and release progress here.

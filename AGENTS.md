@@ -27,6 +27,18 @@ Do not overwrite unrelated local changes. The main worktree may contain user-own
 
 Private conversation history or tool-specific agent memory is not a project source of truth. Record decisions that future agents need in tracked repository documentation.
 
+## Completion protocol
+
+Before reporting a task complete:
+
+1. Run verification proportional to the change and record the real result, including failures.
+2. Update `PROJECT_STATUS.md` in the same change whenever the work changes project capabilities, milestone state, verification results, blockers, availability, release state, or next actions.
+3. Remove or revise status entries made stale by the work; do not only append new claims.
+4. Update `CHANGELOG.md` only for release-facing changes, not as a substitute for the current status snapshot.
+5. Confirm that durable new constraints or decisions are recorded in the applicable tracked documentation.
+
+If a task has no effect on project status, verify that `PROJECT_STATUS.md` remains accurate and leave it unchanged. Git history is the audit log; `PROJECT_STATUS.md` should remain a concise current snapshot.
+
 ## Scoped guidance
 
 - `apps/server/AGENTS.md`: Go service, API, jobs, storage, and build metadata.
