@@ -1,91 +1,60 @@
-# OJ Review Desktop
+# OJReview Desktop
 
-[![Release](https://github.com/746445568/algorithm-review-system/actions/workflows/release.yml/badge.svg)](https://github.com/746445568/algorithm-review-system/releases)
+OJReview is a local-first algorithm review application. It synchronizes Codeforces and AtCoder submissions, stores business data in local SQLite, analyzes mistakes through an OpenAI-compatible provider, and schedules reviews with SM-2.
 
-OJ Review Desktop is a local-first desktop app for algorithm competition review. It syncs online judge submissions (Codeforces / AtCoder), analyzes wrong attempts with an OpenAI-compatible LLM provider, stores data locally in SQLite, and schedules follow-up reviews using the SM-2 spaced repetition algorithm.
+Windows x64 is the only formally supported target. macOS and Linux packages are not produced by the release workflow.
 
-## Features
+## Current availability
 
-- 🔄 **Multi-platform sync** — Codeforces and AtCoder submission history
-- 🤖 **AI-powered analysis** — Automatic error pattern detection, knowledge graph, and problem analysis
-- 📅 **Spaced repetition** — Adaptive SM-2 algorithm with review calendar and streak tracking
-- 📊 **Statistics & visualization** — Verdict distribution, ability radar, rating curve, knowledge graph
-- 💬 **Chat with AI** — Socratic tutoring mode and direct Q&A for each problem
-- 🌐 **Cross-platform** — Windows, macOS, Linux
+- Desktop development and internal Windows artifacts are supported.
+- The browser extension is temporarily unavailable because all local API imports now require authentication. It will return after one-time secure pairing and a dedicated import token are implemented.
+- Governance work does not publish a public 3.0.0 release. Unsigned builds remain internal CI artifacts.
 
-## Installation
+## Requirements
 
-Download the latest release from the [Releases page](https://github.com/746445568/algorithm-review-system/releases).
+- Windows x64
+- Node.js 20 or newer
+- Go 1.26 (as declared by `apps/server/go.mod`)
 
-| Platform | Package |
-|----------|---------|
-| Windows  | `OJReviewDesktop-x.x.x-win-x64.exe` (NSIS installer) |
-| macOS    | `OJReviewDesktop-x.x.x-mac-x64.dmg` |
-| Linux    | `OJReviewDesktop-x.x.x-linux-x64.AppImage` |
+## Development and verification
 
-## Quick Start
+```powershell
+npm ci --prefix apps/desktop-electron
+npm run desktop:dev
 
-1. Install and launch the app
-2. Add your Codeforces or AtCoder account in Settings
-3. Configure an AI provider (OpenAI / DeepSeek / Ollama) in Settings
-4. Sync your submissions — the app will fetch your history
-5. Review problems and get AI-powered analysis
-
-## Development
-
-See [CONTRIBUTING.md](./CONTRIBUTING.md) for detailed setup instructions.
-
-### Prerequisites
-
-- Go 1.22+
-- Node.js 20+
-
-### Quick Start
-
-```bash
-# Backend
-cd apps/server
-go run ./cmd/ojreviewd
-
-# Frontend (in another terminal)
+# Complete local quality gate
 cd apps/desktop-electron
-npm install
-npm run dev
+npm run verify
+
+# Core Electron/renderer E2E collection and execution
+npm run test:e2e
+
+# Internal Windows installer and portable package
+npm run dist
 ```
 
-### Run Tests
+`npm run dist` always rebuilds `ojreviewd.exe`, verifies its version metadata, builds the renderer once, and packages Windows x64 artifacts.
 
-```bash
-# Backend tests
-cd apps/server && go test ./...
+## Local security model
 
-# Frontend tests
-cd apps/desktop-electron && npm test
-```
+The Go service binds only to `127.0.0.1:38473`. `/health` is public; every `/api/*` endpoint requires a bearer token. A random 32-byte token is stored under the application's `secure` directory. Electron and the development Vite proxy inject it outside the renderer, so renderer JavaScript cannot read it. AI API keys are encrypted at rest and settings responses expose only `hasApiKey`.
+
+The Electron renderer runs with Chromium sandboxing and a restrictive CSP. External navigation is limited to Codeforces and AtCoder, and filesystem opening is limited to application/runtime/export directories.
 
 ## Architecture
 
+```text
+Electron renderer -- authenticated local HTTP --> Go service -- SQLite
+       ^                                           |
+       | token injected by main/Vite proxy         +-- persistent sync jobs
+Electron main
 ```
-[browser extension]  --HTTP POST--> [Go Server :38473] <--HTTP REST-- [Electron renderer]
-                                        |
-                                  [SQLite + AES Vault]
-```
 
-- **Go server** (`apps/server`) — REST API, SQLite storage, AI integration, sync engine
-- **Electron app** (`apps/desktop-electron`) — React 19 + Vite renderer, offline-first with IndexedDB cache
-- **Browser extension** (`apps/browser-extension`) — Import problem statements and submission sources
+- `apps/desktop-electron`: Electron 37, React 19, Vite 7, SWR session cache
+- `apps/server`: Go 1.26, `net/http`, pure-Go SQLite
+- `apps/browser-extension`: retained source; blocked pending secure pairing
 
-See [CLAUDE.md](./CLAUDE.md) for the full architecture overview.
-
-## Tech Stack
-
-| Layer | Technology |
-|-------|-----------|
-| Backend | Go 1.22+, standard `net/http`, SQLite (pure-Go via `modernc.org/sqlite`) |
-| Frontend | React 19, Vite 7, SWR, react-i18next |
-| Desktop | Electron 37, electron-builder, electron-updater |
-| AI | OpenAI-compatible API (OpenAI / DeepSeek / Ollama) |
-| Testing | Go stdlib `testing`, Playwright |
+See [CONTRIBUTING.md](./CONTRIBUTING.md) and [SECURITY.md](./SECURITY.md).
 
 ## License
 

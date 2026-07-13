@@ -6,6 +6,7 @@ import {
   createElectronProcessEnv,
   formatElectronEnvSanitization,
 } from "../bootstrap/launch-env.mjs";
+import { loadOrCreateServiceToken } from "../bootstrap/service-auth.mjs";
 
 const require = createRequire(import.meta.url);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -16,12 +17,14 @@ const rendererPort = process.env.OJREVIEW_RENDERER_PORT ?? "5180";
 const rendererUrl = `http://127.0.0.1:${rendererPort}`;
 const bootstrapProbePrefix = "[ojreview-bootstrap]";
 const { strippedEntries } = createElectronProcessEnv();
-const electronArgs = [
-  appRoot,
-  "--no-sandbox",
-  "--in-process-gpu",
-  "--disable-gpu-sandbox",
-];
+const electronArgs = [appRoot];
+const runtimeDir = process.env.OJREVIEW_APP_DIR ?? path.join(appRoot, ".ojreview-runtime");
+const serviceToken = await loadOrCreateServiceToken(runtimeDir);
+const sharedEnv = {
+  ...process.env,
+  OJREVIEW_APP_DIR: runtimeDir,
+  OJREVIEW_SERVICE_TOKEN: serviceToken,
+};
 let rendererProcess;
 let electronProcess;
 
@@ -132,7 +135,7 @@ rendererProcess = spawn(
     cwd: appRoot,
     stdio: "inherit",
     shell: false,
-    env: process.env,
+    env: sharedEnv,
   }
 );
 
@@ -156,6 +159,8 @@ electronProcess = spawn(electronBinary, electronArgs, {
   shell: false,
   env: createElectronProcessEnv({
     ELECTRON_RENDERER_URL: rendererUrl,
+    OJREVIEW_APP_DIR: runtimeDir,
+    OJREVIEW_SERVICE_TOKEN: serviceToken,
   }).env,
 });
 

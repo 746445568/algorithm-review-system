@@ -16,12 +16,7 @@ const electronBinary = require("electron");
 const rendererDistEntry = path.join(appRoot, "renderer", "dist", "index.html");
 const bootstrapProbePrefix = "[ojreview-bootstrap]";
 const { strippedEntries } = createElectronProcessEnv();
-const electronArgs = [
-  appRoot,
-  "--no-sandbox",
-  "--in-process-gpu",
-  "--disable-gpu-sandbox",
-];
+const electronArgs = [appRoot];
 
 function run(command, args, cwd, env = process.env) {
   return new Promise((resolve, reject) => {

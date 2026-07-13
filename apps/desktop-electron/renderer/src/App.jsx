@@ -1,10 +1,10 @@
-import React, { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useTranslation } from "react-i18next";
 import { SWRConfig } from "swr";
 import { NavigationProvider, useNavigation } from "./lib/NavigationContext.jsx";
 import { api } from "./lib/api.js";
 import { formatDate } from "./lib/format.js";
-import { useOfflineData } from "./hooks/useOfflineData.js";
+import { migrateLegacyReviewQueue } from "./lib/legacyReviewMigration.js";
 import { useThemeMode } from "./hooks/useThemeMode.js";
 import { resolveEffectiveTheme } from "./lib/theme.js";
 import { ErrorBoundary } from "./components/ErrorBoundary.jsx";
@@ -125,7 +125,11 @@ function AppShell() {
     isPackaged: false,
   });
   const [browserRuntime, setBrowserRuntime] = useState(null);
-  const { isOnline, lastSyncAt, connectivity, cacheStatus, syncQueue, sync } = useOfflineData();
+  const isOnline = navigator.onLine !== false;
+  const [syncStatus, setSyncStatus] = useState(null);
+  const [migrationError, setMigrationError] = useState("");
+  const [migrationComplete, setMigrationComplete] = useState(false);
+  const [migrationAttempt, setMigrationAttempt] = useState(0);
   const { themeMode, onThemeChange: handleThemeChange } = useThemeMode();
   const [showOnboarding, setShowOnboarding] = useState(false);
 
@@ -150,21 +154,21 @@ function AppShell() {
     async function bootstrap() {
       if (!hasDesktopBridge) {
         const proxyWorks = await fetch("/health").then((response) => response.ok).catch(() => false);
-        const baseUrl = proxyWorks ? "" : "http://127.0.0.1:38473";
+        const baseUrl = "";
         const serviceUrl = getBrowserRuntimeServiceUrl({
           proxyWorks,
-          fallbackUrl: baseUrl,
+          fallbackUrl: "Vite 代理不可用",
         });
         api.setBaseUrl(baseUrl);
 
         if (!cancelled) {
-          const source = proxyWorks ? "vite-proxy" : "browser-direct";
+          const source = "vite-proxy";
           setRuntimeInfo((current) => ({ ...current, serviceUrl }));
-          setBrowserRuntime({ source, serviceUrl });
+          setBrowserRuntime({ source, serviceUrl, proxyWorks });
           setServiceStatus(
             getServiceStatusSnapshot({
               hasDesktopBridge: false,
-              isOnline,
+              isOnline: isOnline && proxyWorks,
               serviceStatus: initialStatus,
               serviceUrl,
               source,
@@ -211,53 +215,51 @@ function AppShell() {
     setServiceStatus((current) =>
       getServiceStatusSnapshot({
         hasDesktopBridge: false,
-        isOnline,
+        isOnline: isOnline && browserRuntime.proxyWorks,
         serviceStatus: current,
         serviceUrl: browserRuntime.serviceUrl,
         source: browserRuntime.source,
       })
     );
-  }, [browserRuntime, hasDesktopBridge, isOnline, connectivity]);
-
-  useEffect(() => {
-    void sync();
-
-    const intervalId = window.setInterval(() => {
-      void sync();
-    }, 5 * 60 * 1000);
-
-    return () => window.clearInterval(intervalId);
-  }, [sync]);
+  }, [browserRuntime, hasDesktopBridge, isOnline]);
 
   useEffect(() => {
     if (serviceStatus?.state !== "healthy") return undefined;
     let cancelled = false;
 
-    async function syncAllAccounts() {
+    async function refreshSyncStatus() {
       try {
-        const accounts = await api.getAccounts();
-        if (cancelled) return;
-        for (const account of accounts) {
-          await api.syncAccount(account.platform, account.id);
-          if (cancelled) return;
-        }
-      } catch (err) {
-        if (!String(err?.message || "").includes("already running")) {
-          console.error("Auto sync accounts failed:", err);
-        }
+        const status = await api.getSyncStatus();
+        if (!cancelled) setSyncStatus(status);
+      } catch {
+        // Service status remains visible; the next poll retries automatically.
       }
     }
 
-    void syncAllAccounts();
-    const syncIntervalId = window.setInterval(() => {
-      void syncAllAccounts();
-    }, 30 * 60 * 1000);
+    void refreshSyncStatus();
+    const statusIntervalId = window.setInterval(() => void refreshSyncStatus(), 30000);
 
     return () => {
       cancelled = true;
-      window.clearInterval(syncIntervalId);
+      window.clearInterval(statusIntervalId);
     };
   }, [serviceStatus?.state]);
+
+  useEffect(() => {
+    if (serviceStatus?.state !== "healthy" || migrationComplete) return undefined;
+    let cancelled = false;
+    setMigrationError("");
+    migrateLegacyReviewQueue(api.saveReviewState)
+      .then(() => {
+        if (!cancelled) setMigrationComplete(true);
+      })
+      .catch((error) => {
+        if (!cancelled) setMigrationError(error?.message || "旧复习状态迁移失败");
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [migrationAttempt, migrationComplete, serviceStatus?.state]);
 
   useEffect(() => {
     if (serviceStatus?.state === "healthy") {
@@ -269,13 +271,12 @@ function AppShell() {
 
   const renderedIndicator = getRenderedServiceIndicator({
     hasDesktopBridge,
-    isOnline,
+    isOnline: hasDesktopBridge ? isOnline : isOnline && Boolean(browserRuntime?.proxyWorks),
     serviceStatus,
   });
-  const lastSyncLabel = useMemo(
-    () => (lastSyncAt ? formatDate(lastSyncAt.toISOString()) : t("status.notSynced")),
-    [lastSyncAt]
-  );
+  const lastSyncLabel = useMemo(() => (
+    syncStatus?.lastRunAt ? formatDate(syncStatus.lastRunAt) : t("status.notSynced")
+  ), [syncStatus?.lastRunAt, t]);
   const effectiveTheme = resolveEffectiveTheme(themeMode);
   const nextThemeMode = effectiveTheme === "dark" ? "light" : "dark";
   const themeToggleLabel = effectiveTheme === "dark" ? t("theme.switchToLight") : t("theme.switchToDark");
@@ -283,6 +284,17 @@ function AppShell() {
 
   if (showOnboarding) {
     return <OnboardingPage onComplete={() => setShowOnboarding(false)} />;
+  }
+
+  if (migrationError) {
+    return (
+      <main className="legacy-migration-blocker" role="alert">
+        <h1>旧复习状态尚未迁移</h1>
+        <p>{migrationError}</p>
+        <p>原 IndexedDB 队列已保留；迁移成功前不会删除。</p>
+        <button type="button" onClick={() => setMigrationAttempt((value) => value + 1)}>重试迁移</button>
+      </main>
+    );
   }
 
   return (
@@ -348,7 +360,7 @@ function AppShell() {
         {visitedPages.has("dashboard") && (
           <div style={{ display: page === "dashboard" ? "" : "none" }}>
             <ErrorBoundary moduleName="DashboardPage" fallback={<ErrorPageFallback />}>
-              <DashboardPage serviceStatus={serviceStatus} runtimeInfo={runtimeInfo} cacheStatus={cacheStatus} connectivity={connectivity} syncQueue={syncQueue} onNavigate={navigateTo} />
+              <DashboardPage serviceStatus={serviceStatus} runtimeInfo={runtimeInfo} onNavigate={navigateTo} />
             </ErrorBoundary>
           </div>
         )}

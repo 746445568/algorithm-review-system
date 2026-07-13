@@ -1,67 +1,48 @@
-# Contributing to OJReviewDesktop
+# Contributing to OJReview
 
-## Development Setup
+## Requirements
 
-### Prerequisites
+- Windows x64
+- Node.js 20+
+- Go 1.26
+- Git
 
-- [Go 1.22+](https://go.dev/dl/)
-- [Node.js 20+](https://nodejs.org/)
-- [Git](https://git-scm.com/)
+## Setup
 
-### Getting Started
-
-```bash
+```powershell
 git clone https://github.com/746445568/algorithm-review-system.git
 cd algorithm-review-system
+npm ci --prefix apps/desktop-electron
+npm run desktop:dev
+```
 
-# Backend
-cd apps/server
-go test ./...
+## Required checks
 
-# Frontend
+Run the same zero-warning gate used by CI:
+
+```powershell
 cd apps/desktop-electron
-npm install
-npm run dev
+npm run verify
+npm run test:e2e
 ```
 
-## Commit Convention
+`verify` runs ESLint with `--max-warnings=0`, TypeScript, Node and renderer unit tests, Go tests, a metadata-injected Go build, and the renderer/Electron build. Browser-extension E2E is intentionally outside the gate until secure pairing is implemented; do not mark it skipped and claim coverage.
 
-This project follows [Conventional Commits](https://www.conventionalcommits.org/):
+For internal Windows artifacts:
 
-```
-<type>: <short description>
-
-feat:    new feature
-fix:     bug fix
-docs:    documentation
-chore:   build/tooling/dependencies
-test:    testing
-refactor: code refactoring (no behavior change)
+```powershell
+cd apps/desktop-electron
+npm run dist
 ```
 
-Example:
-```
-feat: add review calendar view with streak tracking
-fix: prevent sync task from running when queue is full
-docs: add CONTRIBUTING.md
-```
+Public release creation is disabled. A release tag must equal `v${desktopVersion}`, the service metadata must match, and unsigned artifacts are internal only.
 
-## Pull Request Process
+## Change discipline
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feat/my-feature`)
-3. Make your changes with tests
-4. Ensure tests pass:
-   - Backend: `cd apps/server && go test ./...`
-   - Frontend: `cd apps/desktop-electron && npm test`
-5. Commit using Conventional Commits format
-6. Push and create a Pull Request
+- Use Conventional Commits (`test`, `fix`, `refactor`, `build`, `docs`, and so on).
+- Keep the Go service bound to localhost.
+- Never expose service tokens or AI keys to renderer code, JSON responses, logs, or diagnostics.
+- Add behavior tests for fixes; do not add source-regex or `expect(true)` tests.
+- Do not modify `_deprecated/`.
 
-## Code Style
-
-- **Go:** Follow standard Go conventions. Use `t.Fatalf` (not `t.Errorf`) in tests.
-- **JavaScript/React:** Use ES modules. Components in PascalCase files. Follow existing patterns in the codebase.
-
-## Architecture
-
-See [CLAUDE.md](./CLAUDE.md) for the full architecture overview.
+See [SECURITY.md](./SECURITY.md) before changing authentication, navigation, IPC, or secret handling.

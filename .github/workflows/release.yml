@@ -1,132 +1,88 @@
-name: Release
+name: Windows package
 
 on:
   push:
-    tags:
-      - 'v*'
+    tags: ['v*']
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
-  test-go:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
-        with:
-          go-version: '1.22'
-      - name: Run Go tests
-        run: go test ./...
-        working-directory: apps/server
+  quality:
+    uses: ./.github/workflows/quality.yml
 
-  test-js:
-    runs-on: ubuntu-latest
+  package:
+    needs: quality
+    runs-on: windows-latest
+    outputs:
+      signed: ${{ steps.signing.outputs.signed }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v4
         with:
           node-version: '20'
-      - name: Install dependencies
-        run: npm ci
-        working-directory: apps/desktop-electron
-      - name: Install Playwright browsers
-        run: npx playwright install --with-deps chromium
-        working-directory: apps/desktop-electron
-      - name: Run Playwright tests
-        run: npx playwright test
-        working-directory: apps/desktop-electron
-
-  build:
-    needs: [test-go, test-js]
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          - os: windows-latest
-            goos: windows
-            goarch: amd64
-            electron-target: win
-          - os: macos-latest
-            goos: darwin
-            goarch: arm64
-            electron-target: mac
-          - os: macos-13
-            goos: darwin
-            goarch: amd64
-            electron-target: mac
-          - os: ubuntu-latest
-            goos: linux
-            goarch: amd64
-            electron-target: linux
-    steps:
-      - uses: actions/checkout@v4
-
+          cache: npm
+          cache-dependency-path: apps/desktop-electron/package-lock.json
       - uses: actions/setup-go@v5
         with:
-          go-version: '1.22'
-
-      - uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-
+          go-version-file: apps/server/go.mod
+          cache-dependency-path: apps/server/go.sum
+      - name: Validate release input
+        shell: pwsh
+        run: |
+          $version = (Get-Content apps/desktop-electron/package.json | ConvertFrom-Json).version
+          if ('${{ github.ref_name }}' -ne "v$version") { throw "Tag must equal v$version" }
+          if (git status --porcelain) { throw 'Release checkout is not clean' }
+      - name: Detect signing certificate
+        id: signing
+        shell: pwsh
+        env:
+          CSC_LINK: ${{ secrets.WINDOWS_CSC_LINK }}
+        run: |
+          if ($env:CSC_LINK) { "signed=true" >> $env:GITHUB_OUTPUT } else { "signed=false" >> $env:GITHUB_OUTPUT }
       - name: Install dependencies
         run: npm ci
         working-directory: apps/desktop-electron
-
-      - name: Build Go binary
-        run: npm run build:go
+      - name: Build Windows x64 artifacts
+        run: npm run dist
         working-directory: apps/desktop-electron
         env:
-          GOOS: ${{ matrix.goos }}
-          GOARCH: ${{ matrix.goarch }}
-
-      - name: Build renderer
-        run: npm run build:renderer
-        working-directory: apps/desktop-electron
-
-      - name: Build Electron package
-        run: npx electron-builder --publish=never --${{ matrix.electron-target }}
-        working-directory: apps/desktop-electron
-        env:
-          CSC_IDENTITY_AUTO_DISCOVERY: false
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Upload artifacts
-        uses: actions/upload-artifact@v4
+          CSC_LINK: ${{ secrets.WINDOWS_CSC_LINK }}
+          CSC_KEY_PASSWORD: ${{ secrets.WINDOWS_CSC_KEY_PASSWORD }}
+          CSC_IDENTITY_AUTO_DISCOVERY: ${{ steps.signing.outputs.signed }}
+      - name: Verify service metadata
+        shell: pwsh
+        run: |
+          $metadata = & apps/desktop-electron/bin/ojreviewd.exe --version-json | ConvertFrom-Json
+          $version = (Get-Content apps/desktop-electron/package.json | ConvertFrom-Json).version
+          if ($metadata.version -ne $version -or $metadata.apiVersion -ne '1' -or $metadata.commit -eq 'dev') { throw 'Invalid service metadata' }
+      - name: Smoke test unpacked application
+        shell: pwsh
+        run: |
+          $process = Start-Process apps/desktop-electron/dist/win-unpacked/OJReviewDesktop.exe -PassThru -WindowStyle Hidden
+          try {
+            $healthy = $false
+            1..30 | ForEach-Object {
+              if (-not $healthy) {
+                try { $healthy = (Invoke-RestMethod http://127.0.0.1:38473/health).status -eq 'ok' } catch {}
+                Start-Sleep -Seconds 1
+              }
+            }
+            if (-not $healthy) { throw 'Packaged application did not start its service' }
+          } finally {
+            Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
+          }
+      - uses: actions/upload-artifact@v4
         with:
-          name: release-${{ matrix.goos }}-${{ matrix.goarch }}
+          name: windows-x64-${{ steps.signing.outputs.signed == 'true' && 'signed' || 'internal-unsigned' }}
           path: |
             apps/desktop-electron/dist/*.exe
-            apps/desktop-electron/dist/*.dmg
-            apps/desktop-electron/dist/*.AppImage
-            apps/desktop-electron/dist/*.deb
             apps/desktop-electron/dist/latest*.yml
             apps/desktop-electron/dist/*.blockmap
-          if-no-files-found: warn
+          if-no-files-found: error
 
-  publish:
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Download all artifacts
-        uses: actions/download-artifact@v4
-        with:
-          path: dist
-          merge-multiple: true
-
-      - name: Create GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          name: ${{ github.ref_name }}
-          body: |
-            ## ${{ github.ref_name }}
-
-            See [CHANGELOG.md](./CHANGELOG.md) for details.
-          files: dist/*
-          generate_release_notes: true
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+# Public GitHub Release creation is intentionally absent. Unsigned builds are
+# internal artifacts only, and public release remains blocked until extension
+# secure pairing is implemented and a Windows signing certificate is present.

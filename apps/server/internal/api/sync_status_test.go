@@ -1,6 +1,7 @@
 package api
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"net/http"
@@ -8,13 +9,66 @@ import (
 	"testing"
 	"time"
 
+	"ojreviewdesktop/internal/adapters/judges"
 	"ojreviewdesktop/internal/jobs"
 	"ojreviewdesktop/internal/models"
 )
 
+func TestAccountCreationImmediatelyQueuesSync(t *testing.T) {
+	server := newTestServer(t)
+	queue := &recordingQueue{}
+	server.queue = queue
+	server.adapters[models.PlatformCodeforces] = judges.NewPlaceholderAdapter(models.PlatformCodeforces)
+
+	req := httptest.NewRequest(http.MethodPut, "/api/accounts/CODEFORCES", bytes.NewBufferString(`{"handle":"tourist"}`))
+	rec := httptest.NewRecorder()
+	server.Router().ServeHTTP(rec, req)
+
+	if rec.Code != http.StatusOK {
+		t.Fatalf("status = %d: %s", rec.Code, rec.Body.String())
+	}
+	if len(queue.jobs) != 1 || queue.jobs[0].TaskType != models.TaskTypeSync {
+		t.Fatalf("queued jobs = %#v", queue.jobs)
+	}
+}
+
 type recordingQueue struct {
 	jobs   []jobs.Job
 	reject bool
+}
+
+type rejectFirstQueue struct {
+	jobs  []jobs.Job
+	calls int
+}
+
+func (q *rejectFirstQueue) Enqueue(job jobs.Job) bool {
+	q.calls++
+	if q.calls == 1 {
+		return false
+	}
+	q.jobs = append(q.jobs, job)
+	return true
+}
+
+func TestAutoSyncDuplicateDoesNotBlockOtherAccounts(t *testing.T) {
+	server := newTestServer(t)
+	queue := &rejectFirstQueue{}
+	server.queue = queue
+	if _, err := server.db.UpsertAccount(models.PlatformCodeforces, "first"); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := server.db.UpsertAccount(models.PlatformAtCoder, "second"); err != nil {
+		t.Fatal(err)
+	}
+
+	queued, err := server.queueAllAccountSyncs(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	if queued != 1 || len(queue.jobs) != 1 {
+		t.Fatalf("queued = %d, jobs = %d", queued, len(queue.jobs))
+	}
 }
 
 func (q *recordingQueue) Enqueue(job jobs.Job) bool {

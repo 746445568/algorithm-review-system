@@ -1,4 +1,5 @@
 const LOCAL_SERVICE_BASE = "http://127.0.0.1:38473";
+const SECURE_PAIRING_AVAILABLE = false;
 
 const importButton = document.getElementById("importButton");
 const statusEl = document.getElementById("status");
@@ -62,6 +63,10 @@ async function importArtifact(artifact) {
 }
 
 async function handleImport() {
+  if (!SECURE_PAIRING_AVAILABLE) {
+    setStatus("Secure pairing is required before imports can resume.", "error");
+    return;
+  }
   importButton.disabled = true;
   setStatus("Importing...");
   try {

@@ -49,6 +49,10 @@ func (s *Server) handleUpsertAccount(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
+	if _, err := s.enqueueSyncTask(account); err != nil && !isSyncAlreadyQueuedError(err) {
+		writeError(w, http.StatusServiceUnavailable, "account saved but automatic sync could not be queued")
+		return
+	}
 	writeJSON(w, http.StatusOK, account)
 }
 

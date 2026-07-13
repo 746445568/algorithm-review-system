@@ -71,3 +71,23 @@ func TestEnqueue_CancelCleansInflight(t *testing.T) {
 		t.Error("inflight key should be cleared after ctx cancel")
 	}
 }
+
+func TestQueueFailureDoesNotBlockNextJob(t *testing.T) {
+	q := NewQueue(nil)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	q.Start(ctx)
+
+	completed := make(chan struct{})
+	q.Enqueue(Job{Key: "fails", Run: func(context.Context) error { return fmt.Errorf("expected failure") }})
+	q.Enqueue(Job{Key: "continues", Run: func(context.Context) error {
+		close(completed)
+		return nil
+	}})
+
+	select {
+	case <-completed:
+	case <-time.After(time.Second):
+		t.Fatal("later job was blocked by an earlier failure")
+	}
+}

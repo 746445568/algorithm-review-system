@@ -19,11 +19,12 @@ func (s *Server) handleHealth(w http.ResponseWriter, _ *http.Request) {
 	firstRun := settings.APIKey == ""
 
 	writeJSON(w, http.StatusOK, map[string]any{
-		"status":    "ok",
-		"timestamp": time.Now().UTC().Format(time.RFC3339),
-		"version":   buildinfo.Version,
-		"commit":    buildinfo.Commit,
-		"firstRun":  firstRun,
+		"status":     "ok",
+		"timestamp":  time.Now().UTC().Format(time.RFC3339),
+		"version":    buildinfo.Version,
+		"commit":     buildinfo.Commit,
+		"apiVersion": buildinfo.APIVersion,
+		"firstRun":   firstRun,
 	})
 }
 

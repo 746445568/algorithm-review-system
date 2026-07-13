@@ -11,6 +11,7 @@ const defaultAISettings = {
   model: "",
   baseUrl: "",
   apiKey: "",
+  hasApiKey: false,
 };
 
 const defaultGoalForm = {
@@ -124,7 +125,8 @@ export function SettingsPage({ runtimeInfo, serviceStatus }) {
         provider: nextAISettings?.provider ?? "",
         model: nextAISettings?.model ?? "",
         baseUrl: nextAISettings?.baseUrl ?? "",
-        apiKey: nextAISettings?.apiKey ?? "",
+        apiKey: "",
+        hasApiKey: Boolean(nextAISettings?.hasApiKey),
       });
       setGoals(Array.isArray(nextGoals) ? nextGoals : []);
       const loadedLanguage = nextLanguage?.language || "zh-CN";
@@ -175,7 +177,26 @@ export function SettingsPage({ runtimeInfo, serviceStatus }) {
 
     try {
       await api.saveAISettings(aiSettings);
+      setAISettings((current) => ({
+        ...current,
+        apiKey: "",
+        hasApiKey: current.hasApiKey || current.apiKey.trim() !== "",
+      }));
       setNotice(t("settings.ai.saved"));
+    } catch (nextError) {
+      setError(nextError.message);
+    } finally {
+      setSavingAI(false);
+    }
+  }
+
+  async function clearAIKey() {
+    setSavingAI(true);
+    setError("");
+    try {
+      await api.saveAISettings({ ...aiSettings, apiKey: "", clearApiKey: true });
+      setAISettings((current) => ({ ...current, apiKey: "", hasApiKey: false }));
+      setNotice(t("settings.ai.keyCleared"));
     } catch (nextError) {
       setError(nextError.message);
     } finally {
@@ -379,6 +400,7 @@ export function SettingsPage({ runtimeInfo, serviceStatus }) {
                 setGoalForm((current) => ({ ...current, targetRating: event.target.value }))
               }
             />
+            <small>{aiSettings.hasApiKey ? t("settings.ai.keyConfigured") : t("settings.ai.keyNotConfigured")}</small>
           </label>
 
           <label>
@@ -556,6 +578,16 @@ export function SettingsPage({ runtimeInfo, serviceStatus }) {
             >
               {testingAI ? t("settings.ai.testing") : t("settings.ai.test")}
             </button>
+            {aiSettings.hasApiKey ? (
+              <button
+                type="button"
+                className="ghost-button"
+                disabled={savingAI || serviceUnavailable}
+                onClick={() => void clearAIKey()}
+              >
+                {t("settings.ai.clearKey")}
+              </button>
+            ) : null}
             <button
               type="button"
               className="primary-button"

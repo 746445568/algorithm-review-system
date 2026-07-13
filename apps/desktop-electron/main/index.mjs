@@ -8,6 +8,8 @@ import {
   resolveElectronApi,
 } from "../bootstrap/electron-api.mjs";
 import { initAutoUpdater } from "./updater.mjs";
+import { loadOrCreateServiceToken } from "../bootstrap/service-auth.mjs";
+import { isAllowedExternalUrl, isPathWithinAllowedRoots } from "../bootstrap/security-policy.mjs";
 
 const bootstrap = await resolveMainBootstrap();
 const { app, BrowserWindow, ipcMain, shell } = bootstrap.api;
@@ -19,28 +21,16 @@ if (process.env.OJREVIEW_BOOTSTRAP_PROBE === "1") {
 }
 
 const SERVICE_URL = "http://127.0.0.1:38473";
+const EXPECTED_API_VERSION = "1";
 const SERVICE_NAME = process.platform === "win32" ? "ojreviewd.exe" : "ojreviewd";
 const isDev = !app.isPackaged;
 
-app.commandLine.appendSwitch("no-sandbox");
-app.commandLine.appendSwitch("in-process-gpu");
-app.commandLine.appendSwitch("disable-gpu-sandbox");
 app.setName("OJReviewDesktop");
 
-function parseMajorVersion(versionText) {
-  if (!versionText || typeof versionText !== "string") {
-    return null;
-  }
-  const normalized = versionText.trim().replace(/^v/i, "");
-  const majorPart = normalized.split(".")[0];
-  const major = Number.parseInt(majorPart, 10);
-  return Number.isNaN(major) ? null : major;
-}
-
-function formatVersionMismatchHint(expectedMajor, actualVersion, source) {
+function formatVersionMismatchHint(expectedVersion, actualVersion, source) {
   return [
     `service version check failed before startup (${source})`,
-    `desktop requires service major version ${expectedMajor}, but got ${actualVersion ?? "unknown"}`,
+    `desktop requires service version ${expectedVersion}, but got ${actualVersion ?? "unknown"}`,
     "Please rebuild apps/server/bin/ojreviewd with build metadata and refresh apps/desktop-electron/bin/ojreviewd(.exe).",
   ].join("; ");
 }
@@ -49,6 +39,7 @@ class ServiceManager {
   constructor() {
     this.child = null;
     this.startPromise = null;  // 并发锁：in-flight 时非 null
+    this.serviceTokenPromise = null;
     this.status = {
       state: "idle",
       url: SERVICE_URL,
@@ -65,12 +56,11 @@ class ServiceManager {
       : path.join(app.getPath("appData"), "OJReviewDesktop"));
   }
 
-  getExpectedServiceMajor() {
-    const envMajor = parseMajorVersion(process.env.OJREVIEW_SERVICE_MAJOR ?? "");
-    if (envMajor !== null) {
-      return envMajor;
+  getServiceToken() {
+    if (!this.serviceTokenPromise) {
+      this.serviceTokenPromise = loadOrCreateServiceToken(this.getRuntimeDir());
     }
-    return parseMajorVersion(app.getVersion());
+    return this.serviceTokenPromise;
   }
 
   getStatus() {
@@ -86,6 +76,7 @@ class ServiceManager {
   async _startImpl() {
     // 注意：成功路径不清空 startPromise，后续调用直接返回已完成的 Promise
     const runtimeDir = this.getRuntimeDir();
+    const serviceToken = await this.getServiceToken();
     this.updateStatus({
       state: "starting",
       runtimeDir,
@@ -94,7 +85,7 @@ class ServiceManager {
 
     const existingHealth = await this.fetchHealthPayload();
     if (existingHealth?.status === "ok") {
-      const mismatchMessage = this.checkVersionCompatibility(existingHealth.version, "external-running-service");
+      const mismatchMessage = this.checkVersionCompatibility(existingHealth, "external-running-service");
       if (mismatchMessage) {
         this.startPromise = null;
         this.updateStatus({
@@ -145,6 +136,7 @@ class ServiceManager {
         env: {
           ...process.env,
           OJREVIEW_APP_DIR: runtimeDir,
+          OJREVIEW_SERVICE_TOKEN: serviceToken,
         },
         stdio: ["ignore", "pipe", "pipe"],
         windowsHide: true,
@@ -205,7 +197,7 @@ class ServiceManager {
       return this.getStatus();
     }
 
-    const mismatchMessage = this.checkVersionCompatibility(healthPayload.version, launch.source);
+    const mismatchMessage = this.checkVersionCompatibility(healthPayload, launch.source);
     if (mismatchMessage) {
       await this.stop();
       this.startPromise = null;
@@ -380,17 +372,16 @@ class ServiceManager {
       return `failed to parse service version output before startup (${launch.source})`;
     }
 
-    return this.checkVersionCompatibility(payload?.version, launch.source);
+    return this.checkVersionCompatibility(payload, launch.source);
   }
 
-  checkVersionCompatibility(serviceVersion, source) {
-    const expectedMajor = this.getExpectedServiceMajor();
-    if (expectedMajor === null) {
-      return null;
+  checkVersionCompatibility(metadata, source) {
+    if (String(metadata?.apiVersion ?? "") !== EXPECTED_API_VERSION) {
+      return `service API version mismatch (${source}): expected ${EXPECTED_API_VERSION}, got ${metadata?.apiVersion ?? "unknown"}`;
     }
-    const serviceMajor = parseMajorVersion(serviceVersion);
-    if (serviceMajor === null || serviceMajor !== expectedMajor) {
-      return formatVersionMismatchHint(expectedMajor, serviceVersion, source);
+    const expectedVersion = app.getVersion();
+    if (app.isPackaged && metadata?.version !== expectedVersion) {
+      return formatVersionMismatchHint(expectedVersion, metadata?.version, source);
     }
     return null;
   }
@@ -439,7 +430,8 @@ class ServiceManager {
 
 const serviceManager = new ServiceManager();
 
-function createWindow() {
+async function createWindow() {
+  const serviceToken = await serviceManager.getServiceToken();
   const window = new BrowserWindow({
     width: 1460,
     height: 920,
@@ -452,12 +444,20 @@ function createWindow() {
       preload: path.join(__dirname, "..", "preload", "index.mjs"),
       contextIsolation: true,
       nodeIntegration: false,
-      sandbox: false,
+      sandbox: true,
     },
   });
 
+  window.webContents.session.webRequest.onBeforeSendHeaders(
+    { urls: [`${SERVICE_URL}/api/*`] },
+    (details, callback) => {
+      details.requestHeaders.Authorization = `Bearer ${serviceToken}`;
+      callback({ requestHeaders: details.requestHeaders });
+    },
+  );
+
   window.webContents.setWindowOpenHandler(({ url }) => {
-    shell.openExternal(url);
+    void openAllowedExternal(url);
     return { action: "deny" };
   });
 
@@ -480,17 +480,19 @@ ipcMain.handle("desktop:get-runtime-info", () => ({
 
 ipcMain.handle("desktop:get-service-status", () => serviceManager.getStatus());
 ipcMain.handle("desktop:restart-service", () => serviceManager.restart());
-ipcMain.handle("desktop:open-external", (_event, url) => shell.openExternal(url));
-ipcMain.handle("desktop:open-path", async (_event, targetPath) => shell.openPath(targetPath));
+ipcMain.handle("desktop:open-external", (_event, url) => openAllowedExternal(url));
+ipcMain.handle("desktop:open-path", async (_event, targetPath) => openAllowedPath(targetPath));
 
-app.whenReady().then(() => {
-  let mainWindow = createWindow();
+app.whenReady().then(async () => {
+  let mainWindow = await createWindow();
   void serviceManager.ensureStarted();
   initAutoUpdater(ipcMain, app, () => mainWindow);
 
   app.on("activate", () => {
     if (BrowserWindow.getAllWindows().length === 0) {
-      mainWindow = createWindow();
+      void createWindow().then((created) => {
+        mainWindow = created;
+      });
     }
   });
 
@@ -499,6 +501,22 @@ app.whenReady().then(() => {
     if (isDev) mainWindow.webContents.openDevTools();
   });
 });
+
+function openAllowedExternal(rawUrl) {
+  if (!isAllowedExternalUrl(rawUrl)) {
+    throw new Error("external URL is not allowed");
+  }
+  return shell.openExternal(new URL(String(rawUrl)).toString());
+}
+
+function openAllowedPath(targetPath) {
+  const runtimeDir = serviceManager.getRuntimeDir();
+  const roots = [app.getAppPath(), runtimeDir, path.join(runtimeDir, "exports")];
+  if (!isPathWithinAllowedRoots(targetPath, roots)) {
+    throw new Error("path is outside allowed application directories");
+  }
+  return shell.openPath(path.resolve(String(targetPath)));
+}
 
 let isQuitting = false;
 app.on("before-quit", (event) => {

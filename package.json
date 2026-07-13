@@ -1,6 +1,5 @@
 {
   "name": "algorithm-review-system",
-  "version": "1.0.0",
   "description": "OJ review desktop app with Electron, React, Vite, and Go",
   "private": true,
   "scripts": {

@@ -1,6 +1,7 @@
 package api
 
 import (
+	"crypto/subtle"
 	"encoding/json"
 	"net/http"
 	"path/filepath"
@@ -42,22 +43,33 @@ func NewServer(cfg app.Config, db *storage.DB, queue *jobs.Queue) *Server {
 	return s
 }
 
-func (s *Server) Router() http.Handler { return s.corsMiddleware(s.mux) }
+func (s *Server) Router() http.Handler { return s.corsMiddleware(s.authMiddleware(s.mux)) }
+
+func (s *Server) authMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/health" || !strings.HasPrefix(r.URL.Path, "/api/") || s.cfg.ServiceToken == "" {
+			next.ServeHTTP(w, r)
+			return
+		}
+		provided := strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
+		if provided == "" || subtle.ConstantTimeCompare([]byte(provided), []byte(s.cfg.ServiceToken)) != 1 {
+			writeError(w, http.StatusUnauthorized, "unauthorized")
+			return
+		}
+		next.ServeHTTP(w, r)
+	})
+}
 
 func (s *Server) corsMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		origins := s.cfg.AllowedOrigins
 		if len(origins) == 0 {
-			origins = []string{"http://localhost:5173", "http://127.0.0.1:5173", "http://localhost:38473", "http://127.0.0.1:38473"}
+			origins = []string{"null", "http://localhost:5180", "http://127.0.0.1:5180"}
 		}
 		reqOrigin := r.Header.Get("Origin")
 		if reqOrigin != "" {
 			allowedOrigin := ""
 			for _, o := range origins {
-				if o == "*" {
-					allowedOrigin = "*"
-					break
-				}
 				if o == reqOrigin {
 					allowedOrigin = reqOrigin
 					break
@@ -146,11 +158,22 @@ func (s *Server) handleGetAISettings(w http.ResponseWriter, _ *http.Request) {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	writeJSON(w, http.StatusOK, settings)
+	writeJSON(w, http.StatusOK, map[string]any{
+		"provider":  settings.Provider,
+		"model":     settings.Model,
+		"baseUrl":   settings.BaseURL,
+		"hasApiKey": strings.TrimSpace(settings.APIKey) != "",
+	})
 }
 
 func (s *Server) handlePutAISettings(w http.ResponseWriter, r *http.Request) {
-	var payload models.AISettings
+	var payload struct {
+		Provider    string `json:"provider"`
+		Model       string `json:"model"`
+		BaseURL     string `json:"baseUrl"`
+		APIKey      string `json:"apiKey"`
+		ClearAPIKey bool   `json:"clearApiKey"`
+	}
 	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid json body")
 		return
@@ -159,7 +182,23 @@ func (s *Server) handlePutAISettings(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "provider and model are required")
 		return
 	}
-	if err := s.db.SaveAISettings(payload); err != nil {
+	existing, err := s.db.LoadAISettings()
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	apiKey := existing.APIKey
+	if payload.ClearAPIKey {
+		apiKey = ""
+	} else if strings.TrimSpace(payload.APIKey) != "" {
+		apiKey = payload.APIKey
+	}
+	if err := s.db.SaveAISettings(models.AISettings{
+		Provider: payload.Provider,
+		Model:    payload.Model,
+		BaseURL:  payload.BaseURL,
+		APIKey:   apiKey,
+	}); err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
@@ -171,6 +210,14 @@ func (s *Server) handleTestAISettings(w http.ResponseWriter, r *http.Request) {
 	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid json body")
 		return
+	}
+	if strings.TrimSpace(payload.APIKey) == "" {
+		stored, err := s.db.LoadAISettings()
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		payload.APIKey = stored.APIKey
 	}
 
 	provider, err := ai.NewProvider(payload.Provider)

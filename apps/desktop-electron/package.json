@@ -47,42 +47,15 @@
       ],
       "icon": "build/icon.ico"
     },
-    "mac": {
-      "target": [
-        {
-          "target": "dmg",
-          "arch": [
-            "x64",
-            "arm64"
-          ]
-        }
-      ],
-      "icon": "build/icon.icns",
-      "category": "public.app-category.education"
-    },
-    "linux": {
-      "target": [
-        {
-          "target": "AppImage",
-          "arch": [
-            "x64"
-          ]
-        },
-        {
-          "target": "deb",
-          "arch": [
-            "x64"
-          ]
-        }
-      ],
-      "icon": "build",
-      "category": "Education"
-    },
     "nsis": {
+      "artifactName": "OJReviewDesktop-${version}-win-${arch}-setup.${ext}",
       "oneClick": false,
       "allowToChangeInstallationDirectory": true,
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true
+    },
+    "portable": {
+      "artifactName": "OJReviewDesktop-${version}-win-${arch}-portable.${ext}"
     },
     "publish": {
       "provider": "github",
@@ -96,13 +69,20 @@
     "dev:renderer": "vite --config ./renderer/vite.config.mjs",
     "start": "node ./scripts/start-static.mjs",
     "start:static": "node ./scripts/start-static.mjs",
-    "build": "npm run build:renderer && npm run build:electron",
+    "build": "npm run build:electron",
     "build:renderer": "vite build renderer",
     "build:electron": "node ./scripts/build.mjs",
     "build:go": "node ./scripts/build-go.mjs",
-    "pack": "npm run build && electron-builder --dir",
-    "dist": "npm run build && electron-builder",
-    "test": "npx playwright test",
+    "pack": "npm run build:go && npm run build && electron-builder --dir --win --x64",
+    "dist": "npm run build:go && npm run build && electron-builder --win --x64 --publish=never",
+    "test": "npm run test:node && npm run test:renderer",
+    "test:node": "node --test test/*.test.mjs",
+    "test:renderer": "vitest run",
+    "test:e2e": "npm run build:go && npm run build && playwright test",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "lint": "eslint . --max-warnings=0",
+    "verify": "npm run lint && npm run typecheck && npm run server:test && npm run build:go && npm run test:node && npm run test:renderer && npm run build",
+    "server:test": "cd ../server && go test -count=1 ./...",
     "release": "commit-and-tag-version",
     "release:minor": "commit-and-tag-version --release-as minor",
     "release:major": "commit-and-tag-version --release-as major",
@@ -119,11 +99,25 @@
     "swr": "^2.4.1"
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.5",
     "@playwright/test": "^1.59.1",
+    "@testing-library/jest-dom": "^6.9.1",
+    "@testing-library/react": "^16.3.2",
+    "@testing-library/user-event": "^14.6.1",
     "@vitejs/plugin-react": "^5.0.2",
     "commit-and-tag-version": "^12.7.3",
     "electron": "^37.2.6",
     "electron-builder": "^25.0.0",
-    "vite": "^7.1.3"
+    "eslint": "^9.39.5",
+    "eslint-plugin-jsx-a11y": "^6.10.2",
+    "eslint-plugin-react": "^7.37.5",
+    "eslint-plugin-react-hooks": "^7.1.1",
+    "eslint-plugin-react-refresh": "^0.5.3",
+    "globals": "^17.7.0",
+    "jsdom": "^29.1.1",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.63.0",
+    "vite": "^7.1.3",
+    "vitest": "^4.1.10"
   }
 }
