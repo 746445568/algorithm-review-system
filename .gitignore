@@ -65,7 +65,6 @@ apps/server/bin/
 !/docs/superpowers/
 /packaging/
 /scripts/
-/AGENTS.md
 /CLAUDE.md
 /build-all.ps1
 /start-app.bat
