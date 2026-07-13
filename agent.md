@@ -6,6 +6,7 @@ Tradeoff: These guidelines bias toward caution over speed. For trivial tasks, us
 
 ## Project Tooling
 
+- Read `PROJECT_STATUS.md` before continuing an active milestone. Treat it as a dated snapshot and verify time-sensitive PR, CI, and release state at the source.
 - CodeGraph has been initialized for this repository in `.codegraph/`.
 - Before answering architecture, flow, symbol, refactor-impact, or code-location questions, use the codegraph tools first.
 - Use `codegraph_status` to verify index health when needed.

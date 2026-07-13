@@ -54,7 +54,7 @@ Electron main
 - `apps/server`: Go 1.26, `net/http`, pure-Go SQLite
 - `apps/browser-extension`: retained source; blocked pending secure pairing
 
-See [CONTRIBUTING.md](./CONTRIBUTING.md) and [SECURITY.md](./SECURITY.md).
+See [Project Status](./PROJECT_STATUS.md), [CONTRIBUTING.md](./CONTRIBUTING.md), and [SECURITY.md](./SECURITY.md).
 
 ## License
 
