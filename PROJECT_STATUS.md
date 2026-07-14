@@ -10,7 +10,7 @@ This file is a dated execution snapshot, not a substitute for live GitHub state.
 
 ## Active milestone
 
-The repository's active development lines have been consolidated on `codex/engineering-foundation`. [PR #22](https://github.com/746445568/algorithm-review-system/pull/22) now targets `main` directly.
+The engineering foundation and browser-extension pairing work are consolidated on `main` through merged [PR #22](https://github.com/746445568/algorithm-review-system/pull/22).
 
 Delivered scope:
 
@@ -33,9 +33,9 @@ The three unique commits on `origin/feat/phase0-bugfixes-and-knowledge-graph` we
 | Local `npm run verify` | Passed | Lint, typecheck, all Go tests, 27 Node tests, 4 renderer tests, and builds completed with zero warnings on 2026-07-15. |
 | Local Electron and extension E2E | Passed | Three desktop tests and six unpacked-extension tests passed, covering pairing, manual problem imports, automatic source imports, and error UX. |
 | Local Windows packaging | Passed | NSIS setup and portable Windows x64 artifacts built successfully without redundant top-level `7zip-bin` or `app-builder-bin` dependencies. |
-| GitHub Quality jobs | Running | PR #22 was retargeted to `main`; fresh Go and Desktop jobs started after the consolidated branch was pushed. |
+| GitHub Quality jobs | Passed | Both push and pull-request runs passed their Go and Windows Desktop jobs before PR #22 was merged. |
 
-PR #22 is structurally mergeable but must not be merged until the fresh Quality jobs pass.
+PR #22 merged into `main` at commit `67a0cc7` after all required checks passed.
 
 ## Availability and release state
 
@@ -47,10 +47,9 @@ PR #22 is structurally mergeable but must not be merged until the fresh Quality 
 
 ## Next actions
 
-1. Confirm the fresh PR #22 Go and Desktop Quality jobs pass.
-2. Merge PR #22 into `main` only after all required checks are green.
-3. Fast-forward the local `main`, then remove the temporary preservation branch and extra worktree after confirming they are clean.
-4. Keep public release disabled until Windows signing credentials are configured.
+1. Use `main` as the development baseline for subsequent work.
+2. Remove the temporary preservation branch and extra engineering worktree only after their retained safety value is no longer needed.
+3. Keep public release disabled until Windows signing credentials are configured.
 
 ## Maintenance rule
 
