@@ -9,8 +9,21 @@
   <body>
     <main>
       <h1>OJ Review</h1>
-      <p id="summary">Import is temporarily unavailable while secure desktop pairing is being implemented.</p>
-      <button id="importButton" type="button" disabled>Waiting for secure pairing</button>
+      <p id="summary">Checking secure desktop pairing...</p>
+
+      <form id="pairForm" hidden>
+        <label for="pairingCode">Pairing code from OJ Review Desktop</label>
+        <input id="pairingCode" inputmode="numeric" maxlength="6" pattern="[0-9]{6}" autocomplete="one-time-code" />
+        <button id="pairButton" type="submit">Pair extension</button>
+      </form>
+
+      <div id="pairedActions" hidden>
+        <button id="importButton" type="button">Import current page</button>
+        <button id="retryButton" class="secondary" type="button">Retry pending imports</button>
+        <button id="showPairFormButton" class="link-button" type="button">Pair again</button>
+      </div>
+
+      <p id="queueStatus"></p>
       <p id="status" role="status"></p>
     </main>
     <script src="popup.js"></script>

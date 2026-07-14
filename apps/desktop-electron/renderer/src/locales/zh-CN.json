@@ -487,6 +487,18 @@
       "checking": "检查中...",
       "check": "检查更新"
     },
+    "extension": {
+      "title": "浏览器扩展",
+      "caption": "与 OJReview 浏览器扩展进行一次性安全配对",
+      "status": "配对状态",
+      "paired": "已配对：{{origin}}",
+      "unpaired": "未配对",
+      "generate": "生成配对码",
+      "generating": "生成中...",
+      "code": "配对码",
+      "codeHint": "5 分钟内有效，请在浏览器扩展弹窗中输入。",
+      "codeGenerated": "配对码已生成。"
+    },
     "loading": "正在加载设置...",
     "serviceUnavailable": "本地服务 {{url}} 未就绪，设置暂不可用。",
     "about": {

@@ -76,7 +76,7 @@
     "pack": "npm run build:go && npm run build && electron-builder --dir --win --x64",
     "dist": "npm run build:go && npm run build && electron-builder --win --x64 --publish=never",
     "test": "npm run test:node && npm run test:renderer",
-    "test:node": "node --test test/*.test.mjs",
+    "test:node": "node ./scripts/run-node-tests.mjs",
     "test:renderer": "vitest run",
     "test:e2e": "npm run build:go && npm run build && playwright test",
     "typecheck": "tsc --noEmit -p tsconfig.json",

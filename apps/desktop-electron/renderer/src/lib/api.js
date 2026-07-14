@@ -187,6 +187,12 @@ export const api = {
       method: "PUT",
       body: JSON.stringify({ language }),
     }),
+  getExtensionPairing: () => request("/api/extension/pairing"),
+  startExtensionPairing: () =>
+    request("/api/extension/pairing/start", {
+      method: "POST",
+      body: JSON.stringify({}),
+    }),
   getReviewCalendar: (month) => request(withQuery("/api/review/calendar", { month })),
 
   getProblemChats: (problemId) => request(`/api/problems/${problemId}/chats`),

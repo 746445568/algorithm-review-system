@@ -10,17 +10,19 @@ import (
 )
 
 type Config struct {
-	AppDir         string
-	DataDir        string
-	LogDir         string
-	CacheDir       string
-	ExportDir      string
-	SecureDir      string
-	DBPath         string
-	ListenAddr     string
-	MasterKeyPath  string
-	ServiceToken   string
-	AllowedOrigins []string
+	AppDir             string
+	DataDir            string
+	LogDir             string
+	CacheDir           string
+	ExportDir          string
+	SecureDir          string
+	DBPath             string
+	ListenAddr         string
+	MasterKeyPath      string
+	ServiceToken       string
+	ExtensionTokenHash string
+	ExtensionOrigin    string
+	AllowedOrigins     []string
 }
 
 func LoadConfig() (Config, error) {
@@ -38,19 +40,25 @@ func LoadConfig() (Config, error) {
 	if err != nil {
 		return Config{}, err
 	}
+	extensionTokenHash, extensionOrigin, err := loadExtensionPairing(secureDir)
+	if err != nil {
+		return Config{}, err
+	}
 
 	cfg := Config{
-		AppDir:         base,
-		DataDir:        filepath.Join(base, "data"),
-		LogDir:         filepath.Join(base, "logs"),
-		CacheDir:       filepath.Join(base, "cache"),
-		ExportDir:      filepath.Join(base, "exports"),
-		SecureDir:      secureDir,
-		DBPath:         filepath.Join(base, "data", "ojreview.db"),
-		ListenAddr:     "127.0.0.1:38473",
-		MasterKeyPath:  filepath.Join(base, "secure", "master.key"),
-		ServiceToken:   serviceToken,
-		AllowedOrigins: []string{"null", "http://localhost:5180", "http://127.0.0.1:5180"},
+		AppDir:             base,
+		DataDir:            filepath.Join(base, "data"),
+		LogDir:             filepath.Join(base, "logs"),
+		CacheDir:           filepath.Join(base, "cache"),
+		ExportDir:          filepath.Join(base, "exports"),
+		SecureDir:          secureDir,
+		DBPath:             filepath.Join(base, "data", "ojreview.db"),
+		ListenAddr:         "127.0.0.1:38473",
+		MasterKeyPath:      filepath.Join(base, "secure", "master.key"),
+		ServiceToken:       serviceToken,
+		ExtensionTokenHash: extensionTokenHash,
+		ExtensionOrigin:    extensionOrigin,
+		AllowedOrigins:     []string{"null", "http://localhost:5180", "http://127.0.0.1:5180"},
 	}
 
 	for _, dir := range []string{cfg.AppDir, cfg.DataDir, cfg.LogDir, cfg.CacheDir, cfg.ExportDir, cfg.SecureDir} {

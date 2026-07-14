@@ -487,6 +487,18 @@
       "checking": "Checking...",
       "check": "Check for Updates"
     },
+    "extension": {
+      "title": "Browser Extension",
+      "caption": "One-time secure pairing with the OJReview browser extension",
+      "status": "Pairing Status",
+      "paired": "Paired with {{origin}}",
+      "unpaired": "Not paired",
+      "generate": "Generate Pairing Code",
+      "generating": "Generating...",
+      "code": "Pairing Code",
+      "codeHint": "Expires in 5 minutes. Enter it in the browser extension popup.",
+      "codeGenerated": "Pairing code generated."
+    },
     "loading": "Loading settings...",
     "serviceUnavailable": "Local service {{url}} is not ready. Settings are unavailable.",
     "about": {

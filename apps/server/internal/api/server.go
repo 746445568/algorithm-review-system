@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"ojreviewdesktop/internal/adapters/ai"
@@ -26,6 +27,14 @@ type Server struct {
 	adapters map[models.Platform]judges.Adapter
 	mux      *http.ServeMux
 	autoSync *AutoSyncManager
+
+	extensionMu        sync.RWMutex
+	extensionTokenHash string
+	extensionOrigin    string
+	pairingCode        string
+	pairingExpiresAt   time.Time
+	pairingAttempts    int
+	pairingNow         func() time.Time
 }
 
 func NewServer(cfg app.Config, db *storage.DB, queue *jobs.Queue) *Server {
@@ -37,7 +46,10 @@ func NewServer(cfg app.Config, db *storage.DB, queue *jobs.Queue) *Server {
 			models.PlatformCodeforces: judges.NewCodeforcesAdapter(),
 			models.PlatformAtCoder:    judges.NewAtCoderAdapter(),
 		},
-		mux: http.NewServeMux(),
+		mux:                http.NewServeMux(),
+		extensionTokenHash: cfg.ExtensionTokenHash,
+		extensionOrigin:    cfg.ExtensionOrigin,
+		pairingNow:         time.Now,
 	}
 	s.routes()
 	return s
@@ -47,16 +59,20 @@ func (s *Server) Router() http.Handler { return s.corsMiddleware(s.authMiddlewar
 
 func (s *Server) authMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if r.URL.Path == "/health" || !strings.HasPrefix(r.URL.Path, "/api/") || s.cfg.ServiceToken == "" {
+		if r.URL.Path == "/health" || !strings.HasPrefix(r.URL.Path, "/api/") || isExtensionPairingClaim(r) || s.cfg.ServiceToken == "" {
 			next.ServeHTTP(w, r)
 			return
 		}
 		provided := strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
-		if provided == "" || subtle.ConstantTimeCompare([]byte(provided), []byte(s.cfg.ServiceToken)) != 1 {
-			writeError(w, http.StatusUnauthorized, "unauthorized")
+		if provided != "" && subtle.ConstantTimeCompare([]byte(provided), []byte(s.cfg.ServiceToken)) == 1 {
+			next.ServeHTTP(w, r)
 			return
 		}
-		next.ServeHTTP(w, r)
+		if s.allowsExtensionImport(r, provided) {
+			next.ServeHTTP(w, r)
+			return
+		}
+		writeError(w, http.StatusUnauthorized, "unauthorized")
 	})
 }
 
@@ -74,6 +90,9 @@ func (s *Server) corsMiddleware(next http.Handler) http.Handler {
 					allowedOrigin = reqOrigin
 					break
 				}
+			}
+			if allowedOrigin == "" && s.allowsExtensionOrigin(r, reqOrigin) {
+				allowedOrigin = reqOrigin
 			}
 			if allowedOrigin == "" {
 				w.WriteHeader(http.StatusForbidden)
@@ -117,6 +136,9 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("GET /api/problem-pool/sync-tasks", s.handleProblemPoolSyncTasks)
 	s.mux.HandleFunc("POST /api/import/problem-statement", s.handleImportProblemStatement)
 	s.mux.HandleFunc("POST /api/import/submission-source", s.handleImportSubmissionSource)
+	s.mux.HandleFunc("GET /api/extension/pairing", s.handleExtensionPairingStatus)
+	s.mux.HandleFunc("POST /api/extension/pairing/start", s.handleStartExtensionPairing)
+	s.mux.HandleFunc("POST /api/extension/pairing/claim", s.handleClaimExtensionPairing)
 	s.mux.HandleFunc("POST /api/analysis/generate", s.handleAnalysisGenerate)
 	s.mux.HandleFunc("POST /api/analysis/generate-comparison", s.handleAnalysisGenerateComparison)
 	s.mux.HandleFunc("POST /api/analysis/generate-problem/{problemId}", s.handleAnalysisGenerateProblem)

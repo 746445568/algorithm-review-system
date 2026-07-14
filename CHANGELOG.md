@@ -11,7 +11,10 @@ See [commit-and-tag-version](https://github.com/absolute-version/commit-and-tag-
 - Protected local APIs with a persistent bearer token and restricted CORS, Electron navigation, filesystem access, sandboxing, and CSP.
 - Removed renderer-owned synchronization and runtime IndexedDB state; added a one-time pending review-state migration.
 - Made the desktop version authoritative and Windows x64 service/package builds metadata-verifiable and reproducible.
-- Temporarily disabled browser-extension imports pending secure pairing; public release creation remains blocked.
+- Added one-time browser-extension pairing with a dedicated origin-bound, import-only token.
+- Added automatic capture of source code already visible on supported Codeforces and AtCoder pages, with persisted deduplication and bounded retries.
+- Made the Node test runner enumerate files cross-platform so the Windows CI job does not depend on shell wildcard expansion.
+- Kept public release creation blocked pending Windows signing credentials.
 
 ## [2.1.0] - 2026-07-08
 
