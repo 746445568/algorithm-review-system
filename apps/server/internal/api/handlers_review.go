@@ -20,6 +20,15 @@ func (s *Server) handleReviewSummary(w http.ResponseWriter, _ *http.Request) {
 	writeJSON(w, http.StatusOK, summary)
 }
 
+func (s *Server) handleReviewRecommendations(w http.ResponseWriter, r *http.Request) {
+	recommendation, err := s.db.GetRecommendation(r.URL.Query().Get("exclude"))
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	writeJSON(w, http.StatusOK, recommendation)
+}
+
 func (s *Server) handleGetProblemReviewState(w http.ResponseWriter, r *http.Request) {
 	problemID, err := strconv.ParseInt(r.PathValue("problemId"), 10, 64)
 	if err != nil || problemID <= 0 {

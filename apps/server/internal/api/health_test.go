@@ -80,6 +80,9 @@ func TestHealth_FirstRunTrue_WhenNoAIKey(t *testing.T) {
 	server := newTestServer(t)
 
 	payload := readHealthResponse(t, server)
+	if payload["apiVersion"] != "1" {
+		t.Fatalf("apiVersion = %#v", payload["apiVersion"])
+	}
 
 	firstRun, ok := payload["firstRun"].(bool)
 	if !ok {

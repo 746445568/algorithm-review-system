@@ -11,6 +11,7 @@ const defaultAISettings = {
   model: "",
   baseUrl: "",
   apiKey: "",
+  hasApiKey: false,
 };
 
 const defaultGoalForm = {
@@ -68,6 +69,12 @@ export function SettingsPage({ runtimeInfo, serviceStatus }) {
   const [updateInfo, setUpdateInfo] = useState(null);
   const [updateDownloaded, setUpdateDownloaded] = useState(false);
   const [checking, setChecking] = useState(false);
+  const [pairing, setPairing] = useState(null);
+  const [pairingLoading, setPairingLoading] = useState(true);
+  const [pairingError, setPairingError] = useState("");
+  const [pairingNotice, setPairingNotice] = useState("");
+  const [pairingCode, setPairingCode] = useState(null);
+  const [generatingCode, setGeneratingCode] = useState(false);
   const providerOptions = [
     { value: "openai", label: t("settings.ai.providers.openai") },
     { value: "deepseek", label: "DeepSeek" },
@@ -124,7 +131,8 @@ export function SettingsPage({ runtimeInfo, serviceStatus }) {
         provider: nextAISettings?.provider ?? "",
         model: nextAISettings?.model ?? "",
         baseUrl: nextAISettings?.baseUrl ?? "",
-        apiKey: nextAISettings?.apiKey ?? "",
+        apiKey: "",
+        hasApiKey: Boolean(nextAISettings?.hasApiKey),
       });
       setGoals(Array.isArray(nextGoals) ? nextGoals : []);
       const loadedLanguage = nextLanguage?.language || "zh-CN";
@@ -147,6 +155,29 @@ export function SettingsPage({ runtimeInfo, serviceStatus }) {
   useEffect(() => {
     void refresh();
   }, [refresh]);
+
+  const refreshPairing = useCallback(async () => {
+    if (serviceStatus.state !== "healthy") {
+      setPairing(null);
+      setPairingLoading(false);
+      return;
+    }
+
+    setPairingLoading(true);
+    setPairingError("");
+    try {
+      const nextPairing = await api.getExtensionPairing();
+      setPairing(nextPairing);
+    } catch (nextError) {
+      setPairingError(nextError.message);
+    } finally {
+      setPairingLoading(false);
+    }
+  }, [serviceStatus.state]);
+
+  useEffect(() => {
+    void refreshPairing();
+  }, [refreshPairing]);
 
   const serviceUnavailable = serviceStatus.state !== "healthy";
 
@@ -175,7 +206,26 @@ export function SettingsPage({ runtimeInfo, serviceStatus }) {
 
     try {
       await api.saveAISettings(aiSettings);
+      setAISettings((current) => ({
+        ...current,
+        apiKey: "",
+        hasApiKey: current.hasApiKey || current.apiKey.trim() !== "",
+      }));
       setNotice(t("settings.ai.saved"));
+    } catch (nextError) {
+      setError(nextError.message);
+    } finally {
+      setSavingAI(false);
+    }
+  }
+
+  async function clearAIKey() {
+    setSavingAI(true);
+    setError("");
+    try {
+      await api.saveAISettings({ ...aiSettings, apiKey: "", clearApiKey: true });
+      setAISettings((current) => ({ ...current, apiKey: "", hasApiKey: false }));
+      setNotice(t("settings.ai.keyCleared"));
     } catch (nextError) {
       setError(nextError.message);
     } finally {
@@ -263,6 +313,23 @@ export function SettingsPage({ runtimeInfo, serviceStatus }) {
       setError(nextError.message);
     } finally {
       setDiagExporting(false);
+    }
+  }
+
+  async function startPairing() {
+    setGeneratingCode(true);
+    setPairingError("");
+    setPairingNotice("");
+
+    try {
+      const result = await api.startExtensionPairing();
+      setPairingCode(result);
+      setPairingNotice(t("settings.extension.codeGenerated"));
+      await refreshPairing();
+    } catch (nextError) {
+      setPairingError(nextError.message);
+    } finally {
+      setGeneratingCode(false);
     }
   }
 
@@ -379,6 +446,7 @@ export function SettingsPage({ runtimeInfo, serviceStatus }) {
                 setGoalForm((current) => ({ ...current, targetRating: event.target.value }))
               }
             />
+            <small>{aiSettings.hasApiKey ? t("settings.ai.keyConfigured") : t("settings.ai.keyNotConfigured")}</small>
           </label>
 
           <label>
@@ -556,6 +624,16 @@ export function SettingsPage({ runtimeInfo, serviceStatus }) {
             >
               {testingAI ? t("settings.ai.testing") : t("settings.ai.test")}
             </button>
+            {aiSettings.hasApiKey ? (
+              <button
+                type="button"
+                className="ghost-button"
+                disabled={savingAI || serviceUnavailable}
+                onClick={() => void clearAIKey()}
+              >
+                {t("settings.ai.clearKey")}
+              </button>
+            ) : null}
             <button
               type="button"
               className="primary-button"
@@ -604,6 +682,54 @@ export function SettingsPage({ runtimeInfo, serviceStatus }) {
               {checking ? t("settings.update.checking") : t("settings.update.check")}
             </button>
           )}
+        </div>
+      </section>
+
+      <section className="panel settings-extension-panel">
+        <div className="panel-header">
+          <h3>{t("settings.extension.title")}</h3>
+          <span className="caption">{t("settings.extension.caption")}</span>
+        </div>
+        <div className="form-stack">
+          {serviceUnavailable ? (
+            <p className="muted">
+              {t("settings.serviceUnavailable", {
+                url: runtimeInfo.serviceUrl || serviceStatus.url,
+              })}
+            </p>
+          ) : null}
+          {pairingLoading ? <p className="muted">{t("settings.loading")}</p> : null}
+          {pairingError ? <p className="error-text">{pairingError}</p> : null}
+          {pairingNotice ? <p className="success-text">{pairingNotice}</p> : null}
+          {!pairingLoading && !pairingError ? (
+            <article className="inline-card">
+              <div>
+                <strong>{t("settings.extension.status")}</strong>
+                <p>
+                  {pairing?.paired
+                    ? t("settings.extension.paired", { origin: pairing.origin })
+                    : t("settings.extension.unpaired")}
+                </p>
+              </div>
+            </article>
+          ) : null}
+          <button
+            type="button"
+            className="primary-button"
+            disabled={serviceUnavailable || generatingCode}
+            onClick={() => void startPairing()}
+          >
+            {generatingCode ? t("settings.extension.generating") : t("settings.extension.generate")}
+          </button>
+          {pairingCode ? (
+            <article className="inline-card">
+              <div>
+                <strong>{t("settings.extension.code")}</strong>
+                <p className="pairing-code">{pairingCode.code}</p>
+                <small>{t("settings.extension.codeHint")}</small>
+              </div>
+            </article>
+          ) : null}
         </div>
       </section>
     </div>

@@ -45,6 +45,55 @@ button:disabled {
   opacity: 0.65;
 }
 
+form {
+  display: grid;
+  gap: 8px;
+}
+
+label {
+  color: #344054;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+input {
+  width: 100%;
+  min-height: 34px;
+  border: 1px solid #b8c0cc;
+  border-radius: 6px;
+  padding: 6px 9px;
+  font: inherit;
+  letter-spacing: 0.18em;
+}
+
+#pairedActions {
+  display: grid;
+  gap: 8px;
+}
+
+#pairedActions[hidden],
+#pairForm[hidden] {
+  display: none;
+}
+
+button.secondary {
+  color: #25415f;
+  background: #e8edf3;
+}
+
+button.link-button {
+  min-height: auto;
+  padding: 3px;
+  color: #2266d1;
+  background: transparent;
+  font-weight: 500;
+}
+
+#queueStatus {
+  margin-top: 10px;
+  margin-bottom: 0;
+}
+
 #status {
   min-height: 18px;
   margin-top: 10px;

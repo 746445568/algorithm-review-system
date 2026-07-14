@@ -22,11 +22,8 @@ export const ReviewList = memo(function ReviewList({
   onRefresh,
   serviceUnavailable,
   dueCount,
-  doneCount,
-  totalCount,
 }) {
   const { t } = useTranslation();
-  const progress = totalCount > 0 ? Math.round((doneCount / totalCount) * 100) : 0;
 
   const setFilter = useCallback((key, value) => {
     onFiltersChange((prev) => ({ ...prev, [key]: value }));

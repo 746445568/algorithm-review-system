@@ -185,6 +185,7 @@ func (s *Server) queueAllAccountSyncs(ctx context.Context) (int, error) {
 	}
 
 	queuedCount := 0
+	var enqueueErrors []error
 	for _, account := range accounts {
 		select {
 		case <-ctx.Done():
@@ -196,12 +197,13 @@ func (s *Server) queueAllAccountSyncs(ctx context.Context) (int, error) {
 			if isSyncAlreadyQueuedError(err) {
 				continue
 			}
-			return queuedCount, err
+			enqueueErrors = append(enqueueErrors, err)
+			continue
 		}
 		queuedCount++
 	}
 
-	return queuedCount, nil
+	return queuedCount, errors.Join(enqueueErrors...)
 }
 
 func isSyncAlreadyQueuedError(err error) bool {

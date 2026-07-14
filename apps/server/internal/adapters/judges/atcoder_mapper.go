@@ -110,9 +110,13 @@ func atCoderTaskURL(contestID string, problemID string) string {
 	return fmt.Sprintf("https://atcoder.jp/contests/%s/tasks/%s", contestID, problemID)
 }
 
-func normalizeAtCoderContestStatus(startTime time.Time) string {
-	if startTime.After(time.Now().UTC()) {
+func normalizeAtCoderContestStatus(startTime time.Time, durationMinutes int) string {
+	now := time.Now().UTC()
+	if startTime.After(now) {
 		return "UPCOMING"
+	}
+	if durationMinutes > 0 && startTime.Add(time.Duration(durationMinutes)*time.Minute).After(now) {
+		return "ONGOING"
 	}
 	return "FINISHED"
 }

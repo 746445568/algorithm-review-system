@@ -106,15 +106,24 @@ export function StatisticsPage() {
   const [reviewSummary, setReviewSummary] = useState(null);
   const [verdictStats, setVerdictStats] = useState(null);
   const [knowledgeGraph, setKnowledgeGraph] = useState(null);
+  const [statsError, setStatsError] = useState(null);
+  const [knowledgeGraphError, setKnowledgeGraphError] = useState(null);
   const [syncingKnowledge, setSyncingKnowledge] = useState(false);
+  const [refreshingStats, setRefreshingStats] = useState(false);
   const [period, setPeriod] = useState("week");
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
-    setLoading(true);
-    setError(null);
+    const initialLoad = reloadKey === 0;
+
+    if (initialLoad) {
+      setLoading(true);
+    } else {
+      setRefreshingStats(true);
+    }
+    setStatsError(null);
 
     collectStatisticsData(api)
       .then((data) => {
@@ -124,20 +133,24 @@ export function StatisticsPage() {
         setReviewSummary(data.reviewSummary);
         setVerdictStats(data.verdictStats);
         setKnowledgeGraph(data.knowledgeGraph);
-        setError(data.error);
+        setStatsError(data.error);
       })
       .catch((err) => {
         if (cancelled) return;
-        setError(err?.message ?? t('errors.loadFailed'));
+        setStatsError(err?.message ?? t('errors.loadFailed'));
       })
       .finally(() => {
-        if (!cancelled) setLoading(false);
+        if (cancelled) return;
+        if (initialLoad) {
+          setLoading(false);
+        }
+        setRefreshingStats(false);
       });
 
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [reloadKey]);
 
   const stats = useMemo(
     () => calculateStats(submissionStats, reviewStats, reviewSummary),
@@ -149,13 +162,13 @@ export function StatisticsPage() {
 
   async function handleSyncKnowledgeGraph() {
     setSyncingKnowledge(true);
-    setError(null);
+    setKnowledgeGraphError(null);
     try {
       await api.syncKnowledgeGraph();
       const knowledge = await api.getKnowledgeGraph();
       setKnowledgeGraph(knowledge);
     } catch (err) {
-      setError(err?.message ?? t('errors.loadFailed'));
+      setKnowledgeGraphError(err?.message ?? t('errors.loadFailed'));
     } finally {
       setSyncingKnowledge(false);
     }
@@ -187,7 +200,19 @@ export function StatisticsPage() {
 
   return (
     <div className="page-content statistics-page stats-page">
-      {error ? <p className="error-text">{error}</p> : null}
+      {statsError ? (
+        <div className="stats-error-banner">
+          <p className="stats-error-text">{statsError}</p>
+          <button
+            type="button"
+            className="stats-error-btn"
+            onClick={() => setReloadKey((current) => current + 1)}
+            disabled={refreshingStats}
+          >
+            {refreshingStats ? t('common.loading') : t('actions.retry')}
+          </button>
+        </div>
+      ) : null}
 
       <div className="stats-summary-grid stats-grid4">
         <StatCard title={t('statistics.totalSubmissions')} value={stats.totalSubmissions} subtitle={t('statistics.last12Weeks')} icon={<SubmissionIcon />} />
@@ -289,6 +314,19 @@ export function StatisticsPage() {
             {syncingKnowledge ? t('statistics.syncingKnowledgeGraph') : t('statistics.syncKnowledgeGraph')}
           </button>
         </div>
+        {knowledgeGraphError ? (
+          <div className="stats-error-banner stats-error-banner--inline">
+            <p className="stats-error-text">{knowledgeGraphError}</p>
+            <button
+              type="button"
+              className="stats-error-btn"
+              onClick={handleSyncKnowledgeGraph}
+              disabled={syncingKnowledge}
+            >
+              {syncingKnowledge ? t('common.loading') : t('actions.retry')}
+            </button>
+          </div>
+        ) : null}
         <KnowledgeGraph nodes={knowledgeGraph?.nodes ?? []} />
       </section>
 

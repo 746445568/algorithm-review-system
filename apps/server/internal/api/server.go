@@ -1,11 +1,13 @@
 package api
 
 import (
+	"crypto/subtle"
 	"encoding/json"
 	"net/http"
 	"path/filepath"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	"ojreviewdesktop/internal/adapters/ai"
@@ -25,6 +27,14 @@ type Server struct {
 	adapters map[models.Platform]judges.Adapter
 	mux      *http.ServeMux
 	autoSync *AutoSyncManager
+
+	extensionMu        sync.RWMutex
+	extensionTokenHash string
+	extensionOrigin    string
+	pairingCode        string
+	pairingExpiresAt   time.Time
+	pairingAttempts    int
+	pairingNow         func() time.Time
 }
 
 func NewServer(cfg app.Config, db *storage.DB, queue *jobs.Queue) *Server {
@@ -36,32 +46,53 @@ func NewServer(cfg app.Config, db *storage.DB, queue *jobs.Queue) *Server {
 			models.PlatformCodeforces: judges.NewCodeforcesAdapter(),
 			models.PlatformAtCoder:    judges.NewAtCoderAdapter(),
 		},
-		mux: http.NewServeMux(),
+		mux:                http.NewServeMux(),
+		extensionTokenHash: cfg.ExtensionTokenHash,
+		extensionOrigin:    cfg.ExtensionOrigin,
+		pairingNow:         time.Now,
 	}
 	s.routes()
 	return s
 }
 
-func (s *Server) Router() http.Handler { return s.corsMiddleware(s.mux) }
+func (s *Server) Router() http.Handler { return s.corsMiddleware(s.authMiddleware(s.mux)) }
+
+func (s *Server) authMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/health" || !strings.HasPrefix(r.URL.Path, "/api/") || isExtensionPairingClaim(r) || s.cfg.ServiceToken == "" {
+			next.ServeHTTP(w, r)
+			return
+		}
+		provided := strings.TrimPrefix(r.Header.Get("Authorization"), "Bearer ")
+		if provided != "" && subtle.ConstantTimeCompare([]byte(provided), []byte(s.cfg.ServiceToken)) == 1 {
+			next.ServeHTTP(w, r)
+			return
+		}
+		if s.allowsExtensionImport(r, provided) {
+			next.ServeHTTP(w, r)
+			return
+		}
+		writeError(w, http.StatusUnauthorized, "unauthorized")
+	})
+}
 
 func (s *Server) corsMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		origins := s.cfg.AllowedOrigins
 		if len(origins) == 0 {
-			origins = []string{"http://localhost:5173", "http://127.0.0.1:5173", "http://localhost:38473", "http://127.0.0.1:38473"}
+			origins = []string{"null", "http://localhost:5180", "http://127.0.0.1:5180"}
 		}
 		reqOrigin := r.Header.Get("Origin")
 		if reqOrigin != "" {
 			allowedOrigin := ""
 			for _, o := range origins {
-				if o == "*" {
-					allowedOrigin = "*"
-					break
-				}
 				if o == reqOrigin {
 					allowedOrigin = reqOrigin
 					break
 				}
+			}
+			if allowedOrigin == "" && s.allowsExtensionOrigin(r, reqOrigin) {
+				allowedOrigin = reqOrigin
 			}
 			if allowedOrigin == "" {
 				w.WriteHeader(http.StatusForbidden)
@@ -95,13 +126,19 @@ func (s *Server) routes() {
 	s.mux.HandleFunc("GET /api/submissions", s.handleSubmissions)
 	s.mux.HandleFunc("GET /api/problems", s.handleProblems)
 	s.mux.HandleFunc("GET /api/review/summary", s.handleReviewSummary)
+	s.mux.HandleFunc("GET /api/review/recommendations", s.handleReviewRecommendations)
 	s.mux.HandleFunc("GET /api/review/items/{problemId}", s.handleGetProblemReviewState)
 	s.mux.HandleFunc("PUT /api/review/items/{problemId}", s.handlePutProblemReviewState)
 	s.mux.HandleFunc("POST /api/review/items/{problemId}/rate", s.handleRateReview)
 	s.mux.HandleFunc("GET /api/contests", s.handleContests)
 	s.mux.HandleFunc("POST /api/contests/sync", s.handleSyncContests)
+	s.mux.HandleFunc("POST /api/problem-pool/sync", s.handleSyncProblemPool)
+	s.mux.HandleFunc("GET /api/problem-pool/sync-tasks", s.handleProblemPoolSyncTasks)
 	s.mux.HandleFunc("POST /api/import/problem-statement", s.handleImportProblemStatement)
 	s.mux.HandleFunc("POST /api/import/submission-source", s.handleImportSubmissionSource)
+	s.mux.HandleFunc("GET /api/extension/pairing", s.handleExtensionPairingStatus)
+	s.mux.HandleFunc("POST /api/extension/pairing/start", s.handleStartExtensionPairing)
+	s.mux.HandleFunc("POST /api/extension/pairing/claim", s.handleClaimExtensionPairing)
 	s.mux.HandleFunc("POST /api/analysis/generate", s.handleAnalysisGenerate)
 	s.mux.HandleFunc("POST /api/analysis/generate-comparison", s.handleAnalysisGenerateComparison)
 	s.mux.HandleFunc("POST /api/analysis/generate-problem/{problemId}", s.handleAnalysisGenerateProblem)
@@ -143,11 +180,22 @@ func (s *Server) handleGetAISettings(w http.ResponseWriter, _ *http.Request) {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
-	writeJSON(w, http.StatusOK, settings)
+	writeJSON(w, http.StatusOK, map[string]any{
+		"provider":  settings.Provider,
+		"model":     settings.Model,
+		"baseUrl":   settings.BaseURL,
+		"hasApiKey": strings.TrimSpace(settings.APIKey) != "",
+	})
 }
 
 func (s *Server) handlePutAISettings(w http.ResponseWriter, r *http.Request) {
-	var payload models.AISettings
+	var payload struct {
+		Provider    string `json:"provider"`
+		Model       string `json:"model"`
+		BaseURL     string `json:"baseUrl"`
+		APIKey      string `json:"apiKey"`
+		ClearAPIKey bool   `json:"clearApiKey"`
+	}
 	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid json body")
 		return
@@ -156,7 +204,23 @@ func (s *Server) handlePutAISettings(w http.ResponseWriter, r *http.Request) {
 		writeError(w, http.StatusBadRequest, "provider and model are required")
 		return
 	}
-	if err := s.db.SaveAISettings(payload); err != nil {
+	existing, err := s.db.LoadAISettings()
+	if err != nil {
+		writeError(w, http.StatusInternalServerError, err.Error())
+		return
+	}
+	apiKey := existing.APIKey
+	if payload.ClearAPIKey {
+		apiKey = ""
+	} else if strings.TrimSpace(payload.APIKey) != "" {
+		apiKey = payload.APIKey
+	}
+	if err := s.db.SaveAISettings(models.AISettings{
+		Provider: payload.Provider,
+		Model:    payload.Model,
+		BaseURL:  payload.BaseURL,
+		APIKey:   apiKey,
+	}); err != nil {
 		writeError(w, http.StatusInternalServerError, err.Error())
 		return
 	}
@@ -168,6 +232,14 @@ func (s *Server) handleTestAISettings(w http.ResponseWriter, r *http.Request) {
 	if err := json.NewDecoder(r.Body).Decode(&payload); err != nil {
 		writeError(w, http.StatusBadRequest, "invalid json body")
 		return
+	}
+	if strings.TrimSpace(payload.APIKey) == "" {
+		stored, err := s.db.LoadAISettings()
+		if err != nil {
+			writeError(w, http.StatusInternalServerError, err.Error())
+			return
+		}
+		payload.APIKey = stored.APIKey
 	}
 
 	provider, err := ai.NewProvider(payload.Provider)

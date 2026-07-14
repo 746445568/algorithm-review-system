@@ -25,4 +25,6 @@ test("binary --version-json outputs valid JSON with version field", () => {
   assert.equal(result.status, 0, `exit code: ${result.stderr}`);
   const payload = JSON.parse(result.stdout.trim());
   assert.ok(payload.version, "version field missing");
+  assert.equal(payload.apiVersion, "1");
+  assert.notEqual(payload.commit, "dev");
 });

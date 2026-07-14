@@ -14,9 +14,31 @@ type atCoderSubmission struct {
 }
 
 type atCoderProblem struct {
-	ID        string `json:"id"`
-	Title     string `json:"title"`
-	ContestID string `json:"contest_id"`
+	ID           string `json:"id"`
+	Title        string `json:"title"`
+	ContestID    string `json:"contest_id"`
+	ProblemIndex string `json:"problem_index"`
+}
+
+type atCoderMergedProblem struct {
+	ID           string `json:"id"`
+	ContestID    string `json:"contest_id"`
+	ProblemIndex string `json:"problem_index"`
+	Name         string `json:"name"`
+	Title        string `json:"title"`
+	SolverCount  *int   `json:"solver_count"`
+}
+
+type atCoderContestProblem struct {
+	ContestID    string `json:"contest_id"`
+	ProblemID    string `json:"problem_id"`
+	ProblemIndex string `json:"problem_index"`
+}
+
+type atCoderProblemModel struct {
+	Difficulty     *int     `json:"difficulty"`
+	Discrimination *float64 `json:"discrimination"`
+	IsExperimental bool     `json:"is_experimental"`
 }
 
 type atCoderContest struct {

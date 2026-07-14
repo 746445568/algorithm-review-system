@@ -38,8 +38,9 @@ const (
 type TaskType string
 
 const (
-	TaskTypeSync     TaskType = "sync_task"
-	TaskTypeAnalysis TaskType = "analysis_task"
+	TaskTypeSync            TaskType = "sync_task"
+	TaskTypeAnalysis        TaskType = "analysis_task"
+	TaskTypeProblemPoolSync TaskType = "problem_pool_sync_task"
 )
 
 type ReviewStatus string
@@ -90,6 +91,32 @@ type Problem struct {
 	RawTagsJSON       string    `json:"rawTagsJson,omitempty"`
 	CreatedAt         time.Time `json:"createdAt"`
 	UpdatedAt         time.Time `json:"updatedAt"`
+}
+
+type ProblemPoolTag struct {
+	Name       string  `json:"name"`
+	Source     string  `json:"source"`
+	Confidence float64 `json:"confidence"`
+}
+
+type ProblemPoolItem struct {
+	ID                int64            `json:"id"`
+	Platform          Platform         `json:"platform"`
+	ExternalProblemID string           `json:"externalProblemId"`
+	ExternalContestID string           `json:"externalContestId,omitempty"`
+	ProblemIndex      string           `json:"problemIndex,omitempty"`
+	Title             string           `json:"title"`
+	URL               string           `json:"url,omitempty"`
+	DifficultyValue   *int             `json:"difficultyValue,omitempty"`
+	DifficultyRaw     *int             `json:"difficultyRawValue,omitempty"`
+	DifficultyScale   string           `json:"difficultyScale,omitempty"`
+	Source            string           `json:"source"`
+	SolverCount       *int             `json:"solverCount,omitempty"`
+	IsExperimental    bool             `json:"isExperimental"`
+	Tags              []ProblemPoolTag `json:"tags,omitempty"`
+	FetchedAt         string           `json:"fetchedAt,omitempty"`
+	LastSeenAt        string           `json:"lastSeenAt,omitempty"`
+	UpdatedAt         string           `json:"updatedAt,omitempty"`
 }
 
 type ProblemChat struct {
@@ -185,6 +212,44 @@ type Contest struct {
 	CreatedAt         time.Time  `json:"createdAt"`
 	UpdatedAt         time.Time  `json:"updatedAt"`
 	LastSyncedAt      *time.Time `json:"lastSyncedAt,omitempty"`
+}
+
+type ProblemPoolSyncTask struct {
+	ID            int64      `json:"id"`
+	Status        TaskStatus `json:"status"`
+	PlatformsJSON string     `json:"platformsJson"`
+	FetchedCount  int        `json:"fetchedCount"`
+	InsertedCount int        `json:"insertedCount"`
+	UpdatedCount  int        `json:"updatedCount"`
+	ErrorMessage  string     `json:"errorMessage,omitempty"`
+	CreatedAt     time.Time  `json:"createdAt"`
+	StartedAt     *time.Time `json:"startedAt,omitempty"`
+	FinishedAt    *time.Time `json:"finishedAt,omitempty"`
+}
+
+type RecommendationProblem struct {
+	Key               string   `json:"key"`
+	CandidateType     string   `json:"candidateType"`
+	ID                int64    `json:"id"`
+	Title             string   `json:"title"`
+	Platform          Platform `json:"platform"`
+	ExternalProblemID string   `json:"externalProblemId"`
+	Difficulty        string   `json:"difficulty"`
+	DifficultyValue   *int     `json:"difficultyValue,omitempty"`
+	DifficultyScale   string   `json:"difficultyScale,omitempty"`
+	URL               string   `json:"url,omitempty"`
+	Tags              []string `json:"tags"`
+	Reason            string   `json:"reason"`
+	ReasonText        string   `json:"reasonText"`
+	MasteryLevel      *float64 `json:"masteryLevel,omitempty"`
+	KnowledgeName     string   `json:"knowledgeName,omitempty"`
+	IsNew             bool     `json:"isNew"`
+	Score             float64  `json:"score"`
+}
+
+type RecommendationResponse struct {
+	Problem     *RecommendationProblem `json:"problem"`
+	EmptyReason string                 `json:"emptyReason"`
 }
 
 type ErrorPattern struct {

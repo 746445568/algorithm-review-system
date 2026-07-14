@@ -1,0 +1,65 @@
+name: Quality
+
+on:
+  push:
+    branches: ['**']
+  pull_request:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  go:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/server
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: apps/server/go.mod
+          cache-dependency-path: apps/server/go.sum
+      - name: Check formatting
+        shell: bash
+        run: |
+          base='${{ github.event.pull_request.base.sha || github.event.before }}'
+          if [[ -z "$base" || "$base" =~ ^0+$ ]]; then base="HEAD^"; fi
+          mapfile -t files < <(git diff --name-only --diff-filter=ACM "$base" HEAD -- '*.go')
+          if ((${#files[@]})); then test -z "$(gofmt -l "${files[@]}")"; fi
+      - name: Vet
+        run: go vet ./...
+      - uses: golangci/golangci-lint-action@v8
+        with:
+          version: v2.12.2
+          working-directory: apps/server
+      - name: Test with coverage
+        run: go test -count=1 -race -coverprofile=coverage.out ./...
+      - uses: actions/upload-artifact@v4
+        with:
+          name: go-coverage
+          path: apps/server/coverage.out
+
+  desktop:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+          cache-dependency-path: apps/desktop-electron/package-lock.json
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: apps/server/go.mod
+          cache-dependency-path: apps/server/go.sum
+      - name: Install dependencies
+        run: npm ci
+        working-directory: apps/desktop-electron
+      - name: Verify desktop and service
+        run: npm run verify
+        working-directory: apps/desktop-electron
+      - name: Collect core E2E tests
+        run: npx playwright test --list
+        working-directory: apps/desktop-electron

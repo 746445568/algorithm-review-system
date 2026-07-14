@@ -369,6 +369,10 @@
       "baseUrlPlaceholder": "Optional, for custom OpenAI-compatible endpoints",
       "apiKey": "API Key",
       "apiKeyPlaceholder": "Stored locally with encryption",
+      "keyConfigured": "A key is configured; leave blank to keep it",
+      "keyNotConfigured": "No API key configured",
+      "clearKey": "Clear saved key",
+      "keyCleared": "API key cleared",
       "test": "Test Connection",
       "testing": "Testing...",
       "save": "Save AI Settings",
@@ -483,6 +487,18 @@
       "checking": "Checking...",
       "check": "Check for Updates"
     },
+    "extension": {
+      "title": "Browser Extension",
+      "caption": "One-time secure pairing with the OJReview browser extension",
+      "status": "Pairing Status",
+      "paired": "Paired with {{origin}}",
+      "unpaired": "Not paired",
+      "generate": "Generate Pairing Code",
+      "generating": "Generating...",
+      "code": "Pairing Code",
+      "codeHint": "Expires in 5 minutes. Enter it in the browser extension popup.",
+      "codeGenerated": "Pairing code generated."
+    },
     "loading": "Loading settings...",
     "serviceUnavailable": "Local service {{url}} is not ready. Settings are unavailable.",
     "about": {
@@ -591,9 +607,26 @@
     },
     "problemCount": "{{count}} problems",
     "recentSubmissions": "Recent Submissions",
-    "showingCount": "Showing {{count}}",
+    "showingCount": "Showing {{shown}} / {{total}}",
     "totalSubmissions": "Total Submissions",
     "upcomingContests": "Upcoming Contests",
+    "recommendation": {
+      "empty": "No recommendation yet. Sync the problem pool or run a submission sync first.",
+      "loadFailed": "Failed to load recommendation: {{error}}",
+      "next": "Try Another",
+      "reasons": {
+        "retryFailed": "Reason: this problem is not AC yet and is worth retrying",
+        "stretchZone": "Reason: difficulty is close to your current rating",
+        "weakestKnowledge": "Reason: strengthens a weak knowledge area"
+      },
+      "start": "Start Review",
+      "subtitle": "Generated from mastery, failed submissions, and current rating",
+      "syncFailed": "Failed to sync problem pool",
+      "syncing": "Syncing...",
+      "syncPool": "Refresh Pool",
+      "syncQueued": "Problem pool sync started. More recommendations will appear soon.",
+      "title": "Today's Recommendation"
+    },
     "weakTags": {
       "acCount": "AC {{count}} times",
       "attempts": "{{count}} attempts",

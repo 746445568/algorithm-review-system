@@ -391,6 +391,18 @@ body {
   order: 6;
 }
 
+.settings-page-root .settings-extension-panel {
+  order: 7;
+}
+
+.settings-page-root .pairing-code {
+  font-family: ui-monospace, "Cascadia Code", Consolas, monospace;
+  font-size: 1.6rem;
+  font-weight: 600;
+  letter-spacing: 0.25em;
+  margin: 4px 0;
+}
+
 .settings-page-root .settings-wide {
   grid-column: auto;
 }

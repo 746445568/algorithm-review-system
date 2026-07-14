@@ -8,9 +8,34 @@
     return String(value || "").replace(/\u00a0/g, " ").trim();
   }
 
+  function sourceText(value) {
+    return String(value || "")
+      .replace(/\r\n?/g, "\n")
+      .replace(/\u00a0/g, " ");
+  }
+
   function textFromElement(selector) {
     const element = document.querySelector(selector);
     return element ? cleanText(element.textContent) : "";
+  }
+
+  function normalizeLabel(value) {
+    return cleanText(value).replace(/:$/, "").toLowerCase();
+  }
+
+  function tableField(label, root = document) {
+    const wanted = normalizeLabel(label);
+    const rows = [
+      ...(root.matches?.("tr") ? [root] : []),
+      ...root.querySelectorAll("table tr"),
+    ];
+    for (const row of rows) {
+      const cells = Array.from(row.querySelectorAll("th, td"));
+      if (cells.length >= 2 && normalizeLabel(cells[0].textContent) === wanted) {
+        return cleanText(cells[1].textContent);
+      }
+    }
+    return "";
   }
 
   function parseCodeforcesProblem(pathname) {
@@ -26,9 +51,9 @@
   }
 
   function parseCodeforcesSubmission(pathname) {
-    const match = pathname.match(/^\/contest\/(\d+)\/submission\/(\d+)/);
+    const match = pathname.match(/^\/(contest|gym)\/(\d+)\/submission\/(\d+)/);
     if (!match) return null;
-    return { contestId: match[1], submissionId: match[2] };
+    return { contestType: match[1], contestId: match[2], submissionId: match[3] };
   }
 
   function parseAtCoderTask(pathname) {
@@ -48,16 +73,17 @@
    * Works for both AtCoder (/contests/{id}/tasks/{problem}) and
    * Codeforces (/contest/{id}/problem/{index}).
    */
-  function problemIdFromLink(contestId) {
-    const link = Array.from(document.querySelectorAll("a[href]")).find((item) =>
+  function problemIdFromLink(contestId, root = document) {
+    const link = Array.from(root.querySelectorAll("a[href]")).find((item) =>
       item.getAttribute("href").includes(`/contests/${contestId}/tasks/`) ||
-      item.getAttribute("href").includes(`/contest/${contestId}/problem/`)
+      item.getAttribute("href").includes(`/contest/${contestId}/problem/`) ||
+      item.getAttribute("href").includes(`/gym/${contestId}/problem/`)
     );
     if (!link) return "";
     const href = link.getAttribute("href");
     const atcoder = href.match(/\/contests\/[^/]+\/tasks\/([^/?#]+)/);
     if (atcoder) return atcoder[1];
-    const codeforces = href.match(/\/contest\/(\d+)\/problem\/([^/?#]+)/);
+    const codeforces = href.match(/\/(?:contest|gym)\/(\d+)\/problem\/([^/?#]+)/);
     if (codeforces) return `${codeforces[1]}/${codeforces[2]}`;
     return "";
   }
@@ -90,60 +116,70 @@
     // Fallback 1: legacy #submission-code block (pre-CodeMirror era)
     const legacyBlock = document.querySelector("#submission-code");
     if (legacyBlock) {
-      return cleanText(legacyBlock.textContent);
+      return sourceText(legacyBlock.textContent);
     }
 
     // Fallback 2: older highlight.js layout
     const preBlock = document.querySelector("pre.linenums");
     if (preBlock) {
-      return cleanText(preBlock.textContent);
+      return sourceText(preBlock.textContent);
     }
 
     return null;
   }
 
-  /**
-   * Extract a metadata field value from the "Submission Info" table by
-   * matching the row header text.
-   *
-   * @param {string} label  e.g. "Language", "Task", "Status"
-   * @returns {string}
-   */
-  function submissionInfoField(label) {
-    const rows = document.querySelectorAll("table tr");
-    for (const row of rows) {
-      const th = row.querySelector("th");
-      if (th && cleanText(th.textContent) === label) {
-        const td = row.querySelector("td");
-        return td ? cleanText(td.textContent) : "";
-      }
-    }
-    return "";
+  let codeforcesSubmissionHint = null;
+
+  function captureCodeforcesSubmissionHint(link) {
+    const parsed = parseCodeforcesSubmission(new URL(link.href, window.location.href).pathname);
+    if (!parsed) return;
+    const row = link.closest("tr") || document;
+    codeforcesSubmissionHint = {
+      ...parsed,
+      externalProblemId: problemIdFromLink(parsed.contestId, row),
+      language: tableField("Language", row),
+      url: new URL(link.href, window.location.href).href,
+    };
+  }
+
+  function codeforcesSubmissionArtifact() {
+    const sourceElement = document.querySelector("#program-source-text");
+    const submission = parseCodeforcesSubmission(window.location.pathname) || codeforcesSubmissionHint;
+    if (!sourceElement || !submission) return null;
+    const sourceRoot = sourceElement.closest("[role='dialog'], .ui-dialog, .source-popup") || document;
+    return {
+      kind: "submission-source",
+      payload: {
+        platform: "CODEFORCES",
+        externalSubmissionId: submission.submissionId,
+        externalProblemId:
+          problemIdFromLink(submission.contestId, sourceRoot) ||
+          submission.externalProblemId ||
+          problemIdFromLink(submission.contestId),
+        sourceContestId: submission.contestId,
+        sourceCode: sourceText(sourceElement.textContent),
+        language:
+          tableField("Language", sourceRoot) ||
+          submission.language ||
+          textFromElement(".submission-info td:nth-child(3)"),
+        url: submission.url || window.location.href,
+      },
+    };
   }
 
   // ── Codeforces extractor ─────────────────────────────────────────────────
 
   function extractCodeforces() {
     const pathname = window.location.pathname;
+    const visibleSubmission = codeforcesSubmissionArtifact();
+    if (visibleSubmission) return visibleSubmission;
     const submission = parseCodeforcesSubmission(pathname);
     if (submission) {
-      const sourceElement = document.querySelector("#program-source-text");
-      if (!sourceElement) {
+      const artifact = codeforcesSubmissionArtifact();
+      if (!artifact) {
         throw new Error("No visible Codeforces source block found on this page.");
       }
-      return {
-        kind: "submission-source",
-        payload: {
-          platform: "CODEFORCES",
-          externalSubmissionId: submission.submissionId,
-          externalProblemId: problemIdFromLink(submission.contestId),
-          sourceContestId: submission.contestId,
-          sourceCode: cleanText(sourceElement.textContent),
-          language: textFromElement(".submission-info td:nth-child(3)"),
-          pageUrl: window.location.href,
-          pageTitle: document.title,
-        },
-      };
+      return artifact;
     }
 
     const problem = parseCodeforcesProblem(pathname);
@@ -160,11 +196,10 @@
         payload: {
           platform: "CODEFORCES",
           externalProblemId: problem.externalProblemId,
-          sourceContestId: problem.contestId,
+          externalContestId: problem.contestId,
           title: titleEl ? cleanText(titleEl.textContent) : document.title,
-          statementHtml: statementEl.innerHTML,
-          pageUrl: window.location.href,
-          pageTitle: document.title,
+          statementText: statementEl.innerHTML,
+          url: window.location.href,
         },
       };
     }
@@ -200,8 +235,7 @@
           return m ? m[1] : "";
         })();
 
-      const language = submissionInfoField("Language");
-      const status = submissionInfoField("Status");
+      const language = tableField("Language");
 
       return {
         kind: "submission-source",
@@ -212,9 +246,7 @@
           sourceContestId: submission.contestId,
           sourceCode,
           language,
-          status,
-          pageUrl: window.location.href,
-          pageTitle: document.title,
+          url: window.location.href,
         },
       };
     }
@@ -240,17 +272,63 @@
         payload: {
           platform: "ATCODER",
           externalProblemId: task.externalProblemId,
-          sourceContestId: task.contestId,
+          externalContestId: task.contestId,
           title: titleEl ? cleanText(titleEl.textContent) : document.title,
-          statementHtml: statementEl.innerHTML,
-          pageUrl: window.location.href,
-          pageTitle: document.title,
+          statementText: statementEl.innerHTML,
+          url: window.location.href,
         },
       };
     }
 
     return null;
   }
+
+  function detectVisibleSubmissionSource() {
+    const hostname = window.location.hostname;
+    try {
+      if (hostname === "codeforces.com" || hostname === "mirror.codeforces.com") {
+        return codeforcesSubmissionArtifact();
+      }
+      if (hostname === "atcoder.jp" && parseAtCoderSubmission(window.location.pathname)) {
+        return extractAtCoder();
+      }
+    } catch {
+      return null;
+    }
+    return null;
+  }
+
+  let captureTimer = null;
+  function scheduleVisibleSourceCapture() {
+    if (captureTimer !== null) window.clearTimeout(captureTimer);
+    captureTimer = window.setTimeout(() => {
+      captureTimer = null;
+      const artifact = detectVisibleSubmissionSource();
+      if (artifact?.kind === "submission-source" && artifact.payload.sourceCode) {
+        chrome.runtime.sendMessage({
+          type: "OJ_REVIEW_SOURCE_CAPTURED",
+          artifact,
+        }).catch(() => {
+          // The background queue retries after the extension wakes again.
+        });
+      }
+    }, 150);
+  }
+
+  document.addEventListener("click", (event) => {
+    const link = event.target.closest?.('a[href*="/submission/"]');
+    if (!link) return;
+    captureCodeforcesSubmissionHint(link);
+    scheduleVisibleSourceCapture();
+  }, true);
+
+  const sourceObserver = new MutationObserver(scheduleVisibleSourceCapture);
+  sourceObserver.observe(document.documentElement, {
+    childList: true,
+    subtree: true,
+    characterData: true,
+  });
+  scheduleVisibleSourceCapture();
 
   // ── Message handler ──────────────────────────────────────────────────────
 

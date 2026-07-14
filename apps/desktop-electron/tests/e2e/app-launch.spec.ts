@@ -1,67 +1,31 @@
-import { test, expect } from '../fixtures/test.js'
+import { test, expect } from './fixtures/test.js'
 
-test.describe('OJ Review Desktop E2E', () => {
-  test('app should launch without white screen', async ({ dashboardPage }) => {
-    // Verify the app loads without white screen
-    const isLoaded = await dashboardPage.isLoaded()
-    expect(isLoaded).toBe(true)
-
-    // Take a screenshot to verify the UI is rendered
-    await dashboardPage.page.screenshot({ path: 'artifacts/dashboard-loaded.png' })
-
-    // Verify key UI elements are present
-    await expect(dashboardPage.heroSection).toBeVisible()
-    await expect(dashboardPage.serviceStatusPill).toBeVisible()
+test.describe('OJReview desktop security and core flow', () => {
+  test('launches the review-first v2 shell without a white screen', async ({ appPage }) => {
+    await expect(appPage.locator('.top-nav')).toBeVisible()
+    await expect(appPage.locator('.dash-hero')).toBeVisible()
+    await expect(appPage.locator('.sidebar')).toHaveCount(0)
+    await expect(appPage.getByRole('button', { name: /同步|重试同步/ })).toHaveCount(0)
   })
 
-  test('dashboard should show service status', async ({ dashboardPage }) => {
-    await expect(dashboardPage.serviceStatusPill).toBeVisible()
-
-    // Service status should be either healthy or starting
-    const statusText = await dashboardPage.serviceStatusPill.textContent()
-    expect(statusText).toMatch(/在线 | 离线 | 服务状态/)
+  test('injects local API authentication without exposing Node to renderer', async ({ appPage }) => {
+    const rawResponse = await fetch('http://127.0.0.1:38473/api/me')
+    expect(rawResponse.status).toBe(401)
+    const response = await appPage.evaluate(async () => {
+      const result = await fetch('http://127.0.0.1:38473/api/me')
+      return { status: result.status, body: await result.json() }
+    })
+    expect(response.status).toBe(200)
+    expect(response.body.owner).toBeTruthy()
+    expect(await appPage.evaluate(() => typeof globalThis.process)).toBe('undefined')
   })
 
-  test('navigation should work between pages', async ({ dashboardPage, navigationPage }) => {
-    // Start on dashboard
-    await expect(dashboardPage.heroSection).toBeVisible()
+  test('enforces the renderer CSP and supports navigation to settings', async ({ appPage }) => {
+    const csp = await appPage.locator('meta[http-equiv="Content-Security-Policy"]').getAttribute('content')
+    expect(csp).toContain("default-src 'self'")
+    expect(csp).not.toContain('fonts.googleapis.com')
 
-    // Navigate to Analysis page
-    await navigationPage.clickAnalysis()
-    const analysisTitle = await navigationPage.getCurrentPageTitle()
-    expect(analysisTitle).toContain('AI 分析')
-
-    // Take screenshot of Analysis page
-    await navigationPage.page.screenshot({ path: 'artifacts/analysis-page.png' })
-
-    // Navigate back to Dashboard
-    await navigationPage.clickDashboard()
-    await expect(dashboardPage.heroSection).toBeVisible()
-
-    // Navigate to Settings page
-    await navigationPage.clickSettings()
-    const settingsTitle = await navigationPage.getCurrentPageTitle()
-    expect(settingsTitle).toContain('设置')
-
-    // Take screenshot of Settings page
-    await navigationPage.page.screenshot({ path: 'artifacts/settings-page.png' })
-
-    // Navigate back to Dashboard
-    await navigationPage.clickDashboard()
-    await expect(dashboardPage.heroSection).toBeVisible()
-  })
-
-  test('should display sync button and respond to clicks', async ({ dashboardPage }) => {
-    await expect(dashboardPage.syncButton).toBeVisible()
-
-    const syncButton = dashboardPage.syncButton
-    const isDisabled = await syncButton.isDisabled()
-
-    // If not disabled, we can try to click it
-    if (!isDisabled) {
-      await syncButton.click()
-      // Should trigger a sync request
-      await dashboardPage.page.waitForLoadState('networkidle')
-    }
+    await appPage.getByRole('button', { name: /^(设置|Settings)$/ }).click()
+    await expect(appPage.locator('.settings-page-root')).toBeVisible()
   })
 })

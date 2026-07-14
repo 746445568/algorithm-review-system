@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useTranslation } from 'react-i18next';
 import { useNavigation } from "../lib/NavigationContext.jsx";
 import { getAnalysisErrorMessage } from "../lib/runtimeStatus.js";
@@ -16,18 +16,14 @@ import "../styles/ui-analysis.css";
  * AnalysisPage 主容器组件 (Design v2)
  * 使用 SWR 管理分析任务状态，采用分栏卡片布局
  */
-export function AnalysisPage({ serviceStatus, runtimeInfo }) {
+export function AnalysisPage() {
   const { t } = useTranslation();
   const { navigateTo, navigationState } = useNavigation();
 
   // Global report state
-  const [period, setPeriod] = useState("week");
+  const period = "week";
   const [globalTaskId, setGlobalTaskId] = useState(null);
-  const [globalError, setGlobalError] = useState(null);
-
-  // Comparison state
-  const [compTaskId, setCompTaskId] = useState(null);
-  const [compError, setCompError] = useState(null);
+  const [, setGlobalError] = useState(null);
 
   // Single problem state
   const [selectedProblemId, setSelectedProblemId] = useState(null);
@@ -46,11 +42,6 @@ export function AnalysisPage({ serviceStatus, runtimeInfo }) {
     task: globalTask,
     isLoading: globalLoading,
   } = useAnalysisTaskWithPoll(globalTaskId);
-
-  const {
-    task: compTask,
-    isLoading: compLoading,
-  } = useAnalysisTaskWithPoll(compTaskId);
 
   const {
     task: problemTask,
@@ -82,18 +73,6 @@ export function AnalysisPage({ serviceStatus, runtimeInfo }) {
     }
   }
 
-  // ── Comparison Analysis ──
-  async function handleGenerateComparison() {
-    if (compLoading || compTaskId) return;
-    setCompError(null);
-    try {
-      const { task } = await api.generateComparisonAnalysis({ period });
-      setCompTaskId(task.id);
-    } catch (err) {
-      setCompError(getAnalysisErrorMessage(err.message));
-    }
-  }
-
   // ── Problem Analysis ──
   async function handleGenerateProblemAnalysis(problemId) {
     if (problemLoading || problemSubmitRef.current || !problemId || problemTaskId) return;
@@ -115,13 +94,6 @@ export function AnalysisPage({ serviceStatus, runtimeInfo }) {
       return () => clearTimeout(timer);
     }
   }, [globalTask?.status]);
-
-  useEffect(() => {
-    if (compTask?.status === "SUCCESS" || compTask?.status === "FAILED") {
-      const timer = setTimeout(() => setCompTaskId(null), 15000);
-      return () => clearTimeout(timer);
-    }
-  }, [compTask?.status]);
 
   useEffect(() => {
     if (problemTask?.status === "SUCCESS" || problemTask?.status === "FAILED") {
@@ -153,8 +125,6 @@ export function AnalysisPage({ serviceStatus, runtimeInfo }) {
       <div className="an-main ai-layout">
         <AnalysisColumn side="left">
           <AiHero
-            period={period}
-            setPeriod={setPeriod}
             globalTask={globalTask}
             globalLoading={globalLoading}
             onGenerateGlobal={handleGenerateGlobalAnalysis}

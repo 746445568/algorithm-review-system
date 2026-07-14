@@ -164,7 +164,8 @@ WHERE TRIM(tag_name) <> ''`)
 INSERT OR IGNORE INTO problem_knowledge(problem_id, knowledge_id)
 SELECT pt.problem_id, kn.id
 FROM problem_tags pt
-JOIN knowledge_nodes kn ON kn.name = pt.tag_name`)
+JOIN knowledge_nodes kn ON kn.name = pt.tag_name
+WHERE EXISTS (SELECT 1 FROM problems p WHERE p.id = pt.problem_id)`)
 	if err != nil {
 		return 0, 0, fmt.Errorf("sync problem knowledge links: %w", err)
 	}

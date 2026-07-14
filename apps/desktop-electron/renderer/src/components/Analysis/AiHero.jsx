@@ -4,25 +4,17 @@ import { useTranslation } from 'react-i18next';
 /**
  * AI Hero Section - Gradient hero with score cards
  * @param {{
- *   period: string,
- *   setPeriod: Function,
  *   globalTask: object|null,
  *   globalLoading: boolean,
  *   onGenerateGlobal: Function,
  * }} props
  */
 export const AiHero = memo(function AiHero({
-  period,
-  setPeriod,
   globalTask,
   globalLoading,
   onGenerateGlobal
 }) {
   const { t } = useTranslation();
-
-  const handlePeriodChange = (newPeriod) => {
-    setPeriod(newPeriod);
-  };
 
   // Extract scores from global task result
   const scores = globalTask?.status === "SUCCESS" ? (globalTask.result?.scores || {}) : {};

@@ -53,19 +53,20 @@ apps/server/bin/
 .claudeignore
 .codex
 .kilo/
+.omo/
 .sisyphus/
 .superpowers/
+.trae/
 
 # Non-product repository material
-/.github/
 /_deprecated/
 /docs/
 !/docs/
 /docs/*
 !/docs/oj-fetch-matrix.md
+!/docs/superpowers/
 /packaging/
 /scripts/
-/AGENTS.md
 /CLAUDE.md
 /build-all.ps1
 /start-app.bat
