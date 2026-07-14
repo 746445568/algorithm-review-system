@@ -53,8 +53,10 @@ apps/server/bin/
 .claudeignore
 .codex
 .kilo/
+.omo/
 .sisyphus/
 .superpowers/
+.trae/
 
 # Non-product repository material
 /_deprecated/

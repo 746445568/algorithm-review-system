@@ -8,6 +8,55 @@ const extensionDir = path.resolve("../browser-extension");
 const contentScript = fs.readFileSync(path.join(extensionDir, "content.js"), "utf8");
 const fixtureDir = path.resolve("tests/e2e/fixtures");
 
+test("Codeforces problem statement can be extracted manually", async () => {
+  const html = fs.readFileSync(path.join(fixtureDir, "codeforces-problem.html"), "utf8");
+  const harness = createContentHarness(html, "https://codeforces.com/contest/1900/problem/A");
+
+  const response = await extractCurrentPage(harness);
+
+  assert.equal(response.ok, true);
+  assert.equal(response.artifact.kind, "problem-statement");
+  assert.equal(response.artifact.payload.externalProblemId, "1900/A");
+  assert.match(response.artifact.payload.statementText, /Covering Points/);
+  harness.dom.window.close();
+});
+
+test("AtCoder problem statement can be extracted manually", async () => {
+  const html = fs.readFileSync(path.join(fixtureDir, "atcoder-task.html"), "utf8");
+  const harness = createContentHarness(html, "https://atcoder.jp/contests/abc300/tasks/abc300_a");
+
+  const response = await extractCurrentPage(harness);
+
+  assert.equal(response.ok, true);
+  assert.equal(response.artifact.kind, "problem-statement");
+  assert.equal(response.artifact.payload.externalProblemId, "abc300_a");
+  assert.match(response.artifact.payload.statementText, /total score/);
+  harness.dom.window.close();
+});
+
+test("unsupported pages return a controlled extraction error", async () => {
+  const harness = createContentHarness("<p>blog</p>", "https://codeforces.com/blog/entry/1");
+
+  const response = await extractCurrentPage(harness);
+
+  assert.equal(response.ok, false);
+  assert.match(response.error, /not a supported problem statement or submission page/);
+  harness.dom.window.close();
+});
+
+test("supported pages with missing DOM return a controlled extraction error", async () => {
+  const harness = createContentHarness(
+    "<p>missing statement</p>",
+    "https://atcoder.jp/contests/abc300/tasks/abc300_a"
+  );
+
+  const response = await extractCurrentPage(harness);
+
+  assert.equal(response.ok, false);
+  assert.match(response.error, /No visible AtCoder problem statement/);
+  harness.dom.window.close();
+});
+
 test("Codeforces submission detail source is captured automatically", async () => {
   const html = fs.readFileSync(path.join(fixtureDir, "codeforces-submission.html"), "utf8");
   const harness = createContentHarness(html, "https://codeforces.com/contest/1900/submission/12345678");
@@ -95,6 +144,13 @@ function latestSourceArtifact(messages) {
   const message = messages.findLast((item) => item.type === "OJ_REVIEW_SOURCE_CAPTURED");
   assert.ok(message, "expected an automatic source capture message");
   return message.artifact;
+}
+
+function extractCurrentPage(harness) {
+  assert.equal(typeof harness.messageListener, "function");
+  return new Promise((resolve) => {
+    harness.messageListener({ type: "OJ_REVIEW_EXTRACT" }, {}, resolve);
+  });
 }
 
 function waitForCapture() {

@@ -9,7 +9,9 @@ const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 const EXTENSION_PATH = path.resolve(__dirname, '../../../browser-extension')
 const FIXTURES_DIR = path.resolve(__dirname, 'fixtures')
+const cfProblemHtml = fs.readFileSync(path.join(FIXTURES_DIR, 'codeforces-problem.html'), 'utf-8')
 const cfSubmissionHtml = fs.readFileSync(path.join(FIXTURES_DIR, 'codeforces-submission.html'), 'utf-8')
+const atcoderTaskHtml = fs.readFileSync(path.join(FIXTURES_DIR, 'atcoder-task.html'), 'utf-8')
 const atcoderSubmissionHtml = fs.readFileSync(path.join(FIXTURES_DIR, 'atcoder-submission.html'), 'utf-8')
 
 type ImportedArtifact = {
@@ -52,6 +54,37 @@ test.describe('Browser Extension E2E', () => {
     expect(imported[0].authorization).toBe('Bearer extension-import-token')
     expect(imported[0].body.externalSubmissionId).toBe('12345678')
     expect(imported[0].body.sourceCode).toContain('#include')
+    await harness.close()
+  })
+
+  test('manually imports a Codeforces problem statement through the paired background', async () => {
+    const harness = await launchPairedExtension()
+    await routeDocument(harness.page, 'https://codeforces.com/**', cfProblemHtml)
+    const url = 'https://codeforces.com/contest/1900/problem/A'
+    await harness.page.goto(url)
+
+    const result = await extractAndImport(harness.extensionPage, url)
+
+    expect(result.ok).toBe(true)
+    await expect.poll(() => imported.length).toBe(1)
+    expect(imported[0].endpoint).toBe('/api/import/problem-statement')
+    expect(imported[0].authorization).toBe('Bearer extension-import-token')
+    expect(imported[0].body.externalProblemId).toBe('1900/A')
+    await harness.close()
+  })
+
+  test('manually imports an AtCoder problem statement through the paired background', async () => {
+    const harness = await launchPairedExtension()
+    await routeDocument(harness.page, 'https://atcoder.jp/**', atcoderTaskHtml)
+    const url = 'https://atcoder.jp/contests/abc300/tasks/abc300_a'
+    await harness.page.goto(url)
+
+    const result = await extractAndImport(harness.extensionPage, url)
+
+    expect(result.ok).toBe(true)
+    await expect.poll(() => imported.length).toBe(1)
+    expect(imported[0].endpoint).toBe('/api/import/problem-statement')
+    expect(imported[0].body.externalProblemId).toBe('abc300_a')
     await harness.close()
   })
 
@@ -108,11 +141,23 @@ test.describe('Browser Extension E2E', () => {
     expect(imported[0].body.sourceCode).toContain('input()')
     await harness.close()
   })
+
+  test('popup formats a local service outage as an actionable error', async () => {
+    const harness = await launchPairedExtension()
+
+    const message = await harness.extensionPage.evaluate(() => {
+      return (globalThis as any).friendlyError(new TypeError('Failed to fetch'))
+    })
+
+    expect(message).toContain('OJ Review Desktop is not reachable at 127.0.0.1:38473')
+    await harness.close()
+  })
 })
 
 async function launchPairedExtension(): Promise<{
   context: BrowserContext
   page: Page
+  extensionPage: Page
   close: () => Promise<void>
 }> {
   const userDataDir = fs.mkdtempSync(path.join(os.tmpdir(), 'ojreview-extension-'))
@@ -127,22 +172,52 @@ async function launchPairedExtension(): Promise<{
   let worker = context.serviceWorkers()[0]
   if (!worker) worker = await context.waitForEvent('serviceworker')
   const extensionId = new URL(worker.url()).host
-  const popup = await context.newPage()
-  await popup.goto(`chrome-extension://${extensionId}/popup.html`)
-  await popup.locator('#pairingCode').fill('123456')
-  await popup.locator('#pairButton').click()
-  await expect(popup.locator('#status')).toContainText('Paired successfully')
-  await popup.close()
+  const extensionPage = await context.newPage()
+  await extensionPage.goto(`chrome-extension://${extensionId}/popup.html`)
+  await extensionPage.locator('#pairingCode').fill('123456')
+  await extensionPage.locator('#pairButton').click()
+  await expect(extensionPage.locator('#status')).toContainText('Paired successfully')
 
   const page = await context.newPage()
   return {
     context,
     page,
+    extensionPage,
     async close() {
       await context.close()
       fs.rmSync(userDataDir, { recursive: true, force: true })
     },
   }
+}
+
+async function routeDocument(page: Page, pattern: string, body: string) {
+  await page.route(pattern, async route => {
+    if (route.request().resourceType() === 'document') {
+      await route.fulfill({ contentType: 'text/html', body })
+    } else {
+      await route.abort()
+    }
+  })
+}
+
+async function extractAndImport(extensionPage: Page, targetUrl: string) {
+  return extensionPage.evaluate(async url => {
+    const chromeApi = (globalThis as any).chrome
+    const tabs = await chromeApi.tabs.query({ url })
+    if (!tabs.length || !tabs[0].id) throw new Error(`Target tab not found for ${url}`)
+    await chromeApi.scripting.executeScript({ target: { tabId: tabs[0].id }, files: ['content.js'] })
+    const extracted = await chromeApi.tabs.sendMessage(tabs[0].id, { type: 'OJ_REVIEW_EXTRACT' })
+    if (!extracted?.ok) return extracted
+    const [injected] = await chromeApi.scripting.executeScript({
+      target: { tabId: tabs[0].id },
+      func: (artifact: Record<string, unknown>) => {
+        const runtime = (globalThis as any).chrome.runtime
+        return runtime.sendMessage({ type: 'OJ_REVIEW_IMPORT_ARTIFACT', artifact })
+      },
+      args: [extracted.artifact],
+    })
+    return injected.result
+  }, targetUrl)
 }
 
 function startPairingService(imported: ImportedArtifact[]): Promise<Server> {
@@ -166,7 +241,7 @@ function startPairingService(imported: ImportedArtifact[]): Promise<Server> {
       return
     }
 
-    if (request.url === '/api/import/submission-source') {
+    if (request.url === '/api/import/submission-source' || request.url === '/api/import/problem-statement') {
       imported.push({
         endpoint: request.url,
         authorization: request.headers.authorization || '',
