@@ -1,6 +1,6 @@
 # Project Status
 
-**Last verified:** 2026-07-14
+**Last verified:** 2026-07-15
 
 **Current release version:** 2.1.0
 
@@ -10,7 +10,7 @@ This file is a dated execution snapshot, not a substitute for live GitHub state.
 
 ## Active milestone
 
-The engineering-foundation milestone is implemented on `codex/engineering-foundation` and is under review in [PR #22](https://github.com/746445568/algorithm-review-system/pull/22), targeting `fix/2026-07-02-ui-polish`.
+The repository's active development lines have been consolidated on `codex/engineering-foundation`. [PR #22](https://github.com/746445568/algorithm-review-system/pull/22) now targets `main` directly.
 
 Delivered scope:
 
@@ -20,20 +20,22 @@ Delivered scope:
 - reproducible Windows x64 service metadata validation and packaging;
 - one-time browser-extension pairing with an origin-bound, import-only token;
 - automatic import of source code already visible in Codeforces submission dialogs/details and AtCoder submission pages, with persistent deduplication and bounded retry;
+- preserved manual Codeforces/AtCoder problem-statement import and controlled error coverage from the former dirty worktree;
 - documentation of the supported platform and local security model;
 - a tracked cross-agent entry point with a required status-maintenance completion protocol.
+
+The three unique commits on `origin/feat/phase0-bugfixes-and-knowledge-graph` were audited and intentionally not merged: their valid behavior and tests already exist in newer form, while the old knowledge-graph commit references an undefined handler and does not build as-is.
 
 ## Verification state
 
 | Check | State | Evidence or blocker |
 | --- | --- | --- |
-| Local `npm run verify` | Passed | Lint, typecheck, all Go tests, 23 Node tests, 4 renderer tests, and builds completed with zero warnings on 2026-07-14. |
-| Local Electron and extension E2E | Passed | Three desktop tests ran against the real Go service and three unpacked-extension tests covered pairing plus Codeforces/AtCoder automatic source import. |
-| Local Windows packaging smoke | Passed | Setup and portable artifacts contained the current service binary; authenticated API returned 200 and unauthenticated API returned 401. |
-| GitHub Go jobs | Passed | Both push and pull-request workflow runs completed successfully. |
-| GitHub Desktop jobs | Awaiting rerun | The latest remote runs still show the old Windows wildcard failure. The local test command now enumerates files cross-platform and passes, but the change has not been pushed yet. |
+| Local `npm run verify` | Passed | Lint, typecheck, all Go tests, 27 Node tests, 4 renderer tests, and builds completed with zero warnings on 2026-07-15. |
+| Local Electron and extension E2E | Passed | Three desktop tests and six unpacked-extension tests passed, covering pairing, manual problem imports, automatic source imports, and error UX. |
+| Local Windows packaging | Passed | NSIS setup and portable Windows x64 artifacts built successfully without redundant top-level `7zip-bin` or `app-builder-bin` dependencies. |
+| GitHub Quality jobs | Running | PR #22 was retargeted to `main`; fresh Go and Desktop jobs started after the consolidated branch was pushed. |
 
-PR #22 is therefore **not merge-ready**, despite being structurally mergeable.
+PR #22 is structurally mergeable but must not be merged until the fresh Quality jobs pass.
 
 ## Availability and release state
 
@@ -45,9 +47,9 @@ PR #22 is therefore **not merge-ready**, despite being structurally mergeable.
 
 ## Next actions
 
-1. Commit and push the browser-extension pairing and automatic visible-source import changes to PR #22.
-2. Rerun PR CI and confirm the Desktop jobs pass with the cross-platform Node test runner.
-3. Review and merge PR #22 only after all required checks are green.
+1. Confirm the fresh PR #22 Go and Desktop Quality jobs pass.
+2. Merge PR #22 into `main` only after all required checks are green.
+3. Fast-forward the local `main`, then remove the temporary preservation branch and extra worktree after confirming they are clean.
 4. Keep public release disabled until Windows signing credentials are configured.
 
 ## Maintenance rule
