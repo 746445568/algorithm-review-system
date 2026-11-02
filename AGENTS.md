@@ -47,3 +47,12 @@ If a task has no effect on project status, verify that `PROJECT_STATUS.md` remai
 - `apps/browser-extension/AGENTS.md`: browser-extension constraints and current import boundary.
 
 Never modify `_deprecated/`; it is outside the runtime product.
+
+## Cursor Cloud
+
+Linux cloud agents develop the local Go service and Vite renderer. Windows x64 remains the only packaging target.
+
+- Go 1.26.10 is on `PATH` via `/usr/local/go`. `apps/server/go.mod` declares language version 1.26.0.
+- Boot starts `ojreviewd` on `127.0.0.1:38473` and the Vite renderer on `http://127.0.0.1:5180`. Use that browser preview while both are healthy. `npm run desktop:dev` also launches Electron and should not be started beside them.
+- Runtime data is `$HOME/.ojreview-desktop` (`OJREVIEW_APP_DIR`), outside the repository.
+- From `apps/desktop-electron`, `npm run verify` is the local quality gate. It rebuilds `apps/desktop-electron/bin/ojreviewd` for the host OS. Restore that tracked binary with git and do not commit the rebuild.
